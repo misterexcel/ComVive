@@ -18,11 +18,13 @@ Quien compra es el administrador (multi-comunidad). Quien más usa la app es el 
 
 ## Etapa actual
 
-**Etapa 0 · Cimientos.** Objetivo: repositorio, reglas, agentes de diseño y trámites iniciados.
+**Etapa 1 · Diseño.** Objetivo: mapa de usuarios y flujos, wireframes, design system, arquitectura y especificación del motor de gasto común con sus casos de prueba y pruebas de oro. Hito de cierre: diseño aprobado por el líder del proyecto.
 
-Etapas: 0 Cimientos → 1 Diseño → 2 MVP → 3 Piloto → 4 Lanzamiento. Cada etapa cierra con un hito aprobado por el líder del proyecto. No trabajamos con plazos; trabajamos por etapas.
+Etapas: 0 Cimientos (cerrada) → 1 Diseño → 2 MVP → 3 Piloto → 4 Lanzamiento. Cada etapa cierra con un hito aprobado por el líder del proyecto. No trabajamos con plazos; trabajamos por etapas.
 
 Por ahora se trabaja con **comunidades pequeñas simuladas** (`docs/qa/comunidades-simuladas.md`). El segmento comercial se define más adelante.
+
+**Fase de prueba y desarrollo:** donde falte una definición legal o contable, no se bloquea el avance. Se toma el supuesto más realista posible, investigado (ley, práctica en Chile, competidores), se marca como **Supuesto (a validar)** con su fuente y se registra como pregunta abierta. Los supuestos se validan con contador y abogado antes del Piloto.
 
 ## Metodología
 
@@ -62,7 +64,7 @@ Flujo del tablero: Backlog → Especificación → Lista para desarrollo → En 
 5. **Saldos:** se calculan desde un libro de movimientos (cargos y abonos). Nunca un campo de saldo editable.
 6. **Periodos cerrados** son inmutables. Las correcciones se hacen con ajustes en el periodo siguiente.
 7. **Datos personales:** RUT, deudas y datos de visitas se tratan según la Ley 21.719. Solo lo mínimo necesario, acceso por rol y registro de auditoría.
-8. **Normativa:** el diseño respeta la Ley 21.442 de Copropiedad Inmobiliaria y su reglamento. Ante dudas legales, se deja una pregunta abierta para el líder del proyecto; no se asume.
+8. **Normativa:** el diseño respeta la Ley 21.442 de Copropiedad Inmobiliaria y su reglamento. Ante dudas legales, se deja una pregunta abierta para el líder del proyecto y, mientras tanto, un supuesto documentado y marcado como tal (ver "Fase de prueba y desarrollo"); nunca un supuesto implícito.
 9. **Secretos:** nunca en el código ni en commits. Solo variables de entorno.
 10. **Sin aprobación no hay producción.**
 

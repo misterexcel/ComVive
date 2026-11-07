@@ -7,7 +7,7 @@ Software de administración de edificios y condominios para Chile.
 
 ## Estado
 
-Etapa 0 · Cimientos. Todavía no hay código de la aplicación.
+Etapa 1 · Diseño. Todavía no hay código de la aplicación; la Etapa 0 (cimientos) está cerrada.
 
 ## Empezar
 
