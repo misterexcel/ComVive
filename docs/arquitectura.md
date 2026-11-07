@@ -56,6 +56,7 @@ flowchart LR
 | --- | --- | --- |
 | `PERSON` | Identidad única para login | Solo guarda identidad (RUT, credenciales). Nombre y teléfono visibles se guardan en `MEMBERSHIP`, por comunidad |
 | `UF_VALUE` | Dato público diario | Solo lectura para la API |
+| Tasa de interés corriente (CMF) | Dato público periódico | Igual que `UF_VALUE`: global, con su fecha de vigencia, solo lectura para la API |
 | Login y sesión | Previo a elegir comunidad | No devuelve datos de negocio |
 | "Mis comunidades" | Lista las membresías propias | Solo comunidades donde la persona tiene membresía vigente |
 
@@ -68,6 +69,7 @@ flowchart LR
 | Sin membresía vigente en la comunidad, o recurso de otra comunidad | 404 |
 | Membresía vigente, pero el rol no tiene permiso para la acción | 403 |
 | Residente pide una unidad ajena dentro de su comunidad | 404 |
+| Ex residente con membresía vencida | 404 (sin acceso a su historial; lo obtiene a través del administrador) |
 
 Cada endpoint lleva su prueba de aislamiento que verifica esta tabla.
 
@@ -89,7 +91,7 @@ Cada endpoint lleva su prueba de aislamiento que verifica esta tabla.
 | Administrador | Cada comunidad donde tenga membresía | Configurar comunidad y unidades, emitir y cerrar periodos, registrar pagos, conciliar, ver deudas, gestionar usuarios |
 | Comité | Su comunidad | Ver finanzas, cartolas, conciliación y reportes. Sin edición de montos |
 | Residente propietario | Sus unidades | Estado de cuenta y cargos de sus unidades, pagar, comunicados, reservas |
-| Residente arrendatario | Unidad que arrienda | Pagar y ver cargos de la unidad (alcance exacto: pregunta abierta), comunicados, reservas |
+| Residente arrendatario | Unidad que arrienda | Pagar y ver solo los cargos emitidos desde su ingreso (`UNIT_OCCUPANCY.valid_from`), comunicados, reservas |
 | Conserje | Su comunidad | Visitas, encomiendas, bitácora; nombre y unidad de residentes. Sin deudas ni RUT completo |
 
 - Permisos como acciones (`period.close`, `payment.register`, `debt.read`...) mapeadas a roles en una tabla de código versionada. La matriz rol × acción se publica en `docs/specs/` y genera pruebas de permisos automáticas.
@@ -115,6 +117,8 @@ erDiagram
   PERIOD ||--o{ LEDGER_ENTRY : "se registra en"
   LEDGER_ENTRY o|--o{ LEDGER_ENTRY : "ajusta a"
   UF_VALUE ||--o{ EXPENSE : convierte
+  PERIOD ||--o{ PERIOD_UNIT_SHARE : "congela"
+  UNIT ||--o{ PERIOD_UNIT_SHARE : "participa en"
   PAYMENT ||--o{ RECONCILIATION_MATCH : "se asigna en"
   BANK_STATEMENT_LINE ||--o{ RECONCILIATION_MATCH : "cubre"
 
@@ -123,6 +127,7 @@ erDiagram
   MEMBERSHIP { uuid person_id  string role  string display_name  string phone  date valid_from  date valid_to }
   UNIT_OCCUPANCY { uuid unit_id  uuid person_id  string relation  date valid_from  date valid_to }
   PERIOD { uuid id  string year_month  string status }
+  PERIOD_UNIT_SHARE { uuid period_id  uuid unit_id  string basis  bigint weight  int sort_order }
   EXPENSE { uuid period_id  string account  string concept  bigint amount_clp  bigint amount_uf_e4  date uf_date }
   CHARGE { uuid id  uuid unit_id  uuid period_id  string account  bigint amount_clp }
   PAYMENT { uuid id  uuid unit_id  bigint amount_clp  string method  string external_ref  date paid_on  timestamp recorded_at }
@@ -149,19 +154,21 @@ Todas las tablas de negocio llevan `community_id` (omitido en el diagrama), `cre
 - **Método del resto mayor** (`docs/qa/comunidades-simuladas.md`) con aritmética entera: cargo base = `total * peso / suma` (división entera); resto = `total * peso mod suma`. Los pesos faltantes van a los mayores restos.
 - **Desempate:** `UNIT.sort_order`, entero estable y único por comunidad (menor `sort_order` gana). No se usa el código de la unidad.
 - **Supuesto (a validar):** cada cuenta (gasto ordinario, fondo de reserva, extraordinarios) se prorratea por separado y la suma de sus cargos cuadra con su propio total. Así, el total del periodo también cuadra.
+- **Foto de participaciones:** al emitir se guarda en `PERIOD_UNIT_SHARE` la base, el peso y el `sort_order` de cada unidad participante. Los recálculos y ajustes de ese periodo usan la foto, no los valores actuales de `UNIT`, para que sean reproducibles.
+- No se crea `CHARGE` ni movimiento para cargos de $0.
 
 **Libro de movimientos** *(ADR 0004)*
 
 - `LEDGER_ENTRY` es de solo inserción (sin `UPDATE` ni `DELETE`, reforzado con permisos de base de datos y trigger). `kind` = `debit` (cargo, interés, multa) o `credit` (pago, nota de crédito); `amount_clp` siempre positivo; `account` separa gasto ordinario, fondo de reserva y otros.
+- **Apertura:** tipo de movimiento `opening` (débito o crédito por unidad y cuenta, con referencia de origen) para cargar saldos iniciales en la migración. El detalle queda para una spec futura de migración.
 - **El libro es la fuente de verdad.** `CHARGE` es el detalle del cargo; invariante: cada cargo tiene exactamente un movimiento con el mismo monto, cuenta, unidad y periodo, y ambos se crean en la misma transacción.
 - **Saldo** de una unidad = débitos − créditos. No existe columna de saldo editable; si por rendimiento se necesita, se usa una vista o saldos de cierre generados al cerrar, verificables contra el libro.
 
 **Periodos** *(ADR 0004)*
 
-- Estados `draft` → `issued` → `closed`. Al emitir se generan cargos y movimientos en una transacción y se verifica que cada cuenta cuadre con su total.
+- Estados `draft` → `issued` → `closed`. Al emitir se generan cargos y movimientos en una transacción y se verifica que cada cuenta cuadre con su total. **Al emitir el periodo M se crea automáticamente el borrador M+1**, así siempre existe un único borrador vigente.
 - Un periodo `closed` no admite inserciones con su `period_id` (trigger).
-- **Supuesto (a validar):** una corrección a un periodo cerrado es un movimiento nuevo en el periodo siguiente, con `adjusts_entry_id` al original. Si ese periodo no existe, se crea en `draft`; si está en `draft`, el ajuste se agrega ahí.
-- **Supuesto (a validar):** un pago que llega después del cierre se imputa al periodo abierto según su fecha de registro (`recorded_at`) y conserva la fecha real de pago (`paid_on`).
+- **Regla única:** todo ajuste, pago tardío o reverso que llega después de emitir un periodo se registra en el **periodo en borrador vigente**. Los ajustes y reversos llevan `adjusts_entry_id` al movimiento original; los pagos conservan `paid_on` (fecha real de pago) y `recorded_at` (fecha de registro).
 
 **Pagos y conciliación**
 
@@ -171,7 +178,7 @@ Todas las tablas de negocio llevan `community_id` (omitido en el diagrama), `cre
 - Conciliar crea registros de asignación; nunca edita el pago ni la línea.
 - La imputación de un pago a cargos específicos sigue pendiente (pregunta abierta).
 
-**Reproducibilidad:** con el libro, los gastos, las bases de prorrateo, `sort_order` y los valores UF, cualquier cargo y saldo se puede recalcular y comparar.
+**Reproducibilidad:** con el libro, los gastos, la foto de participaciones del periodo y los valores UF, cualquier cargo y saldo se puede recalcular y comparar.
 
 ## 5. Auditoría y datos personales (Ley 21.719)
 
@@ -216,12 +223,11 @@ Todas las tablas de negocio llevan `community_id` (omitido en el diagrama), `cre
 
 1. **Supuestos de este documento:** confirmar o corregir cada **Supuesto (a validar)**, en especial bases de prorrateo, bloqueo de emisión si las alícuotas no suman 100 %, conversión UF en la fecha de emisión y conciliación N:M.
 2. **Empresa administradora:** ¿el administrador es siempre una persona, o hay que modelar una empresa con varios empleados?
-3. **Arrendatario:** ¿ve la deuda acumulada de la unidad anterior a su arriendo, o solo los cargos desde su ingreso?
-4. **Comité:** ¿qué acciones debe aprobar según la Ley 21.442 o el reglamento (p. ej. cierre de periodo, gastos extraordinarios)?
-5. **Conserje:** ¿qué datos de residentes necesita realmente para visitas y encomiendas?
-6. **Imputación de pagos:** ¿un pago parcial se aplica primero a la deuda más antigua, a intereses y multas, o según reglamento?
-7. **Intereses y multas por mora:** ¿entran al MVP?
-8. **UF:** ¿qué fuente oficial se usa para el valor diario?
-9. **Retención de datos:** plazos para visitas, bitácora y ex residentes (requiere asesoría legal, Ley 21.719).
-10. **Transferencia internacional:** Sentry y el proveedor de WhatsApp procesan datos fuera de Chile. ¿Se acepta con datos minimizados?
-11. **Periodo:** ¿siempre es un mes calendario?
+3. **Comité:** ¿qué acciones debe aprobar según la Ley 21.442 o el reglamento (p. ej. cierre de periodo, gastos extraordinarios)?
+4. **Conserje:** ¿qué datos de residentes necesita realmente para visitas y encomiendas?
+5. **Imputación de pagos:** ¿un pago parcial se aplica primero a la deuda más antigua, a intereses y multas, o según reglamento?
+6. **Intereses y multas por mora:** ¿entran al MVP?
+7. **UF:** ¿qué fuente oficial se usa para el valor diario?
+8. **Retención de datos:** plazos para visitas, bitácora y ex residentes (requiere asesoría legal, Ley 21.719).
+9. **Transferencia internacional:** Sentry y el proveedor de WhatsApp procesan datos fuera de Chile. ¿Se acepta con datos minimizados?
+10. **Periodo:** ¿siempre es un mes calendario?
