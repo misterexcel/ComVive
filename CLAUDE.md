@@ -71,6 +71,7 @@ Flujo del tablero: Backlog → Especificación → Lista para desarrollo → En 
 ## Convenciones
 
 - Idioma: código, nombres de variables y commits en inglés; documentación, especificaciones y textos de la interfaz en español de Chile.
+- README bilingüe: `README.md` (español) y `README.en.md` (inglés) se actualizan siempre juntos, en el mismo commit.
 - Commits con formato Conventional Commits (`feat:`, `fix:`, `test:`, `docs:`).
 - Especificaciones: una por módulo en `docs/specs/<modulo>.md`, con la plantilla de `docs/specs/_plantilla.md`.
 - ADR: `docs/adr/NNNN-titulo.md`.
