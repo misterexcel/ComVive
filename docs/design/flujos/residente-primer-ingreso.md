@@ -20,7 +20,7 @@ El método de autenticación depende del ADR 0005. **Supuesto (a validar; UX-7):
 - **Respuesta neutra:** después de escribir el RUT, la pantalla siempre dice "Si el RUT está registrado, te enviamos un código a {contacto enmascarado}". Si el RUT no existe, la pantalla es la misma, sin contacto.
 - **Límites (menor 12; arquitectura §3):** los fallos cuentan por (RUT, dispositivo) y por IP, no solo por RUT, para que nadie bloquee el ingreso de otra persona escribiendo su RUT. Los envíos de código tienen su propio límite.
 - **Privacidad (menor 13):** pantalla informativa, no de aceptación. Los permisos opcionales (notificaciones push y WhatsApp) se piden aparte y se pueden negar sin perder acceso.
-- **404 y 403 neutros (menor 15):** "No encontramos lo que buscas o no tienes acceso", exista o no el recurso.
+- **Errores neutros (spec, "Respuestas de error"):** 404 `NOT_FOUND`: "No encontramos lo que buscas o no tienes acceso", exista o no el recurso. 403 `FORBIDDEN`, solo si la persona ve el recurso pero su rol no permite la acción: "Tu rol no permite esta acción".
 
 ## Diagrama
 
@@ -62,7 +62,7 @@ flowchart TD
 
 **Aceptar (residente)**
 
-1. **Mensaje** genérico, para no exponer datos si el contacto está equivocado: "Te invitaron a ComVive para ver y pagar tu gasto común. Abre el enlace para continuar."
+1. **Mensaje** genérico, para no exponer datos si el contacto está equivocado: "Te invitaron a ComVive para ver y pagar tu gasto común. Abre el enlace para continuar." Si la invitación es de un arrendatario, agrega el texto de S-44 del paso 8, que no contiene datos de la comunidad ni de la unidad.
 2. Si no tiene la app, el enlace lleva a la tienda y la app retoma la invitación al abrirse.
 3. **Bienvenida genérica:** "Para continuar, ingresa tu RUT." No muestra la comunidad ni la unidad.
 4. **RUT:** con formato automático (`12.345.678-9`) y validación del dígito verificador.
@@ -74,6 +74,7 @@ flowchart TD
    - Qué datos: RUT, nombre, contacto, unidad, cargos y pagos.
    - Para qué: cobrar el gasto común y avisarte de cobros y pagos.
    - Quién más los ve: el administrador; el comité ve tu nombre, unidad, alícuota y deuda, con el RUT enmascarado y sin tus contactos (solo propietarios).
+   - **Solo para el arrendatario** (spec, "Datos del arrendatario que ve el propietario", S-44, CA-60), también en el mensaje de invitación: "El propietario de la unidad puede ver tu nombre, tu deuda de gasto común y los pagos que se aplican a ella. La administración de la comunidad ve todos tus datos de cobro".
    - Tus derechos y cómo ejercerlos: enlace "Ejercer mis derechos" (también en Más > Privacidad).
    - Enlace a la política completa.
 9. **Permisos opcionales (menor 13):**

@@ -6,7 +6,7 @@ Superficie: modo conserjería en tablet y app residente
 Alcance: **Posterior.** No entra al MVP hasta que exista la especificación de conserjería.
 Referencias: `docs/arquitectura.md` §3 y §5 (el conserje ve nombre y unidad, sin RUT ni deudas)
 
-Este flujo es una referencia de diseño, no define reglas de negocio. Se eligió encomiendas antes que visitas porque necesita menos datos personales: unidad, destinatario y descripción, frente al nombre, RUT y patente de terceros de una visita, cuya retención aún no está definida (arquitectura §8, pregunta 9).
+Este flujo es una referencia de diseño, no define reglas de negocio. Se eligió encomiendas antes que visitas porque necesita menos datos personales: unidad, destinatario y descripción, frente al nombre, RUT y patente de terceros de una visita, cuya retención aún no está definida (arquitectura §8, pregunta "Retención de datos").
 
 ## Diagrama
 

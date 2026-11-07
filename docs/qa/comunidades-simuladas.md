@@ -58,7 +58,7 @@ Edificio de 4 departamentos con prorrateo por alícuota. Caso base sin redondeo.
 | Unidad | Alícuota | Ocupante |
 | --- | --- | --- |
 | Depto 101 | 20,00 % | Propietario |
-| Depto 102 | 25,00 % | Arrendatario (sin ocupación registrada en CA-1 a CA-21: sus cargos van al ámbito `owner`; ver CA-22) |
+| Depto 102 | 25,00 % | Propietario y, según el escenario, un arrendatario: sin ocupación registrada en CA-1 a CA-21 (cargos en el ámbito `owner`); desde CA-22, ocupaciones O-1 a O-5 (ver "Comunidad A · personas y ocupaciones") |
 | Depto 201 | 25,00 % | Propietario |
 | Depto 202 | 30,00 % | Propietario |
 
@@ -89,6 +89,31 @@ Con redondeo por cuenta el resultado es el mismo, porque ninguna cuenta tiene de
 **Escenario de pago parcial:** Depto 101 paga $100.000. Saldo esperado: 210.000 − 100.000 = **$110.000 adeudado**.
 
 El fondo es un porcentaje de los gastos ordinarios configurado por comunidad, nunca bajo 5 % (`docs/specs/gasto-comun.md`, regla D-2). Aquí se usa 5 % (500 pb), el valor por defecto de los criterios de aceptación.
+
+### Comunidad A · personas y ocupaciones (datos de prueba)
+
+Personas ficticias para los casos de `docs/qa/casos/gasto-comun.md`. Los RUT tienen dígito verificador válido (módulo 11) y son inventados. Ámbitos con los identificadores de la spec: `owner` y `occupancy` con su `occupancy_id`.
+
+| Persona | RUT | Rol en la Comunidad A | Actor en los casos | Casos |
+| --- | --- | --- | --- | --- |
+| Carolina Lagos | 10.987.654-2 | Administradora; no es propietaria de ninguna unidad | `admin-A` | Todos; CA-64 |
+| Héctor Molina | 11.223.344-K | Segundo administrador | `admin2-A` | CA-39, CA-40, CA-43, CA-56, CA-57 |
+| Ana Pérez | 12.345.678-5 | Propietaria del Depto 101; en CA-43 también administradora (dato de escenario) | `propietario-101` | CA-43, CA-46, CA-64 |
+| Luis Muñoz | 12.345.670-K | Propietario del Depto 102 (RUT fijado en CA-44 de la spec rev. 4, distinto del de la propietaria del Depto 101) | `propietario-102` | CA-29, CA-44, CA-60 |
+| Rosa Díaz | 14.682.035-2 | Propietaria del Depto 201 e integrante del comité desde CA-43 | `comite-A` | CA-43, CA-57, CA-63 (propietaria que vende), CA-64 |
+| Marco Silva | 18.234.765-5 | Propietario del Depto 202 | — | CA-31, CA-40 |
+| Juan Castro | 9.876.543-3 | Conserje | `conserje-A` | Permisos |
+
+Ocupaciones de arrendatario del Depto 102. Cada escenario es independiente: un caso usa solo la ocupación que indica. La ocupación anterior a O-1 terminó el 2026-10-31 (CA-22).
+
+| Ocupación | Arrendatario | RUT | Ingreso declarado | Registro del ingreso | `effective_from` | Término (declarado / registrado) | Casos |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| O-1 | Pedro Soto | 15.234.567-4 | 2026-11-15 | 2026-11-15 (**Supuesto (a validar):** CA-22 solo dice que ingresa ese día) | 2026-11-15 | Según el caso: 2026-12-04 / 2026-12-05 10:05 (CA-35); 2026-12-07 / 2026-12-07 (CA-54); 2026-12-08 / 2026-12-08 (CA-56); 2027-01-31 / 2027-01-31 (CA-26) | CA-22, CA-26, CA-29, CA-30, CA-32, CA-35, CA-36, CA-44, CA-47, CA-49, CA-54, CA-56, CA-60 |
+| O-2 | Camila Rojas | 16.789.012-1 | 2026-11-15 | 2026-12-03 | 2026-12-03 | 2026-12-31 / 2027-01-10 | CA-37 |
+| O-3 | Jorge Vera | 17.456.321-7 | Antes del 2026-11-01 | Antes del 2026-11-01 | Antes del 2026-11-01 | Sin término | CA-38 (unidad sin propietario registrado) |
+| O-4 | Daniela Fuentes | 13.579.246-2 | 2026-12-05 | 2026-11-25 | 2026-12-05 (programada hasta esa fecha) | Sin término. En CA-61 se **cancela** el 2026-11-26 (sin fecha de término, sin movimientos) | CA-53, CA-61 |
+| O-5 | Ignacio Paz | 20.123.456-5 | 2026-12-10 | 2026-11-28 | 2026-12-10 (programada hasta esa fecha) | Sin término | CA-61 |
+| O-6 | Tomás Reyes | 19.876.543-0 | 2026-10-01 (dato de prueba) | 2026-10-01 | 2026-10-01 | Sin término | CA-45 |
 
 ---
 
@@ -249,6 +274,104 @@ Comprobación de la suma: 172.427 + 223.851 = 396.278; 396.278 + 236.341 = 632.6
 
 ---
 
+## Pruebas de oro de escenarios (CA-29 a CA-62)
+
+**Estado: aprobadas por el líder del proyecto (2026-11-07).** Montos que mueven dinero en los criterios de aceptación nuevos de `docs/specs/gasto-comun.md` rev. 4, calculados a mano y verificados con enteros. ID: `GOLD-<comunidad><CA>-<nn>`. Los casos que los usan están en `docs/qa/casos/gasto-comun.md`.
+
+### GOLD-A29 · Pago "Ambas" por Webpay e interés siguiente (CA-29, flag activo)
+
+Estado de partida (CA-26 después de emitir `2026-12` el 2027-01-01): ámbito `owner` $266.814 y `occupancy` O-1 $263.190. Pago confirmado el 2027-01-05: un intento de 266.814 + 263.190 = $530.004 que crea un pago por ámbito. "Vencido" se evalúa al 2027-01-05.
+
+Imputación del pago de $266.814 en `owner`:
+
+| Paso (F-5) | Débito | Vence | ¿Vencido? | Imputado | Queda del pago |
+| --- | --- | --- | --- | --- | --- |
+| 1. Intereses vencidos | Interés `2026-11` | 2026-12-11 | Sí | $1.639 | 266.814 − 1.639 = 265.175 |
+| 2. Capital vencido | Ordinario `2026-10` | 2026-11-11 | Sí | $250.000 | 265.175 − 250.000 = 15.175 |
+| 2. Capital vencido | Fondo `2026-10` | 2026-11-11 | Sí | $12.500 | 15.175 − 12.500 = 2.675 |
+| 4. No vencido | Interés `2026-12` | 2027-01-11 | No | $2.675 | 2.675 − 2.675 = 0 |
+
+Imputación del pago de $263.190 en `occupancy` O-1:
+
+| Paso (F-5) | Débito | Vence | ¿Vencido? | Imputado | Queda del pago |
+| --- | --- | --- | --- | --- | --- |
+| 4. No vencido | Interés `2026-12` | 2027-01-11 | No | $690 | 263.190 − 690 = 262.500 |
+| 4. No vencido | Ordinario `2026-12` | 2027-01-11 | No | $250.000 | 262.500 − 250.000 = 12.500 |
+| 4. No vencido | Fondo `2026-12` | 2027-01-11 | No | $12.500 | 12.500 − 12.500 = 0 |
+
+| Prueba | Resultado | Cálculo | Monto |
+| --- | --- | --- | --- |
+| GOLD-A29-01 | Saldo `owner` tras el pago | 266.814 − 266.814 | $0 |
+| GOLD-A29-02 | Saldo `occupancy` O-1 tras el pago | 263.190 − 263.190 | $0 |
+| GOLD-A29-03 | Interés `owner` al emitir `2027-01` el 2027-02-01 | $262.500 de `2026-10` del 2027-01-01 al 2027-01-04 (4 días; fecha efectiva 2027-01-05): piso(262.500 × 4 × 1.200 / 3.650.000) = piso(1.260.000.000 / 3.650.000) = piso(345,2054…) | $345 |
+
+O-1 no genera interés en esa emisión: pagó antes de su vencimiento del 2027-01-11.
+
+### GOLD-A32 · Pago manual "Ambos" (CA-32)
+
+Estado de partida (CA-22 después de emitir `2026-11`): `owner` ordinario $250.000 y fondo $12.500 de `2026-10` (vencidos); O-1 ordinario $250.000 y fondo $12.500 de `2026-11` (vencen el 2026-12-11). Pago del 2026-12-04: `owner` $100.000 y O-1 $162.500 (total $262.500).
+
+| Prueba | Ámbito | Imputación | Pendiente | Saldo del ámbito |
+| --- | --- | --- | --- | --- |
+| GOLD-A32-01 | `owner` | $100.000 al ordinario vencido de `2026-10` | ordinario 250.000 − 100.000 = 150.000; fondo 12.500 | 150.000 + 12.500 = $162.500 |
+| GOLD-A32-02 | `occupancy` O-1 | $162.500 al ordinario no vencido de `2026-11` | ordinario 250.000 − 162.500 = 87.500; fondo 12.500 | 87.500 + 12.500 = $100.000 |
+
+Comprobación: 162.500 + 100.000 = 262.500 = 525.000 − 262.500. Al anular el grupo, los dos ámbitos vuelven a $262.500.
+
+### GOLD-A33 · Anular el gasto "Aseo y artículos" de `2026-10` (CA-33)
+
+Foto de `2026-10` (alícuotas 20 %, 25 %, 25 %, 30 %). Total corregido O = 1.000.000 − 50.000 = $950.000; fondo F = (950.000 × 500 + 9.999) div 10.000 = 475.009.999 div 10.000 = $47.500. Todos los productos son exactos (restos 0).
+
+| Prueba | Unidad | Ordinario original → correcto | Nota ordinario | Fondo original → correcto | Nota fondo | Estado previo | Saldo resultante |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| GOLD-A33-01 | Depto 101 | 200.000 → 950.000 × 20 % = 190.000 | −10.000 | 10.000 → 47.500 × 20 % = 9.500 | −500 | Pagado ($210.000) | −10.000 − 500 = −$10.500 (a favor) |
+| GOLD-A33-02 | Depto 102 | 250.000 → 237.500 | −12.500 | 12.500 → 11.875 | −625 | Impago (spec CA-33) | 262.500 − 13.125 = $249.375 |
+| GOLD-A33-03 | Depto 201 | 250.000 → 237.500 | −12.500 | 12.500 → 11.875 | −625 | Impago (spec CA-33) | 262.500 − 13.125 = $249.375 |
+| GOLD-A33-04 | Depto 202 | 300.000 → 285.000 | −15.000 | 15.000 → 14.250 | −750 | Impago ($315.000) | 285.000 + 14.250 = $299.250 |
+| | **Suma** | 1.000.000 → 950.000 | **−50.000** | 50.000 → 47.500 | **−2.500** | | |
+
+Comprobación: Σ notas = −50.000 − 2.500 = −52.500; emitido corregido 950.000 + 47.500 = 997.500 = 1.050.000 − 52.500.
+
+### GOLD-B34 · Anular el único extraordinario de `2026-10` (CA-34, Comunidad B)
+
+Emisión de CA-16 por casa: ordinario $31.746, fondo $1.588 / $1.587 / $1.587 y extraordinario $100.000. El grupo (extraordinario, partes iguales) pasa de $300.000 a $0: cargo correcto $0 y nota −$100.000 por casa. El ordinario y el fondo no cambian (el extraordinario no genera recargo).
+
+| Prueba | Unidad | Emitido | Estado previo | Nota | Saldo resultante |
+| --- | --- | --- | --- | --- | --- |
+| GOLD-B34-01 | Casa 1 | 31.746 + 1.588 + 100.000 = 133.334 | Pagada | −100.000 | −$100.000 (a favor) |
+| GOLD-B34-02 | Casa 2 | 31.746 + 1.587 + 100.000 = 133.333 | Impaga | −100.000 | 31.746 + 1.587 = $33.333 |
+| GOLD-B34-03 | Casa 3 | 133.333 | Impaga (spec CA-34) | −100.000 | $33.333 |
+
+### GOLD-A39 · Emisión con el gasto "Jardinería" agregado (CA-39, versión v2)
+
+O = 1.000.000 + 10.000 = $1.010.000; F = (1.010.000 × 500 + 9.999) div 10.000 = 505.009.999 div 10.000 = $50.500. Productos exactos (restos 0).
+
+| Prueba | Unidad | Ordinario | Fondo | Total |
+| --- | --- | --- | --- | --- |
+| GOLD-A39-01 | Depto 101 | 1.010.000 × 20 % = 202.000 | 50.500 × 20 % = 10.100 | $212.100 |
+| GOLD-A39-02 | Depto 102 | 1.010.000 × 25 % = 252.500 | 50.500 × 25 % = 12.625 | $265.125 |
+| GOLD-A39-03 | Depto 201 | 252.500 | 12.625 | $265.125 |
+| GOLD-A39-04 | Depto 202 | 1.010.000 × 30 % = 303.000 | 50.500 × 30 % = 15.150 | $318.150 |
+| | **Suma** | **$1.010.000** | **$50.500** | **$1.060.500** ✔ |
+
+Comprobación: 212.100 + 265.125 = 477.225; 477.225 + 265.125 = 742.350; 742.350 + 318.150 = 1.060.500.
+
+### GOLD-A62 · Saldo del fondo de reserva con egresos y correcciones (CA-62)
+
+Saldo del fondo (regla D-5) = recargos imputados + intereses imputados + multas imputadas − egresos − correcciones de egresos (con su signo). Corrección = monto correcto − (monto original + Σ correcciones previas) (regla B-3). Partida: $37.500 de recargos de `2026-10` imputados; sin intereses, multas ni egresos.
+
+| Prueba | Fecha | Operación | Cálculo | Saldo del fondo | Advertencia |
+| --- | --- | --- | --- | --- | --- |
+| GOLD-A62-01 | 2026-11-20 | Egreso "Reparación bomba de agua" $30.000 | 37.500 − 30.000 | $7.500 | No |
+| GOLD-A62-02 | 2026-11-25 | Egreso "Cambio de cerradura portón" $20.000 | 7.500 − 20.000 | −$12.500 | Sí (egreso) |
+| GOLD-A62-03 | 2026-12-03 | Corrección de la cerradura a $15.000: 15.000 − (20.000 + 0) = −5.000 | −12.500 − (−5.000) | −$7.500 | Sí (corrección) |
+| GOLD-A62-04 | Después | Anulación de la cerradura: 0 − (20.000 + (−5.000)) = −15.000 | −7.500 − (−15.000) | $7.500 | No |
+| GOLD-A62-05 | Después | Correcciones rechazadas (monto igual al vigente, −$1.000, anular lo ya anulado) | Sin cambio | $7.500 | — |
+
+Comprobación con la fórmula completa: 37.500 − (30.000 + 20.000) − (−5.000 − 15.000) = 37.500 − 50.000 + 20.000 = $7.500. Egreso de la cerradura vigente: 20.000 − 5.000 − 15.000 = $0.
+
+---
+
 ## Prueba de oro en UF (pendiente de datos)
 
 **Supuesto (a validar):** cuando un gasto está expresado en UF, el **total** de la cuenta se convierte a CLP una sola vez, con el valor de la UF de la fecha que fije la especificación, y se redondea a peso entero; luego ese total en CLP se prorratea con la regla del resto mayor. Nunca se convierte el cargo de cada unidad por separado. El valor en UF y su fecha se guardan aparte.
@@ -268,6 +391,8 @@ Para pruebas basadas en propiedades (fast-check), con cualquier total entero no 
 5. Una unidad con peso 0 tiene cargo $0.
 6. Con redondeo por cuenta, la suma de cada cuenta iguala su propio total.
 7. El total del fondo de un grupo nunca queda bajo su porcentaje y lo supera en menos de un peso: `O × pb ≤ F × 10.000 < O × pb + 10.000`.
+
+Rangos de los generadores (spec rev. 4): totales de $0 a $9.999.999.999 (regla B-6) y porcentaje del fondo de 500 a 5000 pb (regla D-2). Las propiedades de pagos, ámbitos, traspasos y plataforma están en `docs/qa/casos/gasto-comun.md` (PROP-GC-20 a PROP-GC-34).
 
 Casos borde con resultado fijo (supuestos a validar):
 

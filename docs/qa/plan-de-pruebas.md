@@ -28,13 +28,15 @@ Proporción orientativa: muchas unitarias y de propiedades, integración para ca
 | 1 | Saldos | Saldo que no cuadra con los movimientos | Unitarias, propiedades, integración (no existe campo de saldo editable) | Obligatorio |
 | 1 | Periodos cerrados | Modificación de un periodo cerrado | Integración: toda escritura sobre periodo cerrado se rechaza; corrección solo como ajuste en el periodo siguiente | Obligatorio |
 | 1 | Conciliación | Pago asignado a la unidad equivocada, duplicado o cartola importada dos veces | Unitarias, propiedades, integración, pruebas de oro con cartolas simuladas | Obligatorio |
+| 1 | Imputación de pagos y Webpay | Pago aplicado a la deuda o al ámbito equivocado, pago duplicado, grupo anulado a medias, intento en revisión mal resuelto | Unitarias, propiedades, integración, pruebas de oro de escenarios (GOLD-A29, GOLD-A32) | Obligatorio |
+| 1 | Intereses por mora | Interés sobre el tope legal, días cobrados dos veces o perdidos | Unitarias, propiedades, integración | Obligatorio |
 | 1 | Aislamiento entre comunidades | Un usuario ve o modifica datos de otra comunidad | Integración con el patrón de la sección 4, en cada endpoint | Obligatorio |
+| 1 | Aislamiento por ámbito (propietario y arrendatario) | Un arrendatario ve la deuda del propietario, o un residente ve más de lo que define la spec | Integración (sección 4.1) | Obligatorio |
+| 1 | Aislamiento de plataforma (Soporte ComVive, EX-1) | El equipo ComVive ve o escribe datos de negocio fuera de la vista mínima | Integración y base de datos (sección 4.2) | Obligatorio |
 | 2 | Permisos por rol | Un rol ejecuta acciones que no le corresponden | Integración con matriz rol × acción por endpoint (sección 5) | Obligatorio |
 | 3 | Datos personales (Ley 21.719) | Exposición de RUT, deudas o visitas | Integración: respuestas sin campos innecesarios por rol; auditoría de lecturas y escrituras (sección 5.1) | Recomendado |
 
-Reglas de TDD: es obligatorio en gasto común (incluidos redondeo, saldos y periodos cerrados), conciliación, permisos y aislamiento. La prueba se escribe y se ve fallar antes de escribir el código; la revisión cruzada verifica en el historial que la prueba precede a la implementación.
-
-Nota: el líder del proyecto aprobó el 2026-11-07 ampliar el TDD obligatorio en CLAUDE.md a intereses por mora, imputación de pagos (incluido Webpay) y aislamiento.
+Reglas de TDD: es obligatorio en gasto común (incluidos redondeo, saldos y periodos cerrados), intereses por mora, imputación de pagos (incluido Webpay), conciliación, permisos y aislamiento (entre comunidades, por ámbito y de plataforma), como fija `CLAUDE.md`. La prueba se escribe y se ve fallar antes de escribir el código; la revisión cruzada verifica en el historial que la prueba precede a la implementación.
 
 ### 2.1 Supuestos de cálculo (a validar)
 
@@ -52,6 +54,7 @@ Nota: el líder del proyecto aprobó el 2026-11-07 ampliar el TDD obligatorio en
 - La fuente de verdad es `docs/qa/comunidades-simuladas.md`. Cada comunidad trae sus datos, el cálculo paso a paso y el resultado esperado.
 - Un monto esperado solo es válido si muestra su cálculo y fue aprobado por el líder del proyecto. La validación por un contador se exige **antes del Piloto**; hasta entonces los montos se basan en los supuestos documentados.
 - Cobertura actual: Comunidad A (alícuota sin redondeo y pago parcial), B (redondeo con empate por `sort_order`), C (redondeo con varios pesos a repartir), C por cuenta (`GOLD-CE`, detecta el redondeo del total combinado; aprobada el 2026-11-07), D (alícuotas en escala 10^-6, fondo con techo y redondeo por cuenta).
+- Escenarios de la spec rev. 4, aprobados por el líder del proyecto (2026-11-07): pago "Ambas" por Webpay e interés siguiente (`GOLD-A29`), pago manual "Ambos" (`GOLD-A32`), anular gasto (`GOLD-A33` y `GOLD-B34`) emisión con la versión nueva del borrador (`GOLD-A39`) y saldo del fondo con egresos y correcciones (`GOLD-A62`).
 - Casos de prueba derivados de cada especificación: `docs/qa/casos/`. Gasto común: [`docs/qa/casos/gasto-comun.md`](casos/gasto-comun.md).
 - Pendiente de datos: prueba de oro en UF (total UF convertido una vez a CLP y luego prorrateado).
 - Pendiente: comunidades para conciliación (incluida una línea de cartola que cubre varias unidades), multas e intereses y ajustes en periodo siguiente.
@@ -66,7 +69,7 @@ Nota: el líder del proyecto aprobó el 2026-11-07 ampliar el TDD obligatorio en
 
 ### 3.3 Propiedades (fast-check)
 
-Generadores: total entero no negativo y lista no vacía de **pesos enteros no negativos arbitrarios** (al menos uno mayor que 0), con `sort_order` únicos. No se generan "porcentajes que suman 100", porque eso esconde el caso de alícuotas que no suman 100 %.
+Generadores: total entero no negativo y lista no vacía de **pesos enteros no negativos arbitrarios** (al menos uno mayor que 0), con `sort_order` únicos. No se generan "porcentajes que suman 100", porque eso esconde el caso de alícuotas que no suman 100 %. Los rangos siguen la spec vigente: montos de $0 a $9.999.999.999 (regla B-6), como `bigint`; porcentaje del fondo de 500 a 5000 pb (regla D-2). Los valores fuera de rango se generan aparte, solo para probar el rechazo. El detalle por módulo está en los casos (gasto común: PROP-GC-01 a PROP-GC-34).
 
 1. La suma de los cargos es exactamente el total emitido.
 2. Cada cargo difiere de su cargo exacto en menos de un peso.
@@ -77,6 +80,9 @@ Generadores: total entero no negativo y lista no vacía de **pesos enteros no ne
 7. El saldo de una unidad es siempre la suma de sus cargos menos la suma de sus abonos.
 8. Conciliación N:M: para cada línea de cartola, la suma de lo asignado a pagos es menor o igual al monto de la línea; una línea puede cubrir pagos de varias unidades y un pago puede cubrirse con varias líneas.
 9. Idempotencia de importación: importar dos veces la misma cartola no crea líneas duplicadas ni cambia ningún saldo.
+10. Imputación por ámbito: un crédito solo se imputa a débitos de su mismo ámbito y su remanente queda a favor en ese ámbito; un cobro de varios ámbitos crea exactamente un pago por ámbito y la suma de esos pagos es el monto cobrado.
+11. Traspaso: al terminar una ocupación, su ámbito queda en $0 y el ámbito `owner` recibe exactamente su saldo; el saldo de la unidad no cambia.
+12. Escritura acotada: ninguna operación de un actor (incluido Soporte ComVive) inserta filas fuera de su comunidad, ni fuera de la unidad y los ámbitos que la regla permite.
 
 ### 3.4 Regla de bloqueo
 
@@ -86,7 +92,7 @@ Las pruebas de oro y de propiedades corren en **todo PR**, toque o no un cálcul
 
 Todo endpoint nuevo que exponga datos de negocio lleva este patrón estándar, como prueba de integración:
 
-**Preparación:** Comunidad A y Comunidad B, cada una con datos propios (unidades, personas con RUT, cargos, pagos, visitas). Actores de A: `admin-A`, `residente-A` (propietario de una unidad de A), `conserje-A` y `ex-residente-A` (membresía vencida). Cada caso se ejecuta con todos los actores de A que tengan acceso al endpoint.
+**Preparación:** Comunidad A y Comunidad B, cada una con datos propios (unidades, personas con RUT, cargos, pagos, intentos Webpay, visitas). Actores de A: `admin-A`, `comite-A`, `propietario-A` (propietario de una unidad de A), `arrendatario-A` (ocupación vigente en una unidad de A), `conserje-A` y `ex-residente-A` (membresía vencida). Cada caso se ejecuta con todos los actores de A que tengan acceso al endpoint.
 
 **Dos vías obligatorias** en ISO-1, ISO-4 e ISO-5:
 
@@ -107,14 +113,48 @@ Todo endpoint nuevo que exponga datos de negocio lleva este patrón estándar, c
 
 Después de cada caso se verifica en base de datos que B (y la unidad ajena de A en ISO-9) no cambió. La revisión de seguridad rechaza endpoints sin estas pruebas.
 
-**Códigos de respuesta (cerrado como supuesto a validar):**
+**Códigos de respuesta (decisión del líder del proyecto, 2026-11-07; M-4 de la revisión 3 del diseño):** 404 si el actor **no puede ver** el recurso; 403 **solo si lo ve** pero su rol no permite la acción. Orden de validación fijo: sesión → membresía (o rol de plataforma) → visibilidad del recurso → permiso → estado (409) → reglas de negocio (422). Así la respuesta nunca depende de si el recurso existe.
 
 | Situación | Código |
 | --- | --- |
 | Sin sesión | 401 |
 | Sin membresía vigente en la comunidad, o recurso de otra comunidad | 404 |
-| Con membresía vigente, pero el rol no tiene el permiso | 403 |
-| Unidad ajena dentro de la misma comunidad (residente) | 404 |
+| Residente pide una unidad ajena, o un movimiento, pago o intento fuera de los ámbitos que ve | 404 |
+| Rol que no ve ese tipo de recurso (p. ej. el conserje pide un aviso; el comité pide las tareas del administrador; un ex miembro del comité pide el registro de copropietarios) | 404 |
+| Sesión de comunidad en una ruta `/platform/...`, o sesión de plataforma en una ruta `/communities/...` | 404 |
+| El actor ve el recurso, pero su rol no permite la acción (p. ej. el comité ve el periodo e intenta emitirlo) | 403 |
+
+Todo 404 trae el mismo cuerpo (`NOT_FOUND`, "No encontramos lo que buscas o no tienes acceso") y todo 403 el mismo (`FORBIDDEN`, "Tu rol no permite esta acción"). Cada prueba de rechazo verifica además que un id inexistente da la misma respuesta que un id ajeno.
+
+### 4.1 Aislamiento por ámbito (propietario y arrendatario)
+
+Dentro de una misma unidad, lo que ve un residente se decide por el **ámbito** de cada movimiento (`owner` o la ocupación del arrendatario), nunca comparando fechas. Todo endpoint de residente sobre cargos, movimientos, pagos, imputaciones, intentos, avisos o comprobantes lleva estos casos:
+
+| Caso | Acción | Resultado esperado |
+| --- | --- | --- |
+| ISO-10 | El arrendatario lee un movimiento, pago, cargo o saldo del ámbito `owner` de su unidad | 404; listas y saldos solo con su ámbito |
+| ISO-11 | El arrendatario lee el pago del otro ámbito de un grupo, el grupo de pagos o un intento que no inició | 404; ninguna respuesta trae montos del otro ámbito ni el total del grupo |
+| ISO-12 | Ingreso retroactivo: el arrendatario lee un cargo `owner` emitido después de su fecha de ingreso declarada | 404 |
+| ISO-13 | Ocupación programada, terminada o venta: el arrendatario antes de su inicio efectivo, el ex arrendatario o el ex propietario después del registro, leen o pagan en la unidad | 404 |
+| ISO-14 | El propietario lee el ámbito del arrendatario vigente | Solo nombre, deuda, cargos y pagos de ese ámbito; sin RUT, teléfono ni correo; un registro de auditoría por petición |
+| ISO-15 | El propietario lee datos de una ocupación terminada o un intento del arrendatario | 404 |
+
+### 4.2 Aislamiento de plataforma (Soporte ComVive, excepción EX-1)
+
+Soporte ComVive (`platform_support`) es la única excepción a la regla 4 de `CLAUDE.md` en el módulo de gasto común: ve solo los intentos Webpay en revisión, con una vista mínima. Además de las pruebas de cada endpoint de `/platform/...`:
+
+| Caso | Acción | Resultado esperado |
+| --- | --- | --- |
+| ISO-P1 | Soporte lee un intento en `in_review` o `reversal_pending` | Solo los campos de EX-1 (prueba de contrato contra una lista cerrada); sin nombres, RUT, contactos, deudas, saldos ni imputaciones |
+| ISO-P2 | Soporte pide cualquier ruta `/communities/...` o un intento en otro estado | 404 |
+| ISO-P3 | La vista previa de una resolución | Solo campos de EX-1 más el pago a crear (monto, tipo de ámbito y periodo) |
+| ISO-P4 | Una resolución que registra un pago | Solo inserta filas de la comunidad, la unidad y el ámbito del intento; si la ocupación terminó, también el ámbito `owner` de esa unidad; ninguna otra (se verifica en todas las tablas escritas) |
+| ISO-P5 | Sesión de comunidad (incluido un administrador) en `/platform/...`; cada rol de plataforma en los endpoints del otro | 404 |
+| ISO-P6 | Grant de plataforma revocado o vencido | Sin acceso en la petición siguiente |
+| ISO-P7 | El rol de base de datos de plataforma consulta tablas base | Rechazado por PostgreSQL; solo lee su vista |
+| ISO-P8 | Cualquier petición de plataforma, lecturas incluidas | Exactamente un registro de auditoría; si la auditoría falla, la petición falla |
+
+Operaciones ComVive (`platform_operations`) no ve datos de negocio: toda lectura de negocio le responde 404 (ISO-P5).
 
 ## 5. Permisos por rol
 
@@ -127,22 +167,27 @@ Para cada endpoint se prueba la matriz completa rol × acción tomada de la tabl
 | Residente propietario | Solo sus unidades |
 | Residente arrendatario | Solo la unidad que ocupa; sin acciones reservadas al propietario |
 | Conserje | Solo lo operativo (visitas, encomiendas); sin deudas ni RUT completos |
+| Ex residente o ex miembro del comité | Nada de lo que veía con el rol perdido |
+| Soporte ComVive (`platform_support`) | Solo los intentos Webpay en revisión, con la vista mínima EX-1 (sección 4.2) |
+| Operaciones ComVive (`platform_operations`) | Alta de comunidades y rol de administrador; ningún dato de negocio |
 | Sin sesión | Nada |
 
-Cada celda permitida tiene una prueba de éxito y cada celda denegada una prueba de rechazo con los códigos de la sección 4. Si la plantilla de especificación tiene una sola fila "Residente", la especificación debe separar propietario y arrendatario antes de pasar a "Lista para desarrollo".
+Cada celda permitida tiene una prueba de éxito y cada celda denegada una prueba de rechazo con los códigos de la sección 4: **404 si el actor no ve el recurso y 403 solo si lo ve**. La matriz incluye pruebas del orden de validación (por ejemplo, un rol sin permiso sobre un periodo ya emitido recibe 403 y no 409). Si la plantilla de especificación tiene una sola fila "Residente", la especificación debe separar propietario y arrendatario antes de pasar a "Lista para desarrollo".
 
 ### 5.1 Auditoría de lecturas (supuesto a validar)
 
 - Se crea **un registro de auditoría por petición** que devuelva RUT completo, deuda de terceros o datos de visitas.
-- No se audita al residente cuando consulta su propia cuenta.
-- Pruebas: cada endpoint de esos tipos verifica que se crea exactamente un registro por petición (con actor, comunidad, recurso y fecha) y que la consulta del residente sobre su cuenta no crea registro.
+- No se audita al residente cuando consulta su propio ámbito.
+- **Sí** se audita al propietario cuando lee el ámbito del arrendatario vigente de su unidad: es deuda de un tercero (spec de gasto común, S-44).
+- Se audita **toda** petición de Soporte ComVive, lecturas incluidas (EX-1), y todo aviso enviado a un pagador sin membresía.
+- Pruebas: cada endpoint de esos tipos verifica que se crea exactamente un registro por petición (con actor, comunidad, recurso y fecha) y que la consulta del residente sobre su propio ámbito no crea registro.
 
 ## 6. Criterios de salida por etapa
 
 | Etapa | Criterio de salida |
 | --- | --- |
 | 0 · Cimientos | Plan de pruebas y comunidades simuladas aprobados por el líder del proyecto, con los supuestos de cálculo documentados; checks `docs` y `secrets` de la CI marcados como obligatorios en la protección de `main`. |
-| 1 · Diseño | Cada especificación del MVP tiene casos de prueba derivados (uno por CA y por caso borde) revisados; pruebas de oro cubren gasto común, pagos y conciliación; matriz de permisos con los cinco actores definida por módulo. |
+| 1 · Diseño | Cada especificación del MVP tiene casos de prueba derivados (uno por CA y por caso borde) revisados; pruebas de oro cubren gasto común, pagos y conciliación; matriz de permisos definida por módulo con todos los actores de la sección 5 (incluidos ex residentes y roles de plataforma) y la regla 404/403; casos de aislamiento por ámbito y de plataforma para cada endpoint que los requiera. |
 | 2 · MVP | Suite completa en verde en CI; pruebas de oro y propiedades automatizadas, corriendo en todo PR y bloqueantes; cada endpoint con pruebas de aislamiento (dos vías) y permisos; E2E de flujos críticos en web y app; cobertura de líneas mayor o igual a 90 % en módulos de dinero y permisos. |
 | 3 · Piloto | **Antes de iniciar:** regla de redondeo, supuestos de cálculo y pruebas de oro validados por un contador. Durante: datos reales de la comunidad piloto migrados y cuadrados contra su contabilidad anterior; al menos un cierre de mes completo validado por el administrador; cero defectos abiertos de dinero, aislamiento o permisos. |
 | 4 · Lanzamiento | Pruebas de carga y de recuperación ante fallos; revisión de seguridad externa sin hallazgos críticos; auditoría de datos personales según Ley 21.719 aprobada; regresión completa en verde. |
@@ -191,7 +236,10 @@ Las semillas de fast-check que encuentren un fallo se registran en el reporte y 
 - [ ] La CI de la Etapa 0 usa `gitleaks` para detectar secretos. ¿Se confirma con un ADR? (Arquitecto)
 - [ ] ¿Las pruebas E2E de la app (Maestro) corren en cada PR o solo antes de publicar con EAS? (Arquitecto)
 
+Cerradas:
+
+- [x] Códigos de respuesta (decisión del líder del proyecto, 2026-11-07): 404 si el actor no puede ver el recurso; 403 solo si lo ve pero no puede hacer la acción (sección 4).
+
 Cerradas como supuesto (a validar):
 
-- [x] Códigos de respuesta: 404 sin membresía o recurso de otra comunidad; 403 con membresía sin permiso; 404 para unidad ajena en la misma comunidad (sección 4).
-- [x] Auditoría de lecturas: un registro por petición con RUT completo, deuda de terceros o visitas; no se audita al residente sobre su propia cuenta (sección 5.1).
+- [x] Auditoría de lecturas: un registro por petición con RUT completo, deuda de terceros o visitas; no se audita al residente sobre su propio ámbito, pero sí al propietario que lee el ámbito del arrendatario (sección 5.1; spec S-44 y P-34).

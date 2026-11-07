@@ -34,7 +34,7 @@ Aprobación: líder del proyecto
 >   - Flag activo con fecha explícita en CA-6 y CA-8.
 > - **Otros (m-F a m-J):** criterios simples para el débito nuevo, la reclasificación, el cierre y la fecha de emisión. El movimiento de apertura usa el código `opening`. CA-9 queda coherente con la Comunidad A.
 >
-> **Revisión 3 (revisión crítica 2 del diseño, `docs/revisiones/2026-11-07-diseno-rev2.md`, y decisiones del líder del proyecto del 2026-11-07): cambios aplicados.** No se renumeró ninguna regla ni ningún CA existente; las reglas nuevas van al final de su serie y los CA nuevos son CA-29 a CA-47. Cambios:
+> **Revisión 3 (revisión crítica 2 del diseño, `docs/revisiones/2026-11-07-diseno-rev2.md`, y decisiones del líder del proyecto del 2026-11-07): cambios aplicados.** No se renumeró ninguna regla ni ningún CA existente; las reglas nuevas van al final de su serie y los CA nuevos son CA-29 a CA-52 (CA-29 a CA-47 por la revisión 2 del diseño y CA-48 a CA-52 por los hallazgos de QA). Cambios:
 >
 > - **Pago por ámbito desde la app (decisión 1, M1, M2, M3):** el propietario elige pagar su ámbito `owner`, el del arrendatario vigente o ambos; el arrendatario paga solo el suyo. Un cobro que cubre ambos ámbitos genera un pago por ámbito, agrupados por el intento Webpay o por el registro manual (modelo de `docs/arquitectura.md` §4). Bloqueo de Webpay por (unidad, ámbito). Regla F-12, cambios en F-9 y CA-29, CA-30 y CA-32.
 > - **Roles (decisión 2, M9):** el administrador otorga el rol de comité; el rol de administrador solo lo otorga el equipo de ComVive. Sección "Otorgamiento de roles" y CA-43.
@@ -59,6 +59,48 @@ Aprobación: líder del proyecto
 >   - Alcance de la clave de idempotencia (A-3.4).
 >   - Precisiones en CA-8, CA-11, CA-20, CA-26 y CA-28, y supuesto de ámbito del Depto 102 en CA-1 a CA-21.
 >   - CA nuevos CA-48 a CA-52.
+>
+> **Revisión 4 (revisión crítica 3 del diseño, `docs/revisiones/2026-11-07-diseno-rev3.md`, y decisiones del líder del proyecto del 2026-11-07): cambios aplicados.** No se renumeró ninguna regla ni ningún CA existente; los CA nuevos van desde CA-53. Cambios:
+>
+> - **Grupo de pagos (M-1):** se identifica por `payment_group_id`, que se guarda en cada pago y no vence. En Webpay es el intento; en el pago manual lo genera el servidor al registrar. Ya no depende de la clave de idempotencia, que se borra a los 30 días. Reglas F-1, F-2, F-4 y F-12; CA-32 y CA-40.
+> - **Intento de una ocupación terminada (M-2):** F-13 nombra la resolución `register_authorized` de Soporte y define el aviso por correo, sin datos de deuda, al pagador que ya no tiene acceso. CA-54.
+> - **403 o 404 (M-4, decisión del líder):** 404 si el actor no puede ver el recurso; 403 solo si lo ve pero no puede hacer la acción. Orden de validación fijo. Ajustes en "Respuestas de error", CA-24 y CA-43.
+> - **Vista previa de Soporte (M-5):** `resolution-preview` devuelve solo campos de EX-1 más el pago a crear; huella = estado, monto, tipo de ámbito final y periodo; 404 si el intento salió de la vista y 409 si el estado no corresponde dentro de ella. Reglas A-7 y F-16; CA-55.
+> - **Ocupaciones (M-6):** término de arriendo y venta en A-7, con vista previa y 409; fechas declaradas y de registro de cada ocupación; visibilidad del arrendatario por ámbito, nunca por fechas. Regla F-14; CA-56.
+> - **Comité que deja de ser propietario (M-7, decisión del líder):** el rol no se revoca automáticamente; el administrador recibe una alerta inmediata y una tarea pendiente hasta que decida. CA-57.
+> - **Textos canónicos (M-8, decisión del líder):** "Ya hay un pago en proceso para esta deuda", "Registrado por la administración", "En revisión por ComVive", "Pagado por ti" y el mensaje de `reversed`. Nueva regla F-17 "Textos canónicos de pagos".
+> - **Menores:** CA-4 con los valores vigentes de la prueba de oro D (1); permiso `committee_role.grant` y error de administrador y comité a la vez (4); tabla de errores completa y texto de `ONLINE_PAYMENT_NOT_AVAILABLE` (5); saldo de caja en G-4 (6); corrección de egresos del fondo, P-33 (7); días hábiles (8); datos del arrendatario que ve el propietario y deber de información (9); ingreso con fecha futura, F-14 (13). CA-53, CA-58, CA-59 y CA-60.
+> - **Alineación con `docs/arquitectura.md` rev. 3:** códigos de ocupaciones (`TENANT_ALREADY_ACTIVE`, `ALREADY_OWNER`, `OCCUPANCY_ALREADY_ENDED`, `END_BEFORE_START`, `END_DATE_IN_FUTURE`, `USE_OWNERSHIP_TRANSFER`, `INVALID_RUT`), `PAYMENT_ALREADY_VOIDED`, `TASK_ALREADY_RESOLVED`, rutas `payment-groups`, `effective_from`, `PUBLIC_HOLIDAY` y `review_due_on`, tarea `committee_member_not_owner`, aviso sin membresía por correo o SMS, y 404 al administrador que llama a una ruta de plataforma (CA-41).
+> - **Decisiones anteriores del líder:** en el MVP Operaciones ComVive crea las comunidades y su primer administrador; segundo factor opcional para administradores y obligatorio para los roles de plataforma; el comité usa solo la web.
+> - **Vacíos que encontró el arquitecto al alinear `docs/arquitectura.md` (rev. 4, segunda pasada):**
+>   - Definición de ocupación **cancelada** ("Definiciones").
+>   - Errores de la cancelación de un arriendo programado: 409 `OCCUPANCY_ALREADY_STARTED`, 409 `OCCUPANCY_CANCELLED`, 409 `OCCUPANCY_ALREADY_ENDED` y 422 `USE_OWNERSHIP_TRANSFER`, con orden de validación; texto de `REASON_REQUIRED` para cancelar (F-14).
+>   - Pago manual a una ocupación cancelada: 409 `OCCUPANCY_CANCELLED` (F-9).
+>   - Egresos del fondo (B-3, D-5): referencia a la autorización obligatoria (422 `AUTHORIZATION_REFERENCE_REQUIRED`, Supuesto (a validar) S-49), corrección sin diferencia (422 `CORRECTION_WITHOUT_CHANGE`), saldo del fondo negativo permitido con advertencia (Supuesto (a validar) S-50) y textos de `REASON_REQUIRED` para corregir y anular un egreso y para corregir un gasto.
+>   - "Tipo de ámbito final" como único término de la huella de plataforma (EX-1, A-7, F-16, CA-41 y CA-54); el campo del intento que lista EX-1 pasa a llamarse "tipo de ámbito del intento".
+>   - Saldo de caja en la fila "Emisión" de A-7.
+>   - Pagos del propietario anterior que ve el propietario nuevo: sin etiqueta de quién pagó (`payerKind` nulo; F-12, F-17; Supuesto (a validar) S-51; P-40).
+>   - Orden de los 422 al otorgar el rol de comité (S-34).
+>   - CA nuevos CA-61 a CA-64; preguntas P-38 a P-40.
+> - **Textos del diseño sin respaldo en la spec (UX-46, UX-48, UX-49; tercera pasada; Supuesto (a validar) S-52):**
+>   - Estado del pago propio en curso, "Tienes un pago en proceso", distinto del 409 `PAYMENT_IN_PROGRESS` (F-17).
+>   - Motivo de la corrección: el error canónico sigue siendo "Indica el motivo de la corrección" y "El motivo aparecerá en el aviso de cobro" pasa a ser la ayuda del campo (H-7).
+>   - 409 `ALREADY_COMMITTEE_MEMBER`, último en el orden de los errores de comité (S-34, CA-64).
+>   - `CORRECTION_WITHOUT_CHANGE` también en la corrección de gastos (nueva regla H-7), con textos según el caso, incluido el de un gasto o egreso ya anulado.
+>   - Advertencias de término y de venta con fecha pasada (F-14).
+>   - "Saldo a favor traspasado desde arriendo terminado el {dd-mm-aaaa}" en lugar de "Pago del arrendatario anterior…" (F-13, S-44).
+>   - Confirmaciones de la consola de Soporte y del cierre de la tarea de comité (F-17).
+>   - `INVALID_AMOUNT` con un texto propio en las rutas de corrección, donde $0 anula (B-5, B-3), y advertencia de saldo del fondo negativo con un texto para el egreso y otro para la corrección (B-3, CA-62).
+> - **Hallazgos de QA H-20 a H-27 y H-29 (`docs/qa/casos/gasto-comun.md`; cuarta pasada):**
+>   - H-20: nueva sección "Qué recursos ve cada rol" (matriz 404/403). El comprobante del arrendatario lo descargan además el administrador y el comité, no el propietario (G-7; S-53).
+>   - H-21: el tope de la suma del periodo se valida al escribir, en la vista previa y al emitir, con texto propio de `AMOUNT_TOO_LARGE` (B-6; S-55).
+>   - H-22: CA-39 precisado; con el flag apagado, un pago que deja saldo a favor imputable al emitir sí produce 409. A-7 no cambia.
+>   - H-23: `<monto>` de "Tienes un pago en revisión" es el monto iniciado (F-16, F-17).
+>   - H-24: RUT del propietario del Depto 102 en CA-44 cambia a 12.345.670-K.
+>   - H-25: el crédito de traspaso hereda el `paid_on` del crédito de origen (F-13; S-54; P-41). CA-36 corrige "capital vencido" por "no vencido", sin cambiar montos.
+>   - H-26: CA-33 y CA-34 fijan el estado de los Deptos 102 y 201 y de la Casa 3.
+>   - H-27: los rótulos de traspaso usan la fecha de registro del término (S-44, F-13, CA-35).
+>   - H-29: `SCOPE_REQUIRED` para toda petición sin asignaciones, con o sin arrendatario (F-9).
 
 ## Objetivo
 
@@ -97,39 +139,70 @@ La especificación cubre el MVP. Donde la ley o la práctica contable no son cla
 
   - En los CA, "`occupancy` O-1" es el ámbito de la ocupación O-1 (`scope = occupancy`, `occupancy_id` = O-1). Hasta la revisión 3 la spec usaba `unidad` y `ocupacion:<id>`; son lo mismo que `owner` y `occupancy`.
 - **Saldo por ámbito:** Σ débitos del ámbito − Σ créditos imputados o disponibles en ese ámbito. La suma de los saldos de todos los ámbitos es el saldo de la unidad.
-- **Ocupación:** registro de que una persona es propietaria o arrendataria de una unidad desde una fecha de ingreso y, si terminó, hasta una fecha de término. La lleva el administrador (`occupancy.write`).
-- **Ocupación vigente / terminada:** una ocupación de arrendatario está vigente desde su ingreso hasta su término registrado. Está terminada desde que se registra su término; en ese momento se hace el traspaso de la regla F-9.
+- **Ocupación:** registro de que una persona es propietaria o arrendataria de una unidad desde una fecha de ingreso y, si terminó, hasta una fecha de término. La lleva el administrador (`occupancy.write`). Cada ocupación tiene un identificador propio (`occupancy_id`) y guarda (M-6, regla F-14):
+  - la relación (propietario o arrendatario);
+  - la **fecha de ingreso declarada** y la **fecha y hora en que se registró el ingreso**, con quién lo registró;
+  - si terminó, la **fecha de término declarada** y la **fecha y hora en que se registró el término**, con quién lo registró.
+- **Inicio y fin efectivos:** el inicio efectivo es el mayor entre la fecha de ingreso declarada y la fecha de registro del ingreso; el fin efectivo es la fecha y hora de registro del término (regla F-14). Las reglas de ámbito y de acceso usan siempre las fechas efectivas, nunca las declaradas.
+- **Ocupación programada / vigente / terminada / cancelada:** una ocupación de arrendatario está **programada** mientras su inicio efectivo es futuro (ingreso con fecha futura, F-14), **vigente** desde su inicio efectivo hasta su fin efectivo y **terminada** desde que se registra su término; en ese momento se hace el traspaso de la regla F-9. Está **cancelada** desde que el administrador cancela una ocupación programada, antes de su inicio efectivo (F-14): nunca estuvo vigente, no tiene fin efectivo, no tiene movimientos ni traspaso, y no recibe cargos, pagos ni acceso. Los cuatro estados son excluyentes y una ocupación terminada o cancelada no cambia de estado. Solo una ocupación de arrendatario puede estar programada o cancelada.
 - **Traspaso:** par de movimientos enlazados (crédito en el ámbito de la ocupación y débito en el ámbito `owner`, o al revés para un saldo a favor) que mueve lo pendiente de una ocupación terminada al ámbito `owner`. Nada se edita (`docs/arquitectura.md` §4, movimientos `transfer`).
 - **Versión de la vista previa (`previewHash`):** huella del resultado que mostró una vista previa. Cambia cada vez que cambia algo que altera lo que se va a escribir (regla A-7; `docs/arquitectura.md` §4).
 - **Intento Webpay (`WEBPAY_ATTEMPT`):** una transacción Transbank, con un número de orden (`buy_order`), un monto total y uno o más ámbitos pagados (`WEBPAY_ATTEMPT_SCOPE`, uno por ámbito, con su monto). Estados: `initiated` (en curso), `confirmed`, `rejected`, `abandoned`, `in_review` (en revisión), `resolved_paid`, `reversal_pending` y `reversed` (regla F-16).
-- **Pago (`PAYMENT`):** cada pago pertenece a un solo ámbito y tiene un origen (`PAYMENT.origin`): `manual`, `webpay` o `import`. Un cobro que cubre dos ámbitos genera **un pago por ámbito**, agrupados por el intento Webpay o por el registro manual (regla F-12).
+- **Pago (`PAYMENT`):** cada pago pertenece a un solo ámbito y tiene un origen (`PAYMENT.origin`): `manual`, `webpay` o `import`. Un cobro que cubre dos ámbitos genera **un pago por ámbito**, con el mismo `payment_group_id` (regla F-1).
+- **Grupo de pagos (`payment_group_id`, M-1):** identificador que comparten los pagos nacidos de un mismo cobro. Todo pago tiene uno; un pago de un solo ámbito es un grupo de un pago. En Webpay es el identificador del intento (`WEBPAY_ATTEMPT`); en el pago manual lo genera el servidor al registrar. Se guarda en cada `PAYMENT`, nunca cambia y no vence (a diferencia de la clave de idempotencia, que se borra a los 30 días).
+- **Días hábiles (decisión del líder del proyecto, 2026-11-07; menor 8):** lunes a viernes, sin los feriados nacionales legales de Chile. Los feriados regionales no se descuentan. La fuente es el calendario oficial de feriados legales (ver "Referencias"); lo carga el equipo de ComVive en la tabla global `PUBLIC_HOLIDAY`, versionada y de solo lectura para la API, igual que la tasa CMF (`docs/arquitectura.md` §2; S-41). El vencimiento del plazo de revisión de un intento se calcula una vez, al entrar a revisión, y se guarda en `WEBPAY_ATTEMPT.review_due_on` (regla F-16). Un plazo de n días hábiles "desde" un evento se cuenta desde el día hábil siguiente al día del evento (hora de Chile) y vence al terminar el n-ésimo día hábil.
 
 ## Usuarios y permisos
 
 | Rol | Puede ver | Puede hacer |
 | --- | --- | --- |
 | Administrador | Todo el gasto común de las comunidades donde tiene membresía vigente, incluidos los intentos Webpay de su comunidad (`webpay_attempt.read`) y el registro de copropietarios y ocupantes completo (`owner_roster.read`) | Configurar porcentaje del fondo, plazo de vencimiento, tasa del reglamento y `sort_order` (`community.billing.configure`). Crear, editar y eliminar gastos y cargos directos en el borrador vigente (`expense.write`). Emitir (`period.issue`) y cerrar (`period.close`). Registrar y anular pagos manuales (`payment.register`, `payment.void`). Registrar ajustes, correcciones y anulaciones de gastos (`adjustment.create`). Registrar ocupaciones: ingreso y término de arrendatarios y cambios de propietario (`occupancy.write`). Otorgar y revocar el rol de comité (`committee_role.grant`). **No** otorga el rol de administrador ni resuelve intentos Webpay en revisión |
-| Comité | Lo mismo que el administrador, solo de su comunidad y solo lectura, con datos personales limitados (regla "Datos de copropietarios que ve el comité") | Descargar avisos y reportes. Nada más (ver P-4) |
-| Residente propietario | Avisos de cobro, cargos, pagos, imputaciones y saldo de **sus** unidades, por ámbito: el ámbito `owner` y el del arrendatario vigente, cada uno por separado (regla F-9). Resumen de gastos y saldo de caja de la comunidad (regla G-8) | Pagar en línea (Webpay) su ámbito `owner`, el del arrendatario vigente o ambos (`payment.pay_online`, regla F-12). Descargar sus avisos |
+| Comité | Lo mismo que el administrador, solo de su comunidad y solo lectura, con datos personales limitados (regla "Datos de copropietarios que ve el comité"). **Solo en la web** (decisión del líder, 2026-11-07): la app no tiene pantallas de comité; en la app, un miembro del comité que también es residente ve solo lo de su rol de residente | Descargar avisos y reportes. Nada más (ver P-4) |
+| Residente propietario | Avisos de cobro, cargos, pagos, imputaciones y saldo de **sus** unidades, por ámbito: el ámbito `owner` y el del arrendatario vigente, cada uno por separado (regla F-9). Del arrendatario vigente ve solo lo de la regla "Datos del arrendatario que ve el propietario". Resumen de gastos y saldo de caja de la comunidad (regla G-8) | Pagar en línea (Webpay) su ámbito `owner`, el del arrendatario vigente o ambos (`payment.pay_online`, regla F-12). Descargar sus avisos |
 | Residente arrendatario | Solo los movimientos de **su ámbito** (`occupancy`, con su `occupancy_id`), es decir, los cargos emitidos mientras era el ocupante responsable y sus intereses y ajustes (regla F-9), con el contenido de la regla G-7. Resumen de gastos de la comunidad (regla G-8) | Pagar en línea solo su ámbito (`payment.pay_online`, regla F-12). Descargar el comprobante de su cobro, no el aviso legal (regla G-7) |
 | Conserje | Nada de este módulo | Nada |
 | Ex propietario o ex residente | Nada: pierde el acceso al vencer su membresía (S-14) | Pedir su historial al administrador |
 | Soporte ComVive (rol de plataforma `platform_support`) | Solo los intentos Webpay en `in_review` o `reversal_pending`, de cualquier comunidad, con los campos de la excepción EX-1 (`platform.webpay_review.read`). Ningún otro dato de ninguna comunidad (excepción EX-1) | Resolver intentos Webpay en revisión (`platform.webpay_review.resolve`, regla F-16) |
-| Operaciones ComVive (rol de plataforma `platform_operations`; "Cuentas ComVive" en `docs/arquitectura.md` §3) | Ningún dato de negocio de las comunidades | Otorgar y revocar el rol de administrador de una comunidad (`platform.admin_role.grant`) |
+| Operaciones ComVive (rol de plataforma `platform_operations`; "Cuentas ComVive" en `docs/arquitectura.md` §3) | Ningún dato de negocio de las comunidades | En el MVP, crear comunidades y otorgar su primer administrador en el mismo alta (decisión del líder, 2026-11-07). Otorgar y revocar el rol de administrador de una comunidad (`platform.admin_role.grant`) |
 
-Respuestas de error:
+**Segundo factor (decisión del líder, 2026-11-07):** obligatorio para los roles de plataforma (Soporte ComVive y Operaciones ComVive); **opcional** para los administradores en el MVP. Exigirlo a los administradores antes del Piloto queda como sugerencia de la revisión 3 (P-36).
 
-- **403:** un rol con membresía vigente en la comunidad intenta una acción que su rol no permite. Por ejemplo, el comité intenta emitir, o el conserje intenta leer un aviso.
-- **404:** el recurso pertenece a otra comunidad, la membresía está vencida, o un residente pide una unidad que no es suya o un movimiento fuera de su ámbito. Se devuelve 404 para no revelar que el recurso existe (`docs/qa/plan-de-pruebas.md`, ISO-8). Para Soporte ComVive, todo recurso fuera de la excepción EX-1 responde 404.
-- **409:** conflicto de estado: el periodo ya fue emitido (A-3.4), la versión confirmada cambió (A-7), el pago ya fue anulado o el intento Webpay ya fue resuelto (F-16).
-- **422:** la petición es válida en forma pero una regla de negocio la impide; por ejemplo, registrar por el monto autorizado un intento que cubre dos ámbitos (F-16). Los mensajes de validación de cada regla se muestran tal como están escritos en esta especificación.
+Respuestas de error (decisión del líder del proyecto, 2026-11-07; M-4):
+
+- **Orden de validación fijo:** sesión → membresía vigente en la comunidad → **visibilidad del recurso** → permiso de la acción → reglas de negocio. La respuesta nunca depende de si el recurso existe (`docs/arquitectura.md` §2).
+- **404:** el actor **no puede ver** el recurso. Incluye: el recurso es de otra comunidad; la membresía está vencida o revocada; un residente pide una unidad que no es suya o un movimiento fuera de su ámbito; el conserje pide cualquier dato de este módulo (avisos, cargos, saldos, pagos), porque su rol no ve nada del módulo; una persona a quien se revocó el rol de comité pide una pantalla o un dato que solo ve el comité; una sesión de comunidad pide una ruta `/platform/...`, o una de plataforma pide una ruta de comunidad. Para Soporte ComVive, todo recurso fuera de la excepción EX-1 responde 404. Se devuelve 404 para no revelar que el recurso existe (`docs/qa/plan-de-pruebas.md`, ISO-8).
+- **403:** el actor **ve** el recurso pero su rol no le permite la acción. Ejemplos: el comité ve el periodo y pide emitirlo o cerrarlo; el comité ve la unidad y pide registrar un pago; el comité ve el borrador y pide crear un gasto; el comité ve el registro de copropietarios y pide otorgar el rol de comité; el administrador ve las membresías de su comunidad y pide otorgar el rol de administrador por la ruta de comunidad; el comité ve un grupo de pagos y pide anularlo; el comité ve el historial de ocupaciones y pide registrar una.
+- **Resolver un intento Webpay desde la comunidad:** no existe endpoint de resolución en las rutas de comunidad. El administrador o el comité que llama a la ruta de resolución `/platform/...` recibe **404**, porque una sesión de comunidad no ve las rutas de plataforma (`docs/arquitectura.md` §2), aunque vean el intento en "Intentos Webpay".
+- **Cuerpos neutros:** todo 404 responde el código `NOT_FOUND` y el texto "No encontramos lo que buscas o no tienes acceso"; todo 403 responde el código `FORBIDDEN` y el texto "Tu rol no permite esta acción" (`docs/arquitectura.md` §2).
+- **409:** conflicto con el estado actual del recurso sobre el que se actúa: el periodo ya fue emitido (A-3.4), la versión confirmada cambió (A-7), el pago ya fue anulado, el estado del intento Webpay no corresponde a la resolución (F-16), hay un pago en curso sobre el ámbito (F-12), la unidad ya tiene un arrendatario vigente o programado (F-14), o la ocupación elegida ya comenzó, terminó o fue cancelada (F-9, F-14).
+- **422:** la petición es válida en forma pero una regla de negocio no permite esa entrada (un monto, una fecha, un ámbito o la persona elegida). Por ejemplo, registrar por el monto autorizado un intento que cubre dos ámbitos (F-16), u otorgar el rol de comité a quien no es propietario. Los mensajes de validación de cada regla se muestran tal como están escritos en esta especificación.
+
+### Qué recursos ve cada rol (H-20; Supuesto (a validar), S-53)
+
+Esta matriz decide entre 404 y 403 (orden de validación de arriba): si el rol **no ve** el recurso, toda lectura o acción sobre él responde 404; si lo ve pero no tiene el permiso de la acción, 403. "Suyo" es su unidad o su ámbito (regla F-9).
+
+| Recurso | Administrador | Comité | Propietario | Arrendatario | Conserje |
+| --- | --- | --- | --- | --- | --- |
+| Configuración de cobro (fondo, plazo, tasa, `sort_order`, flag) | Ve y edita | Ve (403 al editar) | No ve | No ve | No ve |
+| Borrador vigente, sus gastos, cargos directos y egresos del fondo | Ve y edita | Ve (403 al editar) | No ve | No ve | No ve |
+| Periodo como recurso (vista previa, emisión, cierre) | Ve y actúa | Ve (403 al emitir o cerrar) | No ve | No ve | No ve |
+| Gasto o egreso del fondo de un periodo emitido o cerrado, y sus correcciones | Ve y corrige | Ve (403 al corregir) | No ve el recurso; ve su detalle solo dentro del resumen de gastos (G-8) | Igual que el propietario | No ve |
+| Resumen de gastos y saldo de caja (G-8) | Ve | Ve | Ve | Ve | No ve |
+| Aviso legal (PDF) | Ve todos | Ve todos | Ve el suyo | No ve (G-7) | No ve |
+| Comprobante de cobro del arrendatario (PDF, G-7) | Ve todos | Ve todos | No ve | Ve el suyo | No ve |
+| Cargos, pagos, imputaciones y saldos de una unidad | Ve todos | Ve todos (403 al registrar o anular) | Ve los suyos, por ámbito (F-9, S-44) | Ve los de su ámbito | No ve |
+
+- Así, un residente que pide configurar, emitir, cerrar, crear o corregir un gasto recibe 404 y no 403, porque no ve esos recursos.
+- **Comprobante del arrendatario:** lo descargan el arrendatario titular de esa ocupación, el administrador y el comité (que ven todo el gasto común de la comunidad, solo lectura en el caso del comité). El propietario no lo descarga: ve los mismos datos en "Deuda del arrendatario" (S-44), pero el comprobante es el documento del arrendatario. Un ex arrendatario no lo descarga (S-14) y lo pide al administrador.
 
 ### Códigos y mensajes de error (H-5)
 
-Los códigos en mayúsculas son el campo `code` del cuerpo de la respuesta. El texto es el que ve el usuario. La convención es 409 para un conflicto con el estado actual y 422 para una entrada que una regla no permite. Los que ya fija `docs/arquitectura.md` se usan con el mismo nombre.
+Los códigos en mayúsculas son el campo `code` del cuerpo de la respuesta. El texto es el que ve el usuario. La convención es 409 para un conflicto con el estado actual del recurso sobre el que se actúa y 422 para una entrada que una regla no permite (incluida la persona elegida al otorgar un rol). Los que ya fija `docs/arquitectura.md` se usan con el mismo nombre. Esta tabla es la lista completa de códigos de este módulo (menor 5); diseño y QA copian los textos tal cual.
 
 | Caso | Regla | HTTP | Código | Mensaje |
 | --- | --- | --- | --- | --- |
+| El actor no puede ver el recurso | Respuestas de error | 404 | `NOT_FOUND` | "No encontramos lo que buscas o no tienes acceso" |
+| El actor ve el recurso pero su rol no permite la acción | Respuestas de error | 403 | `FORBIDDEN` | "Tu rol no permite esta acción" |
 | Escritura en un periodo emitido o cerrado | A-4, A-5 | 409 | `PERIOD_NOT_EDITABLE` | "El periodo <AAAA-MM> está <emitido\|cerrado>. Registra el movimiento en el borrador vigente" |
 | Emitir un periodo ya emitido (otra clave) | A-3.4 | 409 | `PERIOD_ALREADY_ISSUED` | "El periodo ya fue emitido" |
 | Cerrar un periodo en borrador | A-5 | 409 | `PERIOD_NOT_ISSUED` | "Solo se puede cerrar un periodo emitido" |
@@ -139,29 +212,78 @@ Los códigos en mayúsculas son el campo `code` del cuerpo de la respuesta. El t
 | Comunidad sin unidades | A-3.8 | 422 | `COMMUNITY_WITHOUT_UNITS` | "La comunidad no tiene unidades. Crea las unidades antes de emitir" |
 | Alícuotas que no suman 100 % | A-3.1 | 422 | `ALIQUOTS_NOT_100` | "Las alícuotas suman 99,9900 %; deben sumar 100,0000 %" (con la suma real) |
 | Grupo con total > 0 y pesos en 0 | A-3.2 | 422 | `GROUP_WITHOUT_WEIGHTS` | "El grupo <cuenta> / <base> no tiene unidades con participación para repartir $<total>" |
-| Monto 0, negativo o con decimales | B-5 | 422 | `INVALID_AMOUNT` | "El monto debe ser un número entero de pesos mayor que $0" |
+| Monto 0, negativo o con decimales (gasto, cargo directo, egreso del fondo o pago) | B-5 | 422 | `INVALID_AMOUNT` | "El monto debe ser un número entero de pesos mayor que $0" |
+| Monto correcto negativo o con decimales en una corrección (de un gasto o de un egreso del fondo), donde $0 anula | B-3, B-5, H-6 | 422 | `INVALID_AMOUNT` | "El monto correcto debe ser un número entero de pesos, mayor o igual que $0. Usa $0 solo para anular" |
 | Monto sobre el máximo | B-6 | 422 | `AMOUNT_TOO_LARGE` | "El monto supera el máximo permitido de $9.999.999.999" |
+| Suma de gastos y cargos directos del periodo sobre el máximo (al escribir, en la vista previa de emisión o al emitir) | B-6 | 422 | `AMOUNT_TOO_LARGE` | "La suma de los gastos del periodo superaría el máximo permitido de $9.999.999.999" |
 | Fondo bajo 500 pb | D-2 | 422 | `RESERVE_RATE_BELOW_MINIMUM` | "El fondo de reserva no puede ser menor que 5,00 % (Ley 21.442, art. 39)" |
 | Fondo sobre 5000 pb | D-2 | 422 | `RESERVE_RATE_ABOVE_MAXIMUM` | "El fondo de reserva no puede superar 50,00 %. Si el reglamento fija más, contacta a soporte" |
 | `paid_on` futuro | F-1 | 422 | `PAID_ON_IN_FUTURE` | "La fecha de pago no puede ser futura" |
-| Pago manual sin ámbito con arrendatario vigente | F-9 | 422 | `SCOPE_REQUIRED` | "Elige a qué deuda aplicar el pago" |
+| Pago manual sin asignaciones, o con una asignación sin ámbito, con o sin arrendatario vigente | F-9 | 422 | `SCOPE_REQUIRED` | "Elige a qué deuda aplicar el pago" |
+| Pago manual dirigido a una ocupación terminada | F-9 | 409 | `OCCUPANCY_ALREADY_ENDED` | "El arriendo de esta persona ya terminó. Aplica el pago a la deuda del propietario" |
+| Pago manual dirigido a una ocupación programada | F-9, F-14 | 409 | `OCCUPANCY_NOT_STARTED` | "El arriendo aún no comienza. Aplica el pago a la deuda del propietario" |
+| Pago manual dirigido a una ocupación cancelada | F-9, F-14 | 409 | `OCCUPANCY_CANCELLED` | "Este arriendo fue cancelado y nunca comenzó. Aplica el pago a la deuda del propietario" |
+| Pago manual "Ambos" con el mismo ámbito dos veces | F-12 | 422 | `DUPLICATE_SCOPE` | "Cada deuda puede aparecer una sola vez en el pago" |
 | Anular un pago que no es manual | F-4 | 422 | `PAYMENT_NOT_VOIDABLE` | "Este pago no se puede anular desde ComVive" |
+| Anular un grupo de pagos ya anulado | F-4 | 409 | `PAYMENT_ALREADY_VOIDED` | "El pago ya fue anulado" |
+| Anular un pago manual sin motivo | F-4 | 422 | `REASON_REQUIRED` | "Indica el motivo de la anulación" |
 | Anular gasto sin motivo | H-6 | 422 | `REASON_REQUIRED` | "Indica el motivo de la anulación" |
-| Pago en línea sin código de comercio | F-12 | 422 | `ONLINE_PAYMENT_NOT_AVAILABLE` | "Esta comunidad aún no recibe pagos en línea. Paga por transferencia con los datos de tu aviso" |
+| Corregir un gasto sin motivo (monto correcto mayor que $0) | H-1 | 422 | `REASON_REQUIRED` | "Indica el motivo de la corrección" |
+| Egreso del fondo sin referencia a la autorización | B-3 | 422 | `AUTHORIZATION_REFERENCE_REQUIRED` | "Indica quién autorizó el uso del fondo de reserva: acuerdo del comité o de la asamblea, con su fecha" |
+| Corregir un egreso del fondo sin motivo (monto correcto mayor que $0) | B-3 | 422 | `REASON_REQUIRED` | "Indica el motivo de la corrección" |
+| Anular un egreso del fondo sin motivo (monto correcto $0) | B-3 | 422 | `REASON_REQUIRED` | "Indica el motivo de la anulación" |
+| Corregir un egreso del fondo por su mismo monto vigente | B-3 | 422 | `CORRECTION_WITHOUT_CHANGE` | "El monto correcto es igual al monto vigente del egreso ($<monto>). No hay nada que corregir" |
+| Anular un egreso del fondo ya anulado | B-3 | 422 | `CORRECTION_WITHOUT_CHANGE` | "Este egreso ya está anulado. No hay nada que corregir" |
+| Corregir un gasto sin cambiar monto, cuenta, base de pesos, conjunto de unidades ni subcategoría | H-7 | 422 | `CORRECTION_WITHOUT_CHANGE` | "La corrección no cambia el gasto. No hay nada que corregir" |
+| Anular un gasto ya anulado | H-6, H-7 | 422 | `CORRECTION_WITHOUT_CHANGE` | "Este gasto ya está anulado. No hay nada que corregir" |
+| Resolver un intento Webpay sin motivo | F-16 | 422 | `REASON_REQUIRED` | "Indica el motivo de la resolución" |
+| Confirmar el reverso sin la referencia de Transbank | F-16 | 422 | `REVERSAL_REFERENCE_REQUIRED` | "Ingresa la referencia de la anulación en Transbank" |
+| Pago en línea sin código de comercio | F-12 | 422 | `ONLINE_PAYMENT_NOT_AVAILABLE` | "Esta comunidad aún no recibe pagos en línea. Pide a la administración los datos para pagar por transferencia" |
 | Pago en línea de un ámbito sin deuda | F-12 | 422 | `SCOPE_WITHOUT_DEBT` | "Esta deuda no tiene saldo pendiente" |
 | Monto distinto del que vio el residente | F-12 | 409 | `AMOUNT_CHANGED` | "El monto a pagar cambió. Revisa el nuevo monto" |
-| Pago en curso sobre el mismo ámbito | F-12 | 409 | `PAYMENT_IN_PROGRESS` | "Hay un pago en proceso para esta deuda" |
+| Pago en curso sobre el mismo ámbito | F-12 | 409 | `PAYMENT_IN_PROGRESS` | "Ya hay un pago en proceso para esta deuda" |
 | Registrar un intento de dos ámbitos en revisión | F-16 | 422 | `MULTI_SCOPE_REVIEW_REVERSAL_ONLY` | "Un pago que cubre dos deudas solo se puede marcar para reverso" |
+| Resolución que no corresponde al estado de un intento que sigue en la vista de Soporte | F-16 | 409 | `PREVIEW_OUTDATED` | "Esta resolución no corresponde al estado actual del intento. Revisa la nueva vista previa" |
 | Comité a quien no es propietario | Otorgamiento de roles | 422 | `COMMITTEE_REQUIRES_OWNER` | "El rol de comité solo se otorga a propietarios registrados de la comunidad" |
+| Comité sin referencia a la asamblea | Otorgamiento de roles | 422 | `ASSEMBLY_REFERENCE_REQUIRED` | "Indica la asamblea que eligió al comité: fecha y referencia" |
+| Comité a quien es administrador de la comunidad | Otorgamiento de roles | 422 | `ADMIN_COMMITTEE_CONFLICT` | "Esta persona es administradora de la comunidad. No puede integrar también el comité" |
+| Administrador a quien integra el comité de la comunidad | Otorgamiento de roles | 422 | `ADMIN_COMMITTEE_CONFLICT` | "Esta persona integra el comité de la comunidad. Primero se debe revocar su rol de comité" |
+| Comité a quien ya lo integra (membresía de comité vigente en la comunidad) | Otorgamiento de roles | 409 | `ALREADY_COMMITTEE_MEMBER` | "Esta persona ya integra el comité" |
+| Resolver la tarea de comité sin motivo | Comité que deja de ser propietario | 422 | `REASON_REQUIRED` | "Indica el motivo de tu decisión" |
+| Resolver una tarea ya cerrada | Comité que deja de ser propietario | 409 | `TASK_ALREADY_RESOLVED` | "Esta tarea ya fue resuelta" |
+| Registrar un arrendatario con otro vigente o programado | F-14 | 409 | `TENANT_ALREADY_ACTIVE` | "La unidad ya tiene un arrendatario vigente o programado. Registra su término o cancela el arriendo programado antes de agregar otro" |
+| Registrar como propietario a quien ya lo es de la unidad | F-14 | 409 | `ALREADY_OWNER` | "Esta persona ya es propietaria de esta unidad" |
+| Terminar una ocupación ya terminada | F-14 | 409 | `OCCUPANCY_ALREADY_ENDED` | "Este arriendo ya terminó" |
+| Fecha de término anterior al ingreso | F-14 | 422 | `END_BEFORE_START` | "La fecha de término no puede ser anterior al ingreso (<dd-mm-aaaa>)" |
+| Fecha de término futura | F-14 | 422 | `END_DATE_IN_FUTURE` | "Registra el término el día que ocurra" |
+| Fecha de venta futura | F-14 | 422 | `END_DATE_IN_FUTURE` | "Registra la venta el día que ocurra" |
+| Terminar una ocupación de propietario por la ruta de término de arriendo | F-14 | 422 | `USE_OWNERSHIP_TRANSFER` | "Para cambiar al propietario, registra la venta" |
+| Cancelar una ocupación de propietario | F-14 | 422 | `USE_OWNERSHIP_TRANSFER` | "Para cambiar al propietario, registra la venta" |
+| Cancelar un arriendo que ya está vigente | F-14 | 409 | `OCCUPANCY_ALREADY_STARTED` | "Este arriendo ya comenzó. Para terminarlo, registra su término" |
+| Cancelar un arriendo terminado | F-14 | 409 | `OCCUPANCY_ALREADY_ENDED` | "Este arriendo ya terminó" |
+| Cancelar un arriendo ya cancelado (otra clave) | F-14 | 409 | `OCCUPANCY_CANCELLED` | "Este arriendo ya fue cancelado" |
+| Cancelar un arriendo programado sin motivo | F-14 | 422 | `REASON_REQUIRED` | "Indica el motivo de la cancelación" |
+| RUT con formato o dígito verificador inválido | F-14 | 422 | `INVALID_RUT` | "Ingresa un RUT válido. Revisa el dígito verificador" |
+| Saldo de caja sin monto o sin fecha de corte | G-4 | 422 | `CASH_BALANCE_REQUIRED` | "Ingresa el saldo de caja y su fecha de corte. Puede ser $0" |
+| Fecha de corte del saldo de caja futura | G-4 | 422 | `CASH_BALANCE_DATE_IN_FUTURE` | "La fecha de corte no puede ser futura" |
 
-La alerta de periodo sin gastos (CA-20) no es un error. La vista previa la devuelve como advertencia y el administrador confirma.
+La alerta de periodo sin gastos (CA-20) no es un error. La vista previa la devuelve como advertencia y el administrador confirma. Tampoco es un error el saldo del fondo de reserva negativo (regla D-5): es una advertencia.
+
+**Orden entre reglas de negocio** (después de sesión, membresía, visibilidad y permiso; se responde solo la primera que falle, para que cada caso tenga una respuesta única):
+
+- **Otorgar el rol de comité (S-34):** `ASSEMBLY_REFERENCE_REQUIRED` → `COMMITTEE_REQUIRES_OWNER` → `ADMIN_COMMITTEE_CONFLICT` → `ALREADY_COMMITTEE_MEMBER` (CA-64). El 409 va al final para que un miembro del comité que dejó de ser propietario (M-7) reciba `COMMITTEE_REQUIRES_OWNER` y no un "ya integra" que esconda el problema.
+- **Corregir o anular un gasto (H-1, H-6):** `INVALID_AMOUNT` o `AMOUNT_TOO_LARGE` → `CORRECTION_WITHOUT_CHANGE` → `REASON_REQUIRED` → `PREVIEW_OUTDATED` (solo en la ejecución).
+- **Cancelar un arriendo programado (F-14):** `USE_OWNERSHIP_TRANSFER` → estado de la ocupación (`OCCUPANCY_ALREADY_STARTED`, `OCCUPANCY_ALREADY_ENDED` u `OCCUPANCY_CANCELLED`) → `REASON_REQUIRED`. El estado va antes del motivo porque no tiene sentido pedir el motivo de una acción que no se puede hacer (CA-61).
+- **Corregir o anular un egreso del fondo (B-3):** `INVALID_AMOUNT` o `AMOUNT_TOO_LARGE` → `CORRECTION_WITHOUT_CHANGE` → `REASON_REQUIRED` → `PREVIEW_OUTDATED` (solo en la ejecución) (CA-62).
 
 Auditoría:
 
 - Toda escritura (gasto, emisión, cierre, pago, anulación, ajuste, configuración) queda en el registro de auditoría.
 - También queda toda lectura de deudas de terceros por el administrador o el comité (regla 7 de `CLAUDE.md`).
 - También queda **toda** lectura y toda resolución de Soporte ComVive (excepción EX-1).
-- También queda todo otorgamiento y toda revocación de roles.
+- También queda todo otorgamiento y toda revocación de roles, y cada alerta, tarea y decisión de "Comité que deja de ser propietario".
+- También queda la lectura de la deuda o los pagos del ámbito del arrendatario por el propietario (Supuesto (a validar), S-44; P-34): es deuda de un tercero.
+- También queda el envío del aviso por correo o SMS al pagador que ya no tiene membresía (regla F-13; `notification.sent_without_membership` en `docs/arquitectura.md` §5).
 
 ### Otorgamiento de roles (decisión del líder del proyecto, 2026-11-07)
 
@@ -169,13 +291,52 @@ El flujo completo va en `docs/design/flujos/admin-usuarios-y-roles.md`. Este mó
 
 | Rol que se otorga | Quién lo otorga y revoca | Permiso |
 | --- | --- | --- |
-| Administrador | Solo Operaciones ComVive. Ningún administrador crea, otorga ni revoca administradores, ni siquiera en sus propias comunidades | `platform.admin_role.grant` |
-| Comité | El administrador de la comunidad | `committee_role.grant` |
+| Administrador | Solo Operaciones ComVive. Ningún administrador crea, otorga ni revoca administradores, ni siquiera en sus propias comunidades. En el MVP, Operaciones ComVive también crea cada comunidad y otorga su primer administrador en el mismo alta (decisión del líder, 2026-11-07) | `platform.admin_role.grant` |
+| Comité | El administrador de la comunidad | `committee_role.grant` (nombre canónico del permiso; menor 4) |
 | Soporte ComVive y Operaciones ComVive | Solo el equipo de ComVive, fuera de la aplicación de las comunidades (P-24) | Fuera de este módulo |
 
-- **Comité, a quién (Supuesto (a validar), S-34):** solo a una persona registrada como propietaria de una unidad de la comunidad, con una referencia obligatoria a la asamblea que la eligió (fecha y texto libre). Si no cumple, se rechaza con "El rol de comité solo se otorga a propietarios registrados de la comunidad". Fuente: el comité de administración lo integran copropietarios elegidos por la asamblea (glosario de `CLAUDE.md`; Ley 21.442, artículo por verificar en P-1). Los casos de cónyuge, conviviente civil o representante de una persona jurídica quedan en P-25.
-- **Revocación:** tiene efecto inmediato. La persona conserva sus otros roles (por ejemplo, residente propietario) y desde la revocación recibe 403 en las acciones y pantallas del comité.
+- **Nombre del permiso (menor 4):** el permiso para otorgar y revocar el rol de comité, y para resolver la tarea "Revisar rol de comité", es `committee_role.grant` (igual que `docs/arquitectura.md` §3). No se usa `membership.manage`. Para el rol de conserje se confirma `concierge_role.grant`, del administrador de la comunidad, con los mismos endpoints de membresías; su detalle queda para la spec de conserjería, fuera de este módulo.
+- **Administrador y comité a la vez (Supuesto (a validar), S-43):** una persona no puede tener el rol de administrador y el de comité en la misma comunidad, porque el comité supervisa al administrador. Otorgar el rol de comité a un administrador de la comunidad responde 422 `ADMIN_COMMITTEE_CONFLICT` con "Esta persona es administradora de la comunidad. No puede integrar también el comité". Otorgar el rol de administrador a un miembro del comité responde 422 `ADMIN_COMMITTEE_CONFLICT` con "Esta persona integra el comité de la comunidad. Primero se debe revocar su rol de comité". Es 422 y no 409 porque la regla rechaza la persona elegida, igual que `COMMITTEE_REQUIRES_OWNER`.
+
+- **Comité, a quién (Supuesto (a validar), S-34):** solo a una persona registrada como propietaria de una unidad de la comunidad, con una referencia obligatoria a la asamblea que la eligió (fecha y texto libre). Sin fecha o sin referencia (o con el texto vacío), se rechaza con 422 `ASSEMBLY_REFERENCE_REQUIRED` y "Indica la asamblea que eligió al comité: fecha y referencia". Si la persona no es propietaria registrada, se rechaza con 422 `COMMITTEE_REQUIRES_OWNER` y "El rol de comité solo se otorga a propietarios registrados de la comunidad". Si fallan varias reglas, se responde solo la primera en este orden (Supuesto (a validar), S-34; igual que `docs/arquitectura.md` §3): `ASSEMBLY_REFERENCE_REQUIRED` (dato faltante del formulario), luego `COMMITTEE_REQUIRES_OWNER`, luego `ADMIN_COMMITTEE_CONFLICT` y al final 409 `ALREADY_COMMITTEE_MEMBER` con "Esta persona ya integra el comité", si ya tiene una membresía de comité vigente en la comunidad (CA-64). Fuente: el comité de administración lo integran copropietarios elegidos por la asamblea (glosario de `CLAUDE.md`; Ley 21.442, artículo por verificar en P-1). Los casos de cónyuge, conviviente civil o representante de una persona jurídica quedan en P-25.
+- **Revocación:** tiene efecto inmediato. La persona conserva sus otros roles (por ejemplo, residente propietario). Desde la revocación, los datos y pantallas que solo ve el comité (registro de copropietarios, deuda de otras unidades, reportes, intentos Webpay de la comunidad) le responden 404, porque ya no puede verlos (M-4). En lo que sigue viendo como residente, aplica su rol de residente.
 - Todo otorgamiento y toda revocación quedan en auditoría, con quién, a quién, cuándo y la referencia.
+
+### Comité que deja de ser propietario (decisión del líder del proyecto, 2026-11-07; M-7)
+
+El rol de comité **no se revoca automáticamente** cuando la persona deja de ser propietaria: lo revoca el administrador. Como mitigación (regla 7 de `CLAUDE.md` y Ley 21.719, porque el comité ve deudas de terceros):
+
+- **Cuándo se dispara:** al confirmar una venta (cambio de propietario, que termina su ocupación como propietario), si la persona que deja de ser propietaria integra el comité de esa comunidad y **ya no es propietaria de ninguna otra unidad de la comunidad**. Si conserva otra unidad, no pasa nada.
+- **Vista previa de la venta:** muestra "{nombre} integra el comité y dejará de ser propietario en la comunidad. Su rol de comité no se revoca automáticamente: decide si lo mantienes o lo revocas". Este dato forma parte de la huella de la vista previa (regla A-7).
+- **Alerta inmediata (`committee_member_not_owner`):** en la misma transacción que registra la venta se encola una alerta para cada administrador con membresía vigente en la comunidad, por push y por correo (`docs/arquitectura.md` §3). Textos:
+  - **Push** (visible en la pantalla bloqueada, sin nombre): "Tienes una tarea pendiente sobre el comité de {comunidad}".
+  - **Correo:** asunto "Revisa el rol de comité de {nombre}"; texto "{nombre} dejó de ser propietario en {comunidad} y sigue en el comité. Decide si mantienes o revocas su rol en Inicio > Tareas pendientes".
+  - Ninguno lleva montos, deudas ni la unidad vendida.
+- **Tarea pendiente:** en la misma transacción se crea la tarea (`ADMIN_TASK`, `kind = committee_member_not_owner`) con el título "Revisar rol de comité de {nombre}", visible como alerta fija en el inicio de la web del administrador hasta que alguno de los administradores decida. Las dos decisiones exigen motivo y clave de idempotencia; sin motivo responden 422 `REASON_REQUIRED` con "Indica el motivo de tu decisión":
+  - **Revocar el rol** (`revoke_committee`): aplica la revocación normal (sección anterior) en la misma transacción y cierra la tarea.
+  - **Mantener el rol** (`keep_committee`): cierra la tarea sin cambiar la membresía. Ejemplos de motivo: la persona representa a una persona jurídica propietaria o la asamblea la mantuvo (P-25 y P-35).
+  - **Confirmación al cerrar la tarea** (texto canónico, F-17): al revocar, "Revocaste el rol de comité de {nombre}. La tarea quedó cerrada"; al mantener, "Mantuviste el rol de comité de {nombre}. La tarea quedó cerrada".
+  - Si el administrador revoca el rol de comité por la sección de usuarios y roles, la tarea se cierra sola (`revoked_elsewhere`).
+  - Una tarea ya cerrada responde 409 `TASK_ALREADY_RESOLVED` con "Esta tarea ya fue resuelta".
+  - Las tareas son solo del administrador: al comité y a los residentes les responden 404.
+- **Mientras la tarea está pendiente,** la persona conserva el rol de comité y su acceso de comité (decisión del líder). Pierde el acceso de residente a la unidad vendida (S-14).
+- **Auditoría:** la alerta, la tarea, quién registró la venta, quién decidió, la decisión, el motivo y las fechas.
+- La tarea no vence ni se repite. Si la persona vuelve a ser propietaria antes de la decisión, la tarea sigue abierta hasta que el administrador la cierre (Supuesto (a validar), S-43).
+
+### Datos del arrendatario que ve el propietario (menor 9; Supuesto (a validar), S-44)
+
+El propietario ve, del arrendatario vigente de su unidad, solo esto:
+
+| Dato | Lo ve el propietario |
+| --- | --- |
+| Nombre del arrendatario | Sí ("Deuda del arrendatario {nombre}") |
+| Deuda del ámbito del arrendatario (deuda bruta y saldo a favor), cargos, intereses y ajustes de ese ámbito | Sí |
+| Pagos del ámbito del arrendatario, con monto, fecha, medio y quién pagó | Sí |
+| RUT, teléfono y correo del arrendatario | No |
+| Datos de ocupaciones terminadas (ex arrendatarios) | No. Lo traspasado aparece en su ámbito `owner`, sin el nombre del ex arrendatario: una deuda como "Traspaso desde arriendo terminado el {dd-mm-aaaa}" y un saldo a favor (por ejemplo, un pago confirmado o resuelto después del término, o una nota de crédito sobre cargos traspasados, F-13) como "Saldo a favor traspasado desde arriendo terminado el {dd-mm-aaaa}" (UX-49). En ambos rótulos, {dd-mm-aaaa} es la **fecha de registro del término** (hora de Chile), no la fecha declarada, porque el término rige desde su registro (F-14; H-27) |
+
+- **Deber de información (Ley 21.719):** el arrendatario debe saber, antes de usar ComVive, que el propietario de la unidad ve su nombre, la deuda de su ámbito y los pagos aplicados a ella. Se le informa en la invitación y en la pantalla de primer ingreso, con el texto: "El propietario de la unidad puede ver tu nombre, tu deuda de gasto común y los pagos que se aplican a ella. La administración de la comunidad ve todos tus datos de cobro". El texto queda en el aviso de privacidad de ComVive. Si basta con esto o se requiere otra base de licitud queda en P-34.
+- Cada lectura del propietario sobre el ámbito del arrendatario queda en auditoría (S-44).
 
 ### Datos de copropietarios que ve el comité (decisión del líder del proyecto, 2026-11-07)
 
@@ -197,9 +358,10 @@ Cada lectura del comité queda en auditoría (regla 7 de `CLAUDE.md`).
 La regla 4 de `CLAUDE.md` exige que toda consulta a datos de negocio filtre por comunidad. **EX-1 es la única excepción de este módulo**, explícita y acotada:
 
 - **Quién:** personas del equipo de ComVive con el rol de plataforma `platform_support`. No tienen membresía en ninguna comunidad.
-- **Qué ven:** solo los intentos Webpay en estado `in_review` o `reversal_pending` (regla F-16), de cualquier comunidad, y solo estos campos (`docs/arquitectura.md` §3, vista `platform_webpay_review`): id del intento, número de orden (`buy_order`), comunidad (id y nombre), código de la unidad, tipo de ámbito (`owner` u `occupancy`, sin nombre de la persona), monto iniciado por ámbito, monto autorizado, estado y códigos de Transbank, y fechas. Un intento en otro estado les responde 404.
-- **Qué no ven:** nombres, RUT, teléfonos, correos, cargos, pagos, saldos, deudas, avisos ni ningún otro dato de la comunidad. Todo otro endpoint de negocio les responde 404.
-- **Qué hacen:** solo las dos resoluciones de la regla F-16.
+- **Qué ven:** solo los intentos Webpay en estado `in_review` o `reversal_pending` (regla F-16), de cualquier comunidad, y solo estos campos (`docs/arquitectura.md` §3, vista `platform_webpay_review`): id del intento, número de orden (`buy_order`), comunidad (id y nombre), código de la unidad, tipo de ámbito de cada `WEBPAY_ATTEMPT_SCOPE` del intento (`owner` u `occupancy`, sin nombre de la persona; es el ámbito con que se inició, distinto del "tipo de ámbito final" del pago a crear), monto iniciado por ámbito, monto autorizado, estado y códigos de Transbank, fechas y la marca "Plazo vencido" (F-16). Un intento en otro estado les responde 404.
+- **Vista previa de una resolución (M-5):** `resolution-preview` devuelve solo los campos anteriores más **el pago que se crearía**: monto, tipo de ámbito final (`owner` u `occupancy`; `owner` si la ocupación del intento ya terminó, F-13) y periodo del borrador vigente donde se registraría (regla F-16). No devuelve deuda, cargos, imputación, saldos ni nombres.
+- **Qué no ven:** nombres, RUT, teléfonos, correos, cargos, pagos, saldos, deudas, imputaciones, avisos ni ningún otro dato de la comunidad. Todo otro endpoint de negocio les responde 404.
+- **Qué hacen:** solo las resoluciones de la regla F-16 (`register_authorized`, `mark_for_reversal` y `confirm_reversal`) y su vista previa.
 - **Auditoría:** toda lectura y toda resolución queda en auditoría, con persona, intento, fecha y hora, y motivo en las resoluciones.
 - **Pruebas:** cada endpoint de EX-1 lleva su prueba de aislamiento que verifica los campos permitidos y el 404 en todo lo demás (CA-42).
 - **ADR:** EX-1 se documenta en el ADR 0006 "Usuarios de plataforma y excepción acotada al aislamiento", que propone `docs/arquitectura.md` (P-16 cerrada). El ADR fija el detalle técnico: vista `platform_webpay_review` con rol de base de datos propio, sesión separada con segundo factor y pruebas de aislamiento específicas.
@@ -250,11 +412,16 @@ La regla 4 de `CLAUDE.md` exige que toda consulta a datos de negocio filtre por 
 
    | Acción | Ejemplos de cambios que producen 409 `PREVIEW_OUTDATED` | Mensaje |
    | --- | --- | --- |
-   | Emisión (`period.issue`) | Otro administrador edita gastos o cargos directos del borrador; cambian unidades, `aliquot_e6`, `sort_order`, conjuntos, porcentaje del fondo, plazo, tasa o el flag; cambia una ocupación o un propietario; cambia la fecha de emisión (cambio de día en hora de Chile); con el flag activo, un pago que cambia el capital y por lo tanto los intereses; un pago que cambia la imputación de saldos a favor al emitir | "El borrador cambió desde la vista previa. Revisa la nueva vista previa antes de emitir" |
-   | Anulación de un pago manual (`payment.void`) | El pago ya fue anulado, o hay movimientos o imputaciones nuevos en los ámbitos del grupo de pagos | "El pago ya fue anulado" si ya estaba anulado; si no, "La cuenta de la unidad cambió desde la vista previa. Revisa la nueva vista previa antes de anular" |
+   | Emisión (`period.issue`) | Otro administrador edita gastos o cargos directos del borrador; cambian unidades, `aliquot_e6`, `sort_order`, conjuntos, porcentaje del fondo, plazo, tasa o el flag; cambia una ocupación o un propietario; cambia el saldo de caja o su fecha de corte (regla G-4, CA-58); cambia la fecha de emisión (cambio de día en hora de Chile); con el flag activo, un pago que cambia el capital y por lo tanto los intereses; un pago que cambia la imputación de saldos a favor al emitir | "El borrador cambió desde la vista previa. Revisa la nueva vista previa antes de emitir" |
+   | Anulación de un grupo de pagos manuales (`payment.void`, por `payment_group_id`) | Hay movimientos o imputaciones nuevos en los ámbitos del grupo de pagos. Si el grupo ya fue anulado, la respuesta no es esta sino 409 `PAYMENT_ALREADY_VOIDED` con "El pago ya fue anulado" (F-4) | "La cuenta de la unidad cambió desde la vista previa. Revisa la nueva vista previa antes de anular" |
    | Corrección o anulación de un gasto (`adjustment.create`, reglas H-2 y H-6) | Otra corrección o anulación del mismo gasto o de su grupo, o movimientos nuevos en los ámbitos afectados | "El gasto cambió desde la vista previa. Revisa la nueva vista previa antes de confirmar" |
-   | Resolución de un intento Webpay en revisión (regla F-16) | Otro miembro de Soporte ya lo resolvió, o cambió el ámbito o la deuda que se imputaría | "El intento cambió desde la vista previa. Revisa la nueva vista previa antes de resolver" |
+   | Resolución de un intento Webpay en revisión (regla F-16) | Cambió algún dato de la **huella de plataforma** (M-5): estado del intento, monto del pago a crear, tipo de ámbito final, es decir, donde quedará el pago (por ejemplo, la ocupación terminó y el pago pasará al ámbito `owner`, F-13) o periodo del borrador vigente donde se registraría. Por ejemplo, otra persona de Soporte lo marcó para reverso | "El intento cambió desde la vista previa. Revisa la nueva vista previa antes de resolver" |
+   | Término de arriendo (`occupancy.write`, reglas F-9, F-13 y F-14; M-6) | Cambió algún movimiento del traspaso: un pago, una anulación, un ajuste o una emisión que cambia la deuda o el saldo a favor del ámbito de la ocupación o del ámbito `owner`, o sus reimputaciones; empezó o terminó un intento Webpay en curso del arrendatario; cambió la fecha de registro (cambio de día en hora de Chile) | "La cuenta de la unidad cambió desde la vista previa. Revisa la nueva vista previa antes de confirmar" |
+   | Venta o cambio de propietario (`occupancy.write`, regla F-14; M-6 y M-7) | Cambió la deuda bruta o el saldo a favor del ámbito `owner` que se muestra; se registró o terminó un arriendo de la unidad; cambió si el propietario que sale integra el comité o si conserva otras unidades en la comunidad | "La cuenta de la unidad cambió desde la vista previa. Revisa la nueva vista previa antes de confirmar" |
 
+   - **Huella del término de arriendo:** cada movimiento del traspaso (unidad, ámbito de origen y de destino, cuenta, periodo, monto y vencimiento conservado), las reimputaciones en el ámbito `owner`, la deuda del ámbito `owner` antes y después, si hay un intento Webpay en curso del arrendatario y la fecha de registro. La vista previa no persiste nada.
+   - **Huella de la venta:** unidad, propietario que sale y propietario que entra, deuda bruta y saldo a favor del ámbito `owner` (que siguen a la unidad, Ley 21.442, art. 6, y no se mueven), arriendo vigente de la unidad si lo hay, y si el propietario que sale integra el comité y deja de ser propietario en la comunidad (M-7). La venta no crea movimientos en el libro.
+   - **Huella de plataforma (M-5):** solo estado del intento, monto del pago a crear, tipo de ámbito final y periodo. No incluye deuda ni imputación, porque Soporte no las ve (EX-1). Si la deuda del ámbito cambia sin cambiar esos datos, la resolución no recibe 409; la imputación se calcula al ejecutar.
    - Un cambio que no altera el resultado no produce 409. Con el flag apagado, un pago que solo cambia el saldo anterior o el total a pagar de un aviso, sin cambiar los movimientos que crea la emisión, no invalida la vista previa.
    - Un reintento con la misma clave de idempotencia de una acción ya ejecutada devuelve el resultado original, aunque el `previewHash` ya no coincida (regla A-3.4). Una clave nueva con un `previewHash` viejo responde 409.
    - La anulación de pagos tiene su propia vista previa: el reverso de cada pago del grupo, los cargos que vuelven a quedar pendientes, las reimputaciones y los ajustes de intereses (regla E-10), por unidad y ámbito, sin persistir nada.
@@ -268,17 +435,35 @@ La regla 4 de `CLAUDE.md` exige que toda consulta a datos de negocio filtre por 
    - **Uso o consumo:** agua, gas, electricidad y telecomunicaciones de uso común.
 2. **Gastos comunes extraordinarios** (Ley 21.442, art. 2 N° 10): todo gasto distinto de los ordinarios, incluidas las obras nuevas. Van a la cuenta `extraordinario` y no generan recargo de fondo (S-4).
 3. **Egresos pagados con el fondo de reserva:**
-   - Se registran como egreso del fondo, con una referencia de texto libre a la autorización.
+   - Se registran como egreso del fondo en el borrador vigente, con concepto, monto (reglas B-5 y B-6) y una **referencia obligatoria a la autorización** (texto libre, por ejemplo "Acta comité 18-11-2026").
+   - **Referencia obligatoria (Supuesto (a validar), S-49; P-38):** la Ley 21.442, art. 39, encarga al comité de administración autorizar el uso del fondo para gastos extraordinarios, urgentes o imprevistos, y a la asamblea, por mayoría absoluta de los derechos, su uso excepcional en gastos ordinarios de mantención o reparación. Por eso un egreso sin referencia (o con el texto vacío) se rechaza con 422 `AUTHORIZATION_REFERENCE_REQUIRED` y "Indica quién autorizó el uso del fondo de reserva: acuerdo del comité o de la asamblea, con su fecha". ComVive solo guarda el texto: no valida quién autorizó ni modela el acuerdo (la autorización de egresos queda fuera de este módulo, ver la nota bajo "Supuestos").
    - No se reparten entre las unidades.
-   - El aviso los muestra como egresos del fondo.
+   - El aviso los muestra como egresos del fondo, con su referencia.
+   - **Saldo del fondo negativo (Supuesto (a validar), S-50; P-39):** un egreso o una corrección que deja el saldo del fondo (D-5) bajo $0 **no se bloquea**. Se muestra una advertencia según el contexto:
+     - En el formulario del egreso: "Con este egreso, el saldo del fondo de reserva registrado en ComVive queda en −$<monto>. Revisa el monto; si el fondo tenía saldo antes de usar ComVive, ese saldo aún no está cargado".
+     - En la vista previa de una corrección o anulación de egreso: "Con esta corrección, el saldo del fondo de reserva registrado en ComVive queda en −$<monto>. Revisa el monto; si el fondo tenía saldo antes de usar ComVive, ese saldo aún no está cargado".
+     - La advertencia no forma parte de la huella de la vista previa (A-7), porque el saldo del fondo cambia con cada pago imputado. El aviso muestra el saldo negativo con signo (D-5).
+   - **Corrección de un egreso del fondo de un periodo emitido o cerrado (menor 7; Supuesto (a validar), S-46; P-33):** el egreso original no se edita. En el borrador vigente se registra una **corrección de egreso del fondo** con motivo obligatorio y referencia al egreso original, por la diferencia `monto_correcto − (monto_original + Σ correcciones previas)`: si es negativa, aumenta el saldo del fondo; si es positiva, lo disminuye. Anular un egreso es una corrección con monto correcto $0. No genera cargos ni notas de crédito a las unidades. El aviso del borrador la muestra como "Corrección egreso del fondo periodo AAAA-MM: motivo", y el saldo del fondo (D-5) la incluye. Tiene vista previa, clave de idempotencia y se confirma contra su versión (regla A-7, fila de corrección de un gasto). Además:
+     - **Monto correcto:** entero CLP mayor o igual que $0 ($0 solo para anular, como en H-6) y no mayor que $9.999.999.999. Un monto negativo o con decimales responde 422 `INVALID_AMOUNT` con "El monto correcto debe ser un número entero de pesos, mayor o igual que $0. Usa $0 solo para anular"; sobre el máximo, 422 `AMOUNT_TOO_LARGE`.
+     - **Motivo obligatorio** (se valida en la vista previa y en la ejecución, porque la vista previa muestra la línea del aviso con el motivo): sin motivo, 422 `REASON_REQUIRED` con "Indica el motivo de la corrección" si el monto correcto es mayor que $0, o con "Indica el motivo de la anulación" si es $0.
+     - **Diferencia $0:** si `monto_correcto` es igual al monto vigente del egreso (`monto_original + Σ correcciones previas`), no hay nada que registrar: la vista previa y la ejecución responden 422 `CORRECTION_WITHOUT_CHANGE` con "El monto correcto es igual al monto vigente del egreso ($<monto>). No hay nada que corregir" y no se escribe nada. Anular un egreso ya anulado (monto vigente $0) responde el mismo código con "Este egreso ya está anulado. No hay nada que corregir". Nunca se crea una corrección por $0.
+     - **Autorización:** la corrección no pide una referencia de autorización nueva; guarda el motivo y apunta al egreso original, que tiene la suya. Si una corrección que aumenta el egreso requiere un acuerdo nuevo del comité o de la asamblea (Ley 21.442, art. 39) queda en P-33.
+     - **Saldo negativo:** si la corrección deja el saldo del fondo bajo $0, aplica la advertencia de arriba (S-50).
+     - El orden de validación está en "Códigos y mensajes de error" (CA-62).
 4. **Cargos directos** (base `monto_directo`):
    - **Consumo individual** (por ejemplo, agua por remarcador): cuenta `ordinario`, subcategoría uso o consumo. El administrador ingresa el monto de cada unidad, calculado fuera de ComVive.
    - **Multa:** cuenta `multas`, con motivo y referencia al reglamento o al acuerdo que la respalda. En el MVP las multas son siempre manuales (S-8).
    - **Otros:** cuenta `ordinario` o `extraordinario`, a elección del administrador.
-5. **Montos:** todo monto ingresado es un entero CLP mayor que 0. Un monto 0, negativo o con decimales se rechaza con 422 `INVALID_AMOUNT` y el mensaje "El monto debe ser un número entero de pesos mayor que $0" (H-5). Las rebajas se hacen como notas de crédito (sección H).
-   - **Excepción explícita (M6):** la acción "Anular gasto" (regla H-6) usa $0 como monto correcto de un gasto de un periodo emitido o cerrado. Es el único caso en que se acepta $0, y solo como monto correcto de esa acción. Un gasto nuevo, un cargo directo nuevo o una corrección común con $0 se siguen rechazando.
+5. **Montos:** todo monto ingresado es un entero CLP mayor que 0. Un monto 0, negativo o con decimales se rechaza con 422 `INVALID_AMOUNT` y el mensaje "El monto debe ser un número entero de pesos mayor que $0" (H-5). En las rutas de corrección de un gasto y de un egreso del fondo, el monto correcto $0 es una anulación (H-6, B-3), así que ahí solo se rechaza un monto negativo o con decimales, con el mensaje "El monto correcto debe ser un número entero de pesos, mayor o igual que $0. Usa $0 solo para anular". Las rebajas se hacen como notas de crédito (sección H).
+   - **Excepción explícita (M6):** la acción "Anular gasto" (regla H-6) usa $0 como monto correcto de un gasto de un periodo emitido o cerrado. Es el único **cargo o gasto** en que se acepta $0, y solo como monto correcto de esa acción. Un gasto nuevo o un cargo directo nuevo con $0 se siguen rechazando. En la ruta de corrección (la misma para corregir y anular, `docs/arquitectura.md` §4), un monto correcto $0 es "Anular gasto" y exige el motivo de la anulación. Fuera de los cargos y gastos, la corrección de un egreso del fondo también acepta $0 como monto correcto, solo para anularlo (regla B-3).
+   - **Saldo de caja (menor 6):** no es un cobro sino un dato informativo del aviso, así que esta regla no le aplica: acepta $0 y valores negativos (regla G-4).
 6. **Monto máximo y aritmética (H-11; Supuesto (a validar), S-37):**
-   - Ningún monto ingresado (gasto, cargo directo, pago o saldo de caja) puede superar **$9.999.999.999** (diez mil millones menos un peso). Tampoco la suma de los gastos de un periodo. Si se supera, la respuesta es 422 `AMOUNT_TOO_LARGE` con "El monto supera el máximo permitido de $9.999.999.999".
+   - Ningún monto ingresado (gasto, cargo directo o pago) puede superar **$9.999.999.999** (diez mil millones menos un peso). Tampoco la suma de los gastos de un periodo. En el saldo de caja, que puede ser negativo (regla G-4), el tope se aplica al **valor absoluto**: debe estar entre −$9.999.999.999 y $9.999.999.999. Si se supera, la respuesta es 422 `AMOUNT_TOO_LARGE` con "El monto supera el máximo permitido de $9.999.999.999".
+   - **Tope de la suma del periodo (H-21; Supuesto (a validar), S-55):** la suma es la de los gastos y cargos directos del borrador (los que generan cargos); no incluye los egresos del fondo ni el recargo del fondo. Se valida en tres momentos, con 422 `AMOUNT_TOO_LARGE` y el mensaje "La suma de los gastos del periodo superaría el máximo permitido de $9.999.999.999":
+     - al crear o editar un gasto o un cargo directo del borrador, dentro de su transacción, si con él la suma supera el tope (no se escribe);
+     - en la vista previa de emisión;
+     - en la emisión, dentro de su transacción, como resguardo ante escrituras concurrentes.
+     - Un monto individual sobre el tope responde el mensaje de monto individual ("El monto supera el máximo permitido de $9.999.999.999"), que se valida antes que la suma.
    - El tope es una protección contra errores de digitación y desbordes, no una regla legal. Supera con holgura el gasto anual de un condominio grande.
    - **Aritmética:** el motor calcula todo con enteros `bigint` de punta a punta (`docs/arquitectura.md` §1 y §4; ADR 0004). Nunca usa `number` de JavaScript para productos intermedios: `T × aliquot_e6` supera 2^53 − 1 desde T > $9.007.199.254, y la suma del interés (capital × tasa × 366 × días) también puede superarlo. Ese límite no fija el tope; el tope de arriba es independiente.
 
@@ -315,7 +500,9 @@ La regla 4 de `CLAUDE.md` exige que toda consulta a datos de negocio filtre por 
    - `F_g` se reparte con el método del resto mayor y los mismos pesos de su grupo ordinario.
    - Los cargos directos ordinarios, los extraordinarios, los intereses, las multas y los egresos del fondo no generan recargo.
 4. **Otros ingresos del fondo:** lo recaudado por multas e intereses va al fondo (Ley 21.442, art. 39). El reporte del fondo suma como ingreso lo imputado a cargos de las cuentas `intereses` y `multas`.
-5. **Saldo del fondo:** recargos imputados + intereses imputados + multas imputadas − egresos del fondo. Se muestra en el aviso. ComVive no administra inversiones.
+5. **Saldo del fondo:** recargos imputados + intereses imputados + multas imputadas − egresos del fondo − correcciones de egresos del fondo (con su signo; regla B-3). Se muestra en el aviso. ComVive no administra inversiones.
+   - Es el saldo **registrado en ComVive**, no el de la cuenta bancaria: no incluye el saldo que el fondo tenía antes de usar ComVive (saldo de apertura, reservado en F-10 para la spec de migración).
+   - Puede ser negativo (Supuesto (a validar), S-50): el aviso lo muestra con signo, "Saldo del fondo de reserva: −$<monto>", igual que el saldo de caja (G-4).
 
 ### E. Vencimiento, intereses y multas
 
@@ -396,19 +583,23 @@ La regla 4 de `CLAUDE.md` exige que toda consulta a datos de negocio filtre por 
    - Por importación (`origin = import`): reservado para las specs de conciliación y migración.
    - Todo pago (`PAYMENT`) tiene unidad, **un solo ámbito**, origen, monto CLP entero > 0, `paid_on`, `recorded_at`, medio y referencia. Un `paid_on` posterior a la fecha actual (hora de Chile) se rechaza con 422 `PAID_ON_IN_FUTURE` y el mensaje "La fecha de pago no puede ser futura".
    - El libro registra un crédito en la cuenta `pago`, en el ámbito del pago. El reparto por cuenta sale de las imputaciones.
-   - **Grupo de pagos:** cuando un mismo cobro cubre dos ámbitos se registra **un pago por ámbito**, y esos pagos quedan agrupados (regla F-12):
-     - En Webpay, el grupo es el intento (`WEBPAY_ATTEMPT`, con un `WEBPAY_ATTEMPT_SCOPE` por ámbito).
-     - En el pago manual "Ambos", el grupo es el registro, identificado por su clave de idempotencia.
+   - **Grupo de pagos (M-1):** cuando un mismo cobro cubre dos ámbitos se registra **un pago por ámbito**, y esos pagos comparten el mismo `payment_group_id` (regla F-12):
+     - En Webpay, `payment_group_id` es el identificador del intento (`WEBPAY_ATTEMPT`, con un `WEBPAY_ATTEMPT_SCOPE` por ámbito). Los pagos que crea una resolución `register_authorized` de Soporte (F-16) también llevan el identificador de su intento.
+     - En el pago manual, el servidor genera un `payment_group_id` nuevo al registrar, en la misma transacción que crea los pagos. El registro manual envía una lista de asignaciones, cada una con ámbito, ocupación (si el ámbito es `occupancy`) y monto; con "Ambos" son dos asignaciones. Cada ámbito puede aparecer una sola vez; si se repite, la respuesta es 422 `DUPLICATE_SCOPE` con "Cada deuda puede aparecer una sola vez en el pago".
+     - Todo pago tiene `payment_group_id`, incluido el de un solo ámbito (grupo de un pago).
+     - La clave de idempotencia **no** identifica el grupo: solo evita registrar dos veces el mismo envío (F-2) y se borra a los 30 días (A-3.4). El grupo se conserva para siempre.
 2. **Idempotencia (M5):** depende del origen del pago.
    - **Webpay e importaciones:** la combinación (`origin`, `external_ref`, ámbito) es única por comunidad (`docs/arquitectura.md` §4). En Webpay, `external_ref` es el número de orden (`buy_order`) de Transbank. Como los dos pagos de un intento de dos ámbitos comparten `buy_order` pero no ámbito, no chocan. En una importación, `external_ref` es la referencia del movimiento importado (la definirán las specs de conciliación y migración). Un reintento o una reimportación devuelve los pagos existentes y no crea otros.
-   - **Pago manual:** la idempotencia es la **clave de idempotencia del envío** (`Idempotency-Key`), que el formulario genera al abrirse. Un envío repetido con la misma clave (doble clic, reintento por red) devuelve el mismo pago o el mismo grupo de pagos. La referencia que escribe el administrador (número de comprobante, "transferencia", etc.) **no es única**: dos pagos manuales con la misma referencia son dos pagos distintos. La referencia solo alimenta la advertencia de la regla F-3.
+   - **Pago manual:** la idempotencia es la **clave de idempotencia del envío** (`Idempotency-Key`), que el formulario genera al abrirse. Un envío repetido con la misma clave (doble clic, reintento por red) devuelve los mismos pagos, con el mismo `payment_group_id`, y no crea otros. Pasados los 30 días de vida de la clave, un envío con esa clave se trata como uno nuevo; el grupo ya registrado no cambia. La referencia que escribe el administrador (número de comprobante, "transferencia", etc.) **no es única**: dos pagos manuales con la misma referencia son dos pagos distintos. La referencia solo alimenta la advertencia de la regla F-3.
 3. **Posible duplicado manual (solo advertencia):** el formulario advierte en dos casos, y en ninguno bloquea el registro:
    - Si ya existe un pago con la misma unidad, monto, fecha y medio: "Ya existe un pago de $<monto> para <unidad> con fecha <dd-mm-aaaa> por <medio>. Revisa que no sea un duplicado".
    - Si ya existe en la comunidad un pago con la misma referencia (sin distinguir mayúsculas ni espacios), el mismo medio y el mismo monto: "Ya existe un pago de $<monto> por <medio> con la referencia "<referencia>" (<unidad>, <dd-mm-aaaa>). Revisa que no sea un duplicado".
 4. **Anulación:**
    - Un pago no se borra ni se edita. Se anula con un débito de reverso en la cuenta `pago`, que apunta al pago y lleva motivo.
    - El reverso se registra en el borrador vigente (regla A-4) y deshace las imputaciones del pago.
-   - Si el pago pertenece a un grupo (regla F-12), la anulación anula **todos los pagos del grupo juntos**, cada uno con su reverso en su ámbito, en una sola transacción. No se anula un solo pago de un grupo.
+   - La anulación se hace sobre el **grupo de pagos** (`payment_group_id`, M-1), con las rutas `POST /communities/{communityId}/payment-groups/{paymentGroupId}/void-preview` y `.../void` (`docs/arquitectura.md` §4). Se ofrece desde cualquiera de sus pagos y anula **todos los pagos con ese `payment_group_id`**, cada uno con su reverso en su ámbito, en una sola transacción. No se anula un solo pago de un grupo de dos. Como el grupo no vence, esto vale igual después de los 30 días de vida de la clave de idempotencia del registro.
+   - La anulación lleva motivo obligatorio. Sin motivo responde 422 `REASON_REQUIRED` con "Indica el motivo de la anulación".
+   - Un grupo ya anulado responde 409 `PAYMENT_ALREADY_VOIDED` con "El pago ya fue anulado", también en la vista previa.
    - Solo el administrador anula pagos, solo los de `origin = manual`, y se confirma contra el `previewHash` de su vista previa (regla A-7). Un pago de otro origen responde 422 `PAYMENT_NOT_VOIDABLE` con "Este pago no se puede anular desde ComVive".
    - La anulación de pagos Webpay registrados queda fuera de alcance. Marcar un intento en revisión para reverso (regla F-16) no es una anulación: ese intento nunca se registró como pago.
 5. **Orden de imputación (S-12).** ComVive imputa como lo haría el acreedor en la carta de pago (Código Civil, art. 1596). En el MVP el pagador no elige a qué deuda se aplica su pago. El orden es:
@@ -457,9 +648,11 @@ La regla 4 de `CLAUDE.md` exige que toda consulta a datos de negocio filtre por 
      - Los pagos del arrendatario van solo a su ámbito.
      - Los pagos del propietario van al ámbito que él elige: `owner`, el del arrendatario vigente o ambos.
      - En un pago manual, el administrador elige el ámbito de forma explícita: "Aplicar a la deuda de: Propietario / Arrendatario {nombre} / Ambos". Si la unidad no tiene arrendatario vigente, el único ámbito es `owner` y no se pregunta. Si tiene arrendatario vigente, no hay valor por defecto y sin elección el registro se rechaza con "Elige a qué deuda aplicar el pago". Con "Ambos", el administrador ingresa el monto de cada ámbito.
-     - Un pago manual nuevo o un intento Webpay nuevo solo se puede dirigir al ámbito `owner` o al de una ocupación vigente, nunca a una ocupación terminada. La confirmación de un intento iniciado antes del término sigue la regla F-13.
+     - **En la API (H-29):** el registro siempre lleva al menos una asignación con su ámbito, también en una unidad sin arrendatario vigente, donde la web envía `owner` sin preguntar. Una petición sin asignaciones, o con una asignación sin ámbito, responde 422 `SCOPE_REQUIRED` con "Elige a qué deuda aplicar el pago", con o sin arrendatario vigente; la API nunca supone `owner` (`docs/arquitectura.md` §4).
+     - Un pago manual nuevo o un intento Webpay nuevo solo se puede dirigir al ámbito `owner` o al de una ocupación vigente, nunca a una ocupación terminada, programada ni cancelada. Un pago manual a una ocupación terminada responde 409 `OCCUPANCY_ALREADY_ENDED` con "El arriendo de esta persona ya terminó. Aplica el pago a la deuda del propietario"; a una programada, 409 `OCCUPANCY_NOT_STARTED` con "El arriendo aún no comienza. Aplica el pago a la deuda del propietario"; a una cancelada, 409 `OCCUPANCY_CANCELLED` con "Este arriendo fue cancelado y nunca comenzó. Aplica el pago a la deuda del propietario" (el administrador ve la ocupación cancelada en el historial, así que es 409 y no 404); a una ocupación de otra unidad, 404. En todos estos casos no se escribe nada. Para un residente, un intento Webpay sobre una ocupación que no está vigente responde 404, porque no la ve. La confirmación de un intento iniciado antes del término, y su resolución por Soporte, siguen la regla F-13.
      - Cada crédito se imputa solo a débitos de su ámbito, y su remanente queda a favor en ese mismo ámbito.
    - **Visibilidad:**
+     - **Por ámbito, nunca por fechas (M-6):** lo que ve un arrendatario se decide solo por el ámbito de cada movimiento (`scope = occupancy` y su `occupancy_id`), nunca comparando fechas de cargos con las fechas de su ocupación. Con un ingreso retroactivo (F-14), los cargos emitidos entre la fecha de ingreso declarada y el registro están en el ámbito `owner` y el arrendatario no los ve (CA-37). Un arrendatario con ocupación programada aún no tiene acceso a la unidad.
      - El arrendatario ve solo su ámbito. Su vista del aviso muestra como saldo anterior solo el de su ámbito (regla G-7).
      - El propietario ve cada ámbito de su unidad por separado: "Tu deuda" (ámbito `owner`) y "Deuda del arrendatario {nombre}" (ámbito de la ocupación vigente), cada uno con su deuda bruta y su saldo a favor. Nunca se le muestra como "Total a pagar" un saldo neto que compense ámbitos (M1). El total a pagar de cada opción de pago es el de la regla F-12.
      - El administrador y el comité ven por unidad la deuda bruta y el saldo a favor de cada ámbito, no un saldo neto.
@@ -480,7 +673,7 @@ La regla 4 de `CLAUDE.md` exige que toda consulta a datos de negocio filtre por 
     - Para una nota de crédito, `paid_on` es la fecha de vencimiento del cargo que ajusta.
     - El capital de un cargo deja de contar para el interés desde el cierre del día de la fecha efectiva (regla E-5).
 12. **Pago en línea por ámbito (decisiones del líder del proyecto, 2026-11-07; S-24, S-25).**
-    - **Disponibilidad (decisión del líder, 2026-11-07):** cada comunidad tiene su propio código de comercio Transbank, y el abono de Transbank llega directo a la cuenta bancaria de la comunidad (ComVive no recauda fondos de terceros). Mientras una comunidad no tenga su código de comercio, opera solo con pagos manuales: la app no ofrece pagar en línea y muestra "Esta comunidad aún no recibe pagos en línea. Paga por transferencia con los datos de tu aviso". Si se intenta iniciar un pago por la API, la respuesta es 422 `ONLINE_PAYMENT_NOT_AVAILABLE`.
+    - **Disponibilidad (decisión del líder, 2026-11-07):** cada comunidad tiene su propio código de comercio Transbank, y el abono de Transbank llega directo a la cuenta bancaria de la comunidad (ComVive no recauda fondos de terceros). Mientras una comunidad no tenga su código de comercio, opera solo con pagos manuales: la app no ofrece pagar en línea y muestra, al propietario y al arrendatario por igual, "Esta comunidad aún no recibe pagos en línea. Pide a la administración los datos para pagar por transferencia" (el texto no menciona el aviso, que el arrendatario no recibe; menor 5). Si se intenta iniciar un pago por la API, la respuesta es 422 `ONLINE_PAYMENT_NOT_AVAILABLE`.
     - **Opciones de pago (`payment.pay_online`):**
 
       | Quién paga | Puede elegir |
@@ -496,7 +689,7 @@ La regla 4 de `CLAUDE.md` exige que toda consulta a datos de negocio filtre por 
       - Al confirmarse, en una sola transacción se crea **un `PAYMENT` por ámbito**. Cada uno lleva `origin = webpay`, el mismo `buy_order` como `external_ref`, el mismo `paid_on` y el monto de su ámbito, y queda agrupado por el intento.
       - Cada pago genera su crédito en su ámbito, se imputa allí con el orden de F-5 y su remanente queda a favor en ese ámbito.
       - Si la deuda de un ámbito bajó entre el inicio y la confirmación, la diferencia queda como saldo a favor de ese ámbito; nunca se pasa al otro.
-    - **Bloqueo por (unidad, ámbito) (M3):** un intento en curso (`initiated`) bloquea nuevos intentos solo en los ámbitos que cubre. Mientras el propietario paga su ámbito `owner`, el arrendatario puede pagar el suyo. Si hay un intento en curso sobre la deuda del arrendatario, nadie puede iniciar otro sobre ese ámbito y el propietario no puede elegir "Ambas". El mensaje es "Hay un pago en proceso para esta deuda" (409 `PAYMENT_IN_PROGRESS`), sin decir quién paga.
+    - **Bloqueo por (unidad, ámbito) (M3):** un intento en curso (`initiated`) bloquea nuevos intentos solo en los ámbitos que cubre. Mientras el propietario paga su ámbito `owner`, el arrendatario puede pagar el suyo. Si hay un intento en curso sobre la deuda del arrendatario, nadie puede iniciar otro sobre ese ámbito y el propietario no puede elegir "Ambas". El mensaje es "Ya hay un pago en proceso para esta deuda" (409 `PAYMENT_IN_PROGRESS`; texto fijado por el líder, M-8), sin decir quién paga.
     - **Lo que ve el arrendatario cuando otro paga su ámbito (decisión del líder del proyecto, 2026-11-07; S-25):**
       - Ve el pago de su ámbito con su monto, fecha y medio, y con la etiqueta de quién pagó:
 
@@ -504,21 +697,68 @@ La regla 4 de `CLAUDE.md` exige que toda consulta a datos de negocio filtre por 
         | --- | --- |
         | El propio arrendatario | "Pagado por ti" |
         | El propietario | "Pagado por el propietario" |
-        | Pago manual del administrador | "Registrado por la administración" (Supuesto (a validar), S-25) |
+        | Pago manual del administrador | "Registrado por la administración" (decisión del líder, M-8) |
 
       - No ve el pago del otro ámbito del mismo grupo, ni el monto total del intento, ni nada del ámbito `owner` (la deuda propia del propietario). El otro pago del grupo y el detalle del intento le responden 404.
-    - **Lo que ve el propietario:** el grupo completo: el total del intento y cada pago por ámbito ("Tu deuda $…", "Deuda del arrendatario $…").
-    - **Pago manual con "Ambos":** sigue la misma estructura. Se crean dos `PAYMENT` con `origin = manual`, uno por ámbito, con los montos que ingresa el administrador, agrupados por la clave de idempotencia del registro. Se anulan juntos (F-4).
+    - **Lo que ve el propietario:** el grupo completo: el total del intento y cada pago por ámbito ("Tu deuda $…", "Deuda del arrendatario $…"). Cada pago lleva la etiqueta de quién pagó, vista desde el propietario: "Pagado por ti" (él inició el pago), "Pagado por el arrendatario" (lo inició el arrendatario, en su ámbito) o "Registrado por la administración" (pago manual) (Supuesto (a validar), S-48).
+    - **Quién pagó** se toma de la persona que inició el intento Webpay y de su relación con la unidad al iniciarlo (propietario o arrendatario), fijada en el intento para que la etiqueta no cambie si después termina la ocupación. Un pago manual siempre es "Registrado por la administración", aunque el administrador sepa quién transfirió.
+    - **Pagos del propietario anterior que ve el propietario nuevo (Supuesto (a validar), S-51; P-40):** el propietario nuevo ve la historia completa del ámbito `owner` de la unidad, porque la deuda sigue a la unidad (Ley 21.442, art. 6) y necesita entender de dónde sale. Un pago Webpay de ese ámbito que inició otra persona (en la práctica, un propietario anterior) se muestra con monto, fecha y medio, **sin etiqueta de quién pagó** y sin nombre ni dato alguno de esa persona: la API lo entrega con `payerKind` nulo (`docs/arquitectura.md` §4, "Visibilidad por ámbito"). Lo mismo vale para un pago Webpay del ámbito del arrendatario vigente que inició un propietario anterior. Los pagos manuales siguen siendo "Registrado por la administración". Etiquetas por caso, vistas por quien consulta:
+
+      | Pago | Lo ve el propietario | Lo ve el arrendatario |
+      | --- | --- | --- |
+      | Webpay que inició quien consulta | "Pagado por ti" | "Pagado por ti" |
+      | Webpay del ámbito del arrendatario que inició el arrendatario | "Pagado por el arrendatario" | No aplica (es "Pagado por ti") |
+      | Webpay del ámbito del arrendatario que inició quien era propietario al iniciarlo | "Pagado por ti" si es él; sin etiqueta si es un propietario anterior | "Pagado por el propietario" |
+      | Webpay del ámbito `owner` que inició un propietario anterior | Sin etiqueta (`payerKind` nulo) | No lo ve |
+      | Manual (`origin = manual`) | "Registrado por la administración" | "Registrado por la administración" |
+
+    - **Pago manual con "Ambos":** sigue la misma estructura. Se crean dos `PAYMENT` con `origin = manual`, uno por ámbito, con los montos que ingresa el administrador y el mismo `payment_group_id`, generado por el servidor al registrar (regla F-1). Se anulan juntos (F-4).
 13. **Ámbito de una ocupación terminada (M7; S-26).** Después del traspaso, el ámbito de una ocupación terminada siempre queda con deuda $0 y saldo a favor $0.
-    - Los movimientos que, por las reglas de ámbito (F-9), caen en una ocupación terminada se registran igual en ese ámbito, para no perder la trazabilidad: notas de crédito y débitos de ajuste que apuntan a sus movimientos, ajustes de intereses (E-10), cargos nuevos por reclasificación (H-3), reversos de sus pagos y confirmaciones de intentos Webpay iniciados antes del término.
+    - Los movimientos que, por las reglas de ámbito (F-9), caen en una ocupación terminada se registran igual en ese ámbito, para no perder la trazabilidad: notas de crédito y débitos de ajuste que apuntan a sus movimientos, ajustes de intereses (E-10), cargos nuevos por reclasificación (H-3), reversos de sus pagos, confirmaciones de intentos Webpay iniciados antes del término y **resoluciones `register_authorized` de Soporte ComVive** (F-16) de intentos iniciados antes del término (M-2).
     - En la misma transacción, la deuda o el saldo a favor que resulte en ese ámbito se traspasa al ámbito `owner` con un traspaso nuevo, y allí se reimputa con la regla F-6.
     - Una nota de crédito sobre un cargo que ya había sido traspasado libera parte del crédito de traspaso. Esa parte queda a favor en la ocupación, se traspasa al ámbito `owner` y ahí se imputa con el orden de F-5, no necesariamente al débito de traspaso de ese mismo cargo.
-    - **Webpay iniciado antes del término y confirmado después:** el crédito se registra en el ámbito con que se inició, queda a favor (porque la deuda ya se traspasó) y se traspasa de inmediato al ámbito `owner`. El pago no se pierde ni queda en un ámbito que nadie ve. Al registrar el término, si hay un intento en curso del arrendatario, el administrador ve la advertencia "Hay un pago en línea en curso del arrendatario. Si se confirma, se aplicará a la deuda de la unidad".
+    - **`paid_on` del crédito de traspaso (H-25; Supuesto (a validar), S-54):** el crédito que lleva un saldo a favor de la ocupación al ámbito `owner` **hereda el `paid_on` del crédito que generó ese saldo a favor**, nunca la fecha del traspaso:
+      - si lo generó un pago (confirmación tardía, resolución `register_authorized` o un pago anterior al término), el `paid_on` de ese pago;
+      - si lo generó una nota de crédito, incluida la parte liberada de un crédito de traspaso por una nota de crédito sobre un cargo ya traspasado, el `paid_on` de la regla F-11 (vencimiento del cargo ajustado).
+      - Si el saldo a favor viene de varios créditos, el traspaso se divide en un crédito por cada crédito de origen, cada uno con su `paid_on`.
+      - Ese `paid_on` se usa para la fecha de referencia de "vencido" (F-5) y para la fecha efectiva de la imputación (F-11). Si la fecha efectiva cae en días con intereses ya cobrados en el ámbito `owner`, aplica E-10 como con cualquier crédito.
+      - Así, el resultado no depende de cuándo se registró el término ni de cuándo llegó la confirmación, igual que S-39 (CA-36, CA-54).
+    - **Webpay iniciado antes del término y confirmado después:** el crédito se registra en el ámbito con que se inició, queda a favor (porque la deuda ya se traspasó) y se traspasa de inmediato al ámbito `owner`. El pago no se pierde ni queda en un ámbito que nadie ve. Al registrar el término, si hay un intento en curso del arrendatario, el administrador ve la advertencia "Hay un pago en línea en curso del arrendatario. Si se confirma, se aplicará a la deuda de la unidad". Si hay un intento del arrendatario en `in_review`, ve "Hay un pago en línea del arrendatario en revisión por ComVive. Si se registra, se aplicará a la deuda de la unidad" (M-2). Ambas advertencias forman parte de la huella de la vista previa del término (A-7).
+    - **Intento en revisión cuya ocupación termina durante la revisión (M-2):** si Soporte resuelve con `register_authorized` un intento de un solo ámbito `occupancy` cuya ocupación ya terminó, en una sola transacción se crea el `PAYMENT` en el ámbito de la ocupación (el del intento), queda a favor y se traspasa de inmediato al ámbito `owner`, donde se imputa con F-5, igual que una confirmación tardía. La vista previa de Soporte muestra como tipo de ámbito final `owner`, sin datos de la deuda (EX-1, regla F-16). Las pruebas de aislamiento de la resolución deben admitir que la escritura llegue al ámbito `owner` de la **misma unidad** del intento, y a ningún otro.
+    - **Aviso al pagador que ya no tiene membresía (M-2; Supuesto (a validar), S-42):** cuando se confirma tarde o se resuelve (`register_authorized`, `mark_for_reversal` o `confirm_reversal`) un intento de una persona que al momento del envío ya no tiene membresía vigente en la comunidad del intento (ex arrendatario, o ex propietario tras una venta), no recibe push ni puede abrir la app. ComVive le envía un aviso transaccional ligado al intento (`docs/arquitectura.md` §5): al **correo verificado** de su cuenta o, si no tiene, por **SMS** a su contacto de ingreso, con el mismo texto. Sin montos, saldos, deudas, unidad, nombres ni enlaces a la app. Asunto del correo: "Tu pago en línea en {comunidad}". Texto según el evento:
+
+      | Evento | Texto |
+      | --- | --- |
+      | Confirmación tardía (F-13) o `register_authorized` | "Tu pago en línea con número de orden {buy_order} en {comunidad} se registró. Si tienes dudas, contacta a la administración de tu comunidad" |
+      | `mark_for_reversal` | "Tu pago en línea con número de orden {buy_order} en {comunidad} no se registró. Se solicitará la devolución del monto a Transbank. Si tienes dudas, contacta a la administración de tu comunidad" |
+      | `confirm_reversal` | "Tu pago en línea con número de orden {buy_order} en {comunidad} fue anulado en Transbank. El reembolso a tu medio de pago depende de tu banco. Si tienes dudas, contacta a la administración de tu comunidad" |
+
+      - Si la persona sigue con membresía vigente, recibe la notificación normal y no este aviso.
+      - Si no tiene correo verificado ni teléfono, no se envía nada. El envío, o su falta, queda en auditoría (`notification.sent_without_membership`), y el administrador ve el intento con su resultado en "Intentos Webpay" (`webpay_attempt.read`).
     - El saldo a favor que se genera así beneficia al ámbito `owner`. Cualquier devolución entre propietario y ex arrendatario queda fuera de ComVive (P-21).
+    - **Cómo se muestra (UX-49):** en el ámbito `owner`, el traspaso de un saldo a favor se rotula "Saldo a favor traspasado desde arriendo terminado el {dd-mm-aaaa}", sin el nombre del ex arrendatario, y el de una deuda "Traspaso desde arriendo terminado el {dd-mm-aaaa}". En los dos rótulos la fecha es la de registro del término, en hora de Chile, y no la declarada (H-27): en CA-35, con término declarado el 2026-12-04 y registrado el 2026-12-05, el rótulo dice "Traspaso desde arriendo terminado el 05-12-2026". Un saldo a favor que se traspasa días después (por ejemplo, una confirmación tardía) lleva igual la fecha de registro del término. No se usa "Pago del arrendatario anterior", porque el saldo a favor también puede venir de una nota de crédito y porque el propietario no ve los pagos de ocupaciones terminadas (S-44).
 14. **Ingresos y términos retroactivos (M7; S-27).** Una ocupación se puede registrar con fecha de ingreso o de término anterior a hoy, pero produce efecto desde su registro:
     - **Ingreso retroactivo (decisión del líder del proyecto, 2026-11-07; P-27 cerrada):** rige desde que se registra. Los cargos ya emitidos quedan en el ámbito `owner` (o en el que tenían) y el administrador no los puede reasignar (S-19). La nueva ocupación recibe solo los cargos que se emitan desde su registro. Al guardar, el administrador ve: "La fecha de ingreso es anterior a hoy. Los cargos ya emitidos no cambian de responsable".
-    - **Término retroactivo (término no registrado a tiempo):** el traspaso se hace al registrar el término, con lo que ese día tenga pendiente la ocupación, incluidos los cargos emitidos entre la fecha de término declarada y el registro. Para el interés aplica la regla E-11 y no se recalculan días ya cobrados. El ex arrendatario pierde el acceso al registrarse el término.
-    - Ambas fechas quedan en el registro de ocupaciones y en auditoría.
+    - **Término retroactivo (término no registrado a tiempo):** el traspaso se hace al registrar el término, con lo que ese día tenga pendiente la ocupación, incluidos los cargos emitidos entre la fecha de término declarada y el registro. Para el interés aplica la regla E-11 y no se recalculan días ya cobrados. El ex arrendatario pierde el acceso al registrarse el término. Con una fecha de término anterior a hoy, la vista previa del término advierte (UX-49): "La fecha de término es anterior a hoy. Lo pendiente del arriendo, incluidos los cargos emitidos desde esa fecha, pasa hoy a la deuda del propietario".
+    - **Venta con fecha pasada (UX-49):** produce efecto desde su registro, como el término. La vista previa de la venta advierte: "La fecha de venta es anterior a hoy. Los avisos ya emitidos siguen a nombre del propietario anterior y la deuda de la unidad no cambia".
+    - **Fecha efectiva de inicio:** `effective_from = máx(fecha de ingreso declarada, fecha de registro en hora de Chile)` (`docs/arquitectura.md` §4, `UNIT_OCCUPANCY.effective_from`). Un ingreso retroactivo rige desde su registro; uno futuro, desde la fecha declarada. La membresía de residente nace con esa misma fecha.
+    - **Ingreso con fecha futura (menor 13; Supuesto (a validar), S-47):** se acepta. La ocupación queda **programada** y rige desde el inicio del día `effective_from` = fecha de ingreso declarada (00:00, hora de Chile):
+      - Hasta ese día, los cargos que se emitan van al ámbito `owner` (o al del arrendatario vigente, si lo hay), el arrendatario no tiene acceso a la unidad y no recibe notificaciones.
+      - Desde ese día, la ocupación está vigente: los cargos que se emitan van a su ámbito y su acceso se activa.
+      - Si la emisión se confirma el mismo día del ingreso, la ocupación ya está vigente. La vista previa de la víspera queda desactualizada por el cambio de fecha (regla A-7).
+      - El administrador ve: "El arriendo comienza el {dd-mm-aaaa}. Hasta entonces, los cargos siguen siendo del propietario y {nombre} no tiene acceso".
+      - Mientras haya un arrendatario programado o vigente, no se puede registrar otro: 409 `TENANT_ALREADY_ACTIVE` con "La unidad ya tiene un arrendatario vigente o programado. Registra su término o cancela el arriendo programado antes de agregar otro". Una ocupación programada se puede **cancelar** antes de su inicio, con motivo y sin fecha de término: nunca estuvo vigente, no tiene movimientos y no hay traspaso. Queda en el historial como "Cancelada" y en auditoría.
+    - **Cancelación de un arriendo programado (`occupancy.write`, solo administrador):**
+      - Ruta `POST .../occupancies/{occupancyId}/cancel`, con clave de idempotencia y motivo obligatorio, sin vista previa: no mueve dinero ni cambia el responsable de una deuda (`docs/arquitectura.md` §4). El comité recibe 403; un residente, 404.
+      - Solo se cancela una ocupación de arrendatario que **sigue programada** al ejecutar (hoy, en hora de Chile, es anterior a su `effective_from`). El día de `effective_from` ya está vigente y no se puede cancelar.
+      - Errores, en este orden: ocupación de propietario, 422 `USE_OWNERSHIP_TRANSFER` con "Para cambiar al propietario, registra la venta"; ocupación vigente, 409 `OCCUPANCY_ALREADY_STARTED` con "Este arriendo ya comenzó. Para terminarlo, registra su término"; ocupación terminada, 409 `OCCUPANCY_ALREADY_ENDED` con "Este arriendo ya terminó"; ocupación ya cancelada, 409 `OCCUPANCY_CANCELLED` con "Este arriendo ya fue cancelado"; sin motivo, 422 `REASON_REQUIRED` con "Indica el motivo de la cancelación". En todos estos casos no se escribe nada. Un reintento con la misma clave de idempotencia devuelve el resultado original, no el 409.
+      - Efecto: la membresía de residente que iba a nacer se termina si la persona no tiene otra ocupación en la comunidad; la persona nunca tuvo acceso ni recibió notificaciones de la unidad. Desde la cancelación se puede registrar otro arrendatario en la unidad.
+      - Una ocupación cancelada no recibe cargos (la emisión no la ve vigente), ni pagos manuales (F-9, 409 `OCCUPANCY_CANCELLED`), ni intentos Webpay (404 para el residente).
+    - **Término o venta con fecha futura (Supuesto (a validar), S-47):** no se aceptan. La respuesta es 422 `END_DATE_IN_FUTURE` con "Registra el término el día que ocurra" o "Registra la venta el día que ocurra". Así, el traspaso y el corte de acceso siempre ocurren al registrar. Una fecha de término anterior a la de ingreso responde 422 `END_BEFORE_START`; terminar una ocupación ya terminada, 409 `OCCUPANCY_ALREADY_ENDED`; terminar una ocupación de propietario por la ruta de término de arriendo, 422 `USE_OWNERSHIP_TRANSFER` (el propietario cambia solo con una venta).
+    - **Rutas (`docs/arquitectura.md` §4):** alta de arrendatario `.../units/{unitId}/occupancies/preview` y `.../occupancies`; término `.../occupancies/{occupancyId}/end-preview` y `.../end`; venta o propietario faltante `.../units/{unitId}/ownership-transfers/preview` y `.../ownership-transfers`.
+    - **Término de arriendo y venta con vista previa (M-6):** ambos se confirman contra la versión de su vista previa (regla A-7), con clave de idempotencia. Si la cuenta de la unidad cambió, la respuesta es 409 `PREVIEW_OUTDATED` con "La cuenta de la unidad cambió desde la vista previa. Revisa la nueva vista previa antes de confirmar" y no se escribe nada.
+    - **Venta:** el propietario que sale pierde el acceso al registrarse (S-14); la deuda y el saldo a favor del ámbito `owner` siguen a la unidad y no se mueven (Ley 21.442, art. 6); el arriendo vigente no cambia. Si el propietario que sale integra el comité, aplica "Comité que deja de ser propietario" (M-7).
+    - Las fechas declaradas y las de registro de cada ingreso y término quedan en el registro de ocupaciones y en auditoría (ver "Ocupación" en "Definiciones").
 15. **Unidad sin propietario registrado (M7; S-28).** La emisión no se bloquea por una unidad sin propietario registrado (por ejemplo, durante una migración):
     - La vista previa de emisión advierte: "Unidades sin propietario registrado: <lista>. Su aviso se emitirá a nombre de 'Propietario sin registrar'".
     - Los cargos siguen la regla F-9: si hay un arrendatario vigente, van a su ámbito; si no, al ámbito `owner`.
@@ -527,21 +767,56 @@ La regla 4 de `CLAUDE.md` exige que toda consulta a datos de negocio filtre por 
     - Si ese aviso sirve para el cobro legal queda en P-20.
 16. **Intento Webpay en revisión (decisión del líder del proyecto, 2026-11-07; M4; S-32).**
     - **Cuándo:** si Transbank autoriza un monto distinto del iniciado, o si Transbank no entrega un estado concluyente, la API no registra ningún pago y el intento pasa a `in_review` (`docs/arquitectura.md` §4).
-    - **Qué ve el pagador:** "Tu pago está en revisión. Te avisaremos cuando se resuelva", con el número de orden. Su deuda no cambia mientras tanto.
-    - **Bloqueo:** `in_review` libera el bloqueo del ámbito para no impedir pagar (Supuesto (a validar) de la arquitectura). Si el pagador vuelve a pagar, la app advierte: "Tienes un pago en revisión por $<monto>; si pagas de nuevo podría quedar saldo a favor".
-    - **Quién lo resuelve:** solo Soporte ComVive (`platform_support`, permiso `platform.webpay_review.resolve`, excepción EX-1). El administrador y el comité de la comunidad ven los intentos en revisión de su comunidad, solo lectura (`webpay_attempt.read`); si intentan resolver, reciben 403.
+    - **Qué ve el pagador:** el estado "En revisión por ComVive" (texto fijado por el líder, M-8) y debajo "Te avisaremos cuando se resuelva. Número de orden {buy_order}". Su deuda no cambia mientras tanto.
+    - **Bloqueo:** `in_review` libera el bloqueo del ámbito para no impedir pagar (Supuesto (a validar) de la arquitectura). Si el pagador vuelve a pagar, la app advierte: "Tienes un pago en revisión por $<monto>; si pagas de nuevo podría quedar saldo a favor". `<monto>` es el **monto iniciado** del intento, el que el pagador quiso pagar (en CA-41, $110.000), no el autorizado (H-23): el autorizado no existe cuando Transbank no entregó un estado concluyente, y el pagador no ve los datos de la revisión.
+    - **Quién lo resuelve:** solo Soporte ComVive (`platform_support`, permiso `platform.webpay_review.resolve`, excepción EX-1). El administrador y el comité de la comunidad ven los intentos en revisión de su comunidad, solo lectura (`webpay_attempt.read`). No tienen endpoint de resolución: si llaman a la ruta de plataforma, reciben 404 (M-4; `docs/arquitectura.md` §2).
     - **Resoluciones, siempre con vista previa (`previewHash`, regla A-7), clave de idempotencia y motivo obligatorio:**
 
       | Resolución (código) | Desde → hasta | Efecto |
       | --- | --- | --- |
-      | Registrar el pago por el monto autorizado (`register_authorized`) | `in_review` → `resolved_paid` | Se registra un `PAYMENT` con `origin = webpay` por el monto autorizado, con `paid_on` = fecha de autorización de Transbank y `external_ref` = `buy_order`, en el borrador vigente (regla A-4) y en el ámbito del intento. Se imputa con F-5; un exceso queda a favor. Si la fecha efectiva cae en días con intereses cobrados, aplica E-10. **Solo para intentos de un ámbito** |
+      | Registrar el pago por el monto autorizado (`register_authorized`) | `in_review` → `resolved_paid` | Se registra un `PAYMENT` con `origin = webpay` por el monto autorizado, con `paid_on` = fecha de autorización de Transbank y `external_ref` = `buy_order`, en el borrador vigente (regla A-4), en el ámbito del intento y con `payment_group_id` = id del intento. Si ese ámbito es una ocupación que ya terminó, el pago se traspasa en la misma transacción al ámbito `owner` (F-13). Se imputa con F-5; un exceso queda a favor. Si la fecha efectiva cae en días con intereses cobrados, aplica E-10. **Solo para intentos de un ámbito** |
       | Marcar para reverso (`mark_for_reversal`) | `in_review` → `reversal_pending` | No se registra ningún pago. El pagador ve "Tu pago no se registró. Se solicitará la devolución del monto a Transbank" |
-      | Confirmar el reverso (`confirm_reversal`) | `reversal_pending` → `reversed` | Soporte registra la referencia de la anulación en Transbank. El pagador ve "La devolución de tu pago fue solicitada a Transbank" |
+      | Confirmar el reverso (`confirm_reversal`) | `reversal_pending` → `reversed` | Soporte registra la referencia de la anulación en Transbank. El pagador ve "Tu pago fue anulado en Transbank. El reembolso a tu medio de pago depende de tu banco" (Supuesto (a validar), S-48; P-31) |
+
+    - **Vista previa de la resolución (M-5):** `resolution-preview` devuelve solo los campos de EX-1 más el pago que se crearía: monto, tipo de ámbito final (`owner` u `occupancy`; `owner` si la ocupación del intento ya terminó) y periodo del borrador vigente. Para `mark_for_reversal` y `confirm_reversal` el pago a crear es "ninguno". No devuelve deuda, cargos, imputación ni saldos: la imputación se calcula al ejecutar y Soporte no la ve. La huella (`previewHash`) es estado del intento, monto, tipo de ámbito final y periodo. La pantalla de Soporte muestra el resultado de la resolución solo en la confirmación inmediata; después el intento deja de estar en su vista.
 
     - **Intento de dos ámbitos:** solo se puede marcar para reverso. Si se intenta registrar, la respuesta es 422 `MULTI_SCOPE_REVIEW_REVERSAL_ONLY` con "Un pago que cubre dos deudas solo se puede marcar para reverso". Así no hay que repartir un monto autorizado distinto entre ámbitos. Esto reemplaza el supuesto de reparto por `position` que la arquitectura dejó para que lo confirmara el analista.
-    - **Doble resolución:** un intento que ya llegó a `resolved_paid` o `reversed` deja de ser visible para Soporte, y cualquier lectura o resolución responde 404 (EX-1). Si dos personas de Soporte resuelven a la vez, la segunda recibe 409 `PREVIEW_OUTDATED` con "El intento ya fue resuelto". Lo mismo pasa con una resolución que no corresponde al estado actual, por ejemplo marcar para reverso un intento que ya está en `reversal_pending`.
-    - **Plazo (decisión del líder del proyecto, 2026-11-07):** Soporte ComVive resuelve cada intento en `in_review` dentro de **5 días hábiles** desde que entra a revisión. Al vencer el plazo sin resolución, se envía una alerta automática al equipo de Soporte ComVive y el intento se marca "Plazo vencido" en su lista.
+    - **Doble resolución y estado (M-5).** La regla es una sola:
+      - **404 `NOT_FOUND`** si el intento **salió de la vista** de Soporte: está en `resolved_paid` o `reversed` (o en cualquier estado distinto de `in_review` y `reversal_pending`). Vale para la lectura, la vista previa y la resolución. Si dos personas de Soporte registran a la vez, la segunda recibe 404, porque al ejecutar el intento ya está en `resolved_paid`.
+      - **409 `PREVIEW_OUTDATED`** con "Esta resolución no corresponde al estado actual del intento. Revisa la nueva vista previa" si el intento **sigue en la vista** pero la resolución pedida no corresponde a su estado: `register_authorized` o `mark_for_reversal` sobre `reversal_pending`, o `confirm_reversal` sobre `in_review`. Vale para la vista previa y la resolución (`docs/arquitectura.md` §2).
+      - **409 `PREVIEW_OUTDATED`** con "El intento cambió desde la vista previa. Revisa la nueva vista previa antes de resolver" si la resolución corresponde al estado actual pero la huella cambió (regla A-7), por ejemplo porque cambió el periodo del borrador vigente o la ocupación terminó y el tipo de ámbito final pasó a `owner`.
+    - **Plazo (decisión del líder del proyecto, 2026-11-07):** Soporte ComVive resuelve cada intento en `in_review` dentro de **5 días hábiles** (ver "Días hábiles" en "Definiciones") desde que entra a revisión: el plazo se cuenta desde el día hábil siguiente al día en que entró a revisión y vence al terminar el quinto día hábil, en hora de Chile. La fecha se guarda en `review_due_on` al entrar a revisión, con los feriados de `PUBLIC_HOLIDAY` vigentes en ese momento. Al vencer el plazo sin resolución, se envía una alerta automática al equipo de Soporte ComVive y el intento se marca "Plazo vencido" en su lista. La alerta lleva solo el id del intento y su número de orden.
     - **Devolución en Transbank:** cómo se ejecuta la anulación en Transbank y en qué plazo sigue abierto (P-31; supuesto de la arquitectura: API de anulación de Webpay Plus, ADR 0007). El abono reversado sale de la cuenta de la comunidad, porque el abono llega directo a ella (F-12).
+17. **Textos canónicos de pagos (decisión del líder del proyecto, 2026-11-07; M-8).** Estos textos se usan **idénticos** en la spec, `docs/arquitectura.md`, `docs/design/` y `docs/qa/`. Ningún documento usa variantes.
+
+    | Caso | Dónde aparece | Texto |
+    | --- | --- | --- |
+    | Bloqueo por pago en curso sobre el ámbito (`PAYMENT_IN_PROGRESS`) | App del residente, al iniciar un pago | "Ya hay un pago en proceso para esta deuda" |
+    | Pago manual del administrador | Historial de pagos del arrendatario y del propietario | "Registrado por la administración" |
+    | Pago del propio residente | Historial de pagos de quien inició el pago | "Pagado por ti" |
+    | Pago del propietario en el ámbito del arrendatario | Historial de pagos del arrendatario | "Pagado por el propietario" |
+    | Pago del arrendatario en su ámbito | Historial de pagos del propietario | "Pagado por el arrendatario" |
+    | Intento en `in_review` | Estado del pago en la app | "En revisión por ComVive" |
+    | Intento en `in_review`, detalle | Debajo del estado | "Te avisaremos cuando se resuelva. Número de orden {buy_order}" |
+    | Intento en `reversal_pending` | Estado del pago en la app | "Tu pago no se registró. Se solicitará la devolución del monto a Transbank" |
+    | Intento en `reversed` | Estado del pago en la app | "Tu pago fue anulado en Transbank. El reembolso a tu medio de pago depende de tu banco" |
+    | Nuevo pago con un intento propio en revisión | App, antes de pagar | "Tienes un pago en revisión por $<monto>; si pagas de nuevo podría quedar saldo a favor" (`<monto>` = monto iniciado del intento, F-16) |
+    | Comunidad sin código de comercio (`ONLINE_PAYMENT_NOT_AVAILABLE`) | App, en lugar del botón de pago | "Esta comunidad aún no recibe pagos en línea. Pide a la administración los datos para pagar por transferencia" |
+    | Intento propio en `initiated` (UX-46) | App del residente que inició el intento, en el estado de su deuda | "Tienes un pago en proceso" |
+    | Intento propio en `initiated`, detalle (UX-46) | Debajo del estado | "Número de orden {buy_order}. Te avisaremos el resultado" |
+    | Resolución `register_authorized` confirmada | Consola de Soporte ComVive, confirmación inmediata | "Pago registrado por $<monto> en la deuda {del propietario\|del arrendatario} de {unidad}, periodo <AAAA-MM>. Número de orden {buy_order}" |
+    | Resolución `mark_for_reversal` confirmada | Consola de Soporte ComVive, confirmación inmediata | "Intento {buy_order} marcado para reverso. Solicita la anulación en Transbank y luego confirma el reverso con su referencia" |
+    | Resolución `confirm_reversal` confirmada | Consola de Soporte ComVive, confirmación inmediata | "Reverso confirmado para el intento {buy_order}. Referencia de Transbank: {referencia}" |
+    | Tarea "Revisar rol de comité" cerrada con `revoke_committee` | Web del administrador | "Revocaste el rol de comité de {nombre}. La tarea quedó cerrada" |
+    | Tarea "Revisar rol de comité" cerrada con `keep_committee` | Web del administrador | "Mantuviste el rol de comité de {nombre}. La tarea quedó cerrada" |
+    | Traspaso de deuda al ámbito `owner` | Historial del ámbito `owner` (propietario, administrador, comité) | "Traspaso desde arriendo terminado el {dd-mm-aaaa}" |
+    | Traspaso de saldo a favor al ámbito `owner` (F-13) | Historial del ámbito `owner` (propietario, administrador, comité) | "Saldo a favor traspasado desde arriendo terminado el {dd-mm-aaaa}" |
+
+    - "Pagado por ti", "Pagado por el arrendatario", el texto de `reversed` y el de `ONLINE_PAYMENT_NOT_AVAILABLE` son propuestas del analista (S-48); los demás los fijó el líder o ya estaban aprobados.
+    - **Pago propio en proceso (UX-46):** "Tienes un pago en proceso" es el **estado** que ve quien inició el intento mientras está en `initiated`. Es distinto del error 409 `PAYMENT_IN_PROGRESS` ("Ya hay un pago en proceso para esta deuda"), que responde la API a quien intenta iniciar otro pago sobre un ámbito bloqueado, sin decir quién paga. Los demás residentes que ven ese ámbito no ven el estado: solo reciben el 409 si intentan pagar.
+    - **Consola de Soporte:** en la confirmación de `register_authorized`, "{del propietario\|del arrendatario}" sale del tipo de ámbito final (`owner` u `occupancy`) y {unidad} es el código de la unidad, los únicos datos que Soporte ve (EX-1); nunca un nombre. Las tres confirmaciones se muestran solo una vez, al confirmar (F-16).
+    - Las confirmaciones de Soporte, las del cierre de la tarea de comité, los dos textos del pago propio en proceso y el del traspaso de saldo a favor son propuestas del analista (S-52) a partir del diseño (UX-46 y UX-49).
+    - **Sin etiqueta:** un pago Webpay que inició un propietario anterior, visto por el propietario nuevo, no lleva texto de quién pagó (`payerKind` nulo; regla F-12, S-51). No hay texto canónico para ese caso: el historial muestra solo monto, fecha y medio.
 
 ### G. Aviso de cobro
 
@@ -556,7 +831,12 @@ La regla 4 de `CLAUDE.md` exige que toda consulta a datos de negocio filtre por 
    - Gastos del periodo por subcategoría. Las remuneraciones se muestran **agregadas** como "Remuneraciones del personal", sin detalle por persona.
    - Cargos de la unidad por cuenta (las unidades con $0 aparecen con $0), ajustes con su motivo, saldo anterior, pagos recibidos, total a pagar, saldo del fondo, medios de pago y nombre del administrador.
 3. **Firma:** el aviso firmado por el administrador, en forma presencial o electrónica, tiene mérito ejecutivo (Ley 21.442, art. 32). En el MVP lleva la identificación del administrador como firma electrónica simple (P-6).
-4. **Saldo de caja:** en el MVP lo ingresa el administrador al emitir, con monto y fecha de corte (S-16). Los ingresos y egresos del mes salen de los pagos y los gastos registrados.
+4. **Saldo de caja:** en el MVP lo ingresa el administrador al emitir, con monto y fecha de corte (S-16). Los ingresos y egresos del mes salen de los pagos y los gastos registrados. Reglas del dato (menor 6; cierra UX-27; Supuesto (a validar), S-45):
+   - Es obligatorio para emitir. Sin monto o sin fecha de corte, la vista previa y la emisión responden 422 `CASH_BALANCE_REQUIRED` con "Ingresa el saldo de caja y su fecha de corte. Puede ser $0".
+   - Es un entero CLP que **acepta $0 y valores negativos** (sobregiro de la cuenta corriente). No es un cobro, así que la regla B-5 no le aplica. El aviso muestra el negativo con signo: "Saldo de caja al {dd-mm-aaaa}: −$<monto>".
+   - Su valor absoluto no puede superar $9.999.999.999 (regla B-6, 422 `AMOUNT_TOO_LARGE`).
+   - La **fecha de corte no puede ser futura** respecto de la fecha de emisión (hora de Chile): 422 `CASH_BALANCE_DATE_IN_FUTURE` con "La fecha de corte no puede ser futura". Puede ser anterior al fin del mes del periodo; la pantalla propone el último día del mes del periodo.
+   - Forma parte de la huella de la vista previa de emisión (regla A-7): cambiar el monto o la fecha de corte invalida la vista previa.
 5. **Documento:** el aviso se guarda como PDF al emitir. Se puede reenviar, nunca regenerar con otros montos.
 6. **Notificación al emitir (menor 6; S-29).** Al terminar la emisión, y fuera de su transacción, ComVive envía automáticamente:
    - Al propietario registrado de cada unidad: "Ya está disponible tu aviso de cobro de <periodo>. Vence el <dd-mm-aaaa>", con acceso al aviso.
@@ -570,7 +850,7 @@ La regla 4 de `CLAUDE.md` exige que toda consulta a datos de negocio filtre por 
    - Sus cargos del periodo por cuenta; sus intereses y ajustes con su motivo; el saldo anterior de su ámbito; los pagos de su ámbito con la etiqueta de quién pagó (regla F-12) y el total a pagar de su ámbito; sus cuotas impagas.
    - El resumen de gastos de la comunidad (regla G-8), el saldo del fondo y el saldo de caja.
    - **No contiene:** nombre ni RUT del propietario, deuda ni saldo del ámbito `owner`, el total de la unidad, ni el número correlativo del aviso legal.
-   - **Descarga (H-12; Supuesto (a validar), S-40):** el arrendatario puede descargar un **comprobante de cobro** en PDF con este mismo contenido, titulado "Comprobante de cobro (no es el aviso de cobro legal)". Se genera al emitir, igual que el aviso (G-5), y no se regenera con otros montos. El aviso legal de su unidad le responde 404.
+   - **Descarga (H-12; Supuesto (a validar), S-40):** el arrendatario puede descargar un **comprobante de cobro** en PDF con este mismo contenido, titulado "Comprobante de cobro (no es el aviso de cobro legal)". Se genera al emitir, igual que el aviso (G-5), y no se regenera con otros montos. El aviso legal de su unidad le responde 404. Además del arrendatario, lo descargan el administrador y el comité; el propietario y el ex arrendatario reciben 404 (H-20; "Qué recursos ve cada rol").
    - El arrendatario ve además el resumen de gastos (G-8), el saldo del fondo y el saldo de caja de la comunidad, igual que el propietario.
 8. **Resumen de gastos para residentes (menor 11; S-31).** Lo ven el propietario y el arrendatario en la app, y es el mismo detalle de gastos del aviso legal:
    - Gastos del periodo por subcategoría con su total, y dentro de cada subcategoría cada gasto con su concepto y monto.
@@ -611,6 +891,9 @@ La regla 4 de `CLAUDE.md` exige que toda consulta a datos de negocio filtre por 
    - Tiene vista previa y se confirma contra su versión (regla A-7), con clave de idempotencia.
    - El gasto no se borra: queda con el estado "Anulado", su motivo y su monto original visibles. Una corrección posterior a un monto mayor que $0 lo reactiva y se calcula con la misma fórmula H-2.
    - En un borrador no se usa esta acción: el gasto simplemente se elimina (regla A-2).
+7. **Corrección sin cambios y motivo (UX-48, UX-49).**
+   - Si la corrección deja el gasto igual (mismo monto, cuenta, base de pesos, conjunto de unidades y subcategoría que su versión vigente), la vista previa y la ejecución responden 422 `CORRECTION_WITHOUT_CHANGE` con "La corrección no cambia el gasto. No hay nada que corregir", y no se escribe nada. Anular un gasto ya anulado responde el mismo código con "Este gasto ya está anulado. No hay nada que corregir". Un cambio solo de subcategoría sí es una corrección (H-3, sin movimiento).
+   - El motivo es obligatorio en la vista previa y en la ejecución: sin él, 422 `REASON_REQUIRED` con "Indica el motivo de la corrección" (monto correcto mayor que $0) o "Indica el motivo de la anulación" ($0). Ese es el texto canónico del error. Bajo el campo, el formulario muestra la ayuda "El motivo aparecerá en el aviso de cobro" (regla H-4); la misma ayuda se usa en la corrección de un egreso del fondo (B-3).
 
 ## Criterios de aceptación
 
@@ -679,7 +962,7 @@ Las comunidades A, B, C y D vienen de `docs/qa/comunidades-simuladas.md`.
 
 - Dado un grupo (ordinario, alícuota) de $876.543 con `aliquot_e6` 187345, 243218, 256789 y 312648
 - Cuando se emite
-- Entonces el fondo es (876.543 × 500 + 9.999) div 10.000 = 438.281.499 div 10.000 = $43.828. Es el techo de 43.827,15; con el redondeo anterior (mitad hacia arriba) era $43.827.
+- Entonces el fondo es (876.543 × 500 + 9.999) div 10.000 = 438.281.499 div 10.000 = $43.828, el techo de 43.827,15 (regla D-3).
 - Y en el fondo los productos 43.828 × `aliquot_e6` son 8.210.956.660, 10.659.758.504, 11.254.548.292 y 13.702.736.544. Las partes enteras suman 8.210 + 10.659 + 11.254 + 13.702 = 43.825, y los 3 pesos que faltan van a los restos 956.660 (Depto 1), 758.504 (Depto 2) y 736.544 (Depto 4).
 - Y los cargos son:
 
@@ -691,7 +974,8 @@ Las comunidades A, B, C y D vienen de `docs/qa/comunidades-simuladas.md`.
   | GOLD-D-04 | Depto 4 | $274.049 | $13.703 | $287.752 |
   | | **Suma** | **$876.543** | **$43.828** | **$920.371** |
 
-- **Diferencia con la prueba de oro D:** `docs/qa/comunidades-simuladas.md` usa un fondo fijo de $43.827 y espera $287.751 en GOLD-D-04. Con el techo de la regla D-3, la emisión da un fondo de $43.828 y $287.752 en GOLD-D-04. GOLD-D-01 a 03 no cambian. La prueba de oro D se actualiza al techo (P-15 cerrada). La diferencia de ±1 peso por cuenta ya no se prueba con la Comunidad D sino con GOLD-CE (regla C-6).
+- Y estos son los valores vigentes de la prueba de oro D en `docs/qa/comunidades-simuladas.md` (fondo $43.828, GOLD-D-04 $287.752, total $920.371; P-15 cerrada). Una implementación que redondee el fondo a la mitad hacia arriba ($43.827) falla GOLD-D-04.
+- Y la diferencia de ±1 peso por cuenta no se prueba con la Comunidad D sino con GOLD-CE (regla C-6).
 
 **CA-5 · Pago parcial e imputación (Comunidad A)**
 
@@ -879,12 +1163,15 @@ Las comunidades A, B, C y D vienen de `docs/qa/comunidades-simuladas.md`.
 
 **CA-24 · Permisos por rol**
 
-- Dado un miembro del comité de la Comunidad A
+- Dado un miembro del comité de la Comunidad A, que ve el periodo `2026-10`, el borrador y las unidades
 - Cuando intenta emitir, cerrar, registrar un pago o crear un gasto
-- Entonces recibe 403 y nada cambia.
+- Entonces recibe 403 `FORBIDDEN` con "Tu rol no permite esta acción", porque ve el recurso pero no puede actuar (M-4), y nada cambia.
 - Dado un conserje de la Comunidad A
-- Cuando intenta leer un aviso o un saldo
-- Entonces recibe 403.
+- Cuando intenta leer un aviso, un cargo, un pago o un saldo
+- Entonces recibe 404 `NOT_FOUND` con "No encontramos lo que buscas o no tienes acceso", porque su rol no ve nada de este módulo (M-4), con la misma respuesta exista o no el recurso.
+- Dado el administrador de la Comunidad A
+- Cuando intenta abrir una ruta `/platform/...` con su sesión de comunidad
+- Entonces recibe 404.
 
 **CA-25 · Emisión idempotente**
 
@@ -951,7 +1238,8 @@ Las comunidades A, B, C y D vienen de `docs/qa/comunidades-simuladas.md`.
 - Y en `owner` se imputa: interés vencido $1.639; capital vencido `2026-10` ordinario $250.000 y fondo $12.500; no vencido, interés $2.675.
 - Y en `occupancy` O-1 se imputa, todo no vencido: interés $690, ordinario `2026-12` $250.000 y fondo `2026-12` $12.500.
 - Y ambos ámbitos quedan con saldo $0.
-- Y el propietario ve el pago en línea de $530.004 con el detalle "Tu deuda $266.814" y "Deuda del arrendatario $263.190".
+- Y los dos pagos tienen el mismo `payment_group_id`, que es el identificador del intento (el de `buy_order` `OC-2027-0001`).
+- Y el propietario ve el pago en línea de $530.004, "Pagado por ti", con el detalle "Tu deuda $266.814" y "Deuda del arrendatario $263.190".
 - Y el arrendatario ve en su ámbito "Pagado por el propietario · $263.190 · 05-01-2027 · Webpay". No ve el pago de $266.814 del ámbito `owner` ni el total de $530.004. Si pide el pago del ámbito `owner` o el detalle del intento, recibe 404.
 - Y en la emisión de `2027-01` el 2027-02-01, el ámbito `owner` genera un interés de piso(262.500 × 4 × 1200 / 3.650.000) = piso(1.260.000.000 / 3.650.000) = piso(345,2054…) = $345, por los días del 2027-01-01 al 2027-01-04 (fecha efectiva máx(2027-01-05, 2026-11-11) = 2027-01-05). El ámbito `occupancy` O-1 no genera interés, porque pagó antes del vencimiento.
 
@@ -959,7 +1247,7 @@ Las comunidades A, B, C y D vienen de `docs/qa/comunidades-simuladas.md`.
 
 - Dado el mismo estado inicial de CA-29
 - Cuando el 2027-01-05 el propietario elige "Deuda del arrendatario" y el intento de $263.190 (un `WEBPAY_ATTEMPT_SCOPE` sobre `occupancy` O-1) queda en `initiated`
-- Entonces el arrendatario ve "Hay un pago en proceso para esta deuda", sin indicar quién paga, y si intenta iniciar otro pago recibe 409 `PAYMENT_IN_PROGRESS`.
+- Entonces el arrendatario ve "Ya hay un pago en proceso para esta deuda", sin indicar quién paga, y si intenta iniciar otro pago recibe 409 `PAYMENT_IN_PROGRESS`.
 - Y el propietario puede iniciar en paralelo "Mi deuda" por $266.814, pero no se le ofrece "Ambas".
 - Y si el arrendatario intenta por la API un pago del ámbito `owner`, recibe 404.
 - Cuando Transbank confirma $263.190
@@ -982,16 +1270,18 @@ Las comunidades A, B, C y D vienen de `docs/qa/comunidades-simuladas.md`.
 - Cuando el 2026-12-04 el administrador registra una transferencia de $262.500 sin elegir a qué deuda aplicarla
 - Entonces el registro se rechaza con 422 `SCOPE_REQUIRED` y "Elige a qué deuda aplicar el pago", y no se escribe nada.
 - Cuando la registra con "Ambos": Propietario $100.000 y Arrendatario $162.500
-- Entonces se registran **dos** `PAYMENT` con `origin = manual` ($100.000 en `owner` y $162.500 en `occupancy` O-1), agrupados por la clave de idempotencia del registro, por un total de $262.500.
+- Entonces se registran **dos** `PAYMENT` con `origin = manual` ($100.000 en `owner` y $162.500 en `occupancy` O-1), con el mismo `payment_group_id` generado por el servidor al registrar (G-1), por un total de $262.500.
 - Y en `owner` se imputan $100.000 al ordinario vencido de `2026-10`, que queda en $150.000 más el fondo de $12.500: saldo del ámbito $162.500.
 - Y en `occupancy` O-1 se imputan $162.500 al ordinario de `2026-11`, que queda en $87.500 más el fondo de $12.500: saldo del ámbito $100.000.
 - Y el arrendatario ve "Registrado por la administración · $162.500 · 04-12-2026 · transferencia", sin el pago de $100.000 del ámbito `owner` ni el total de $262.500.
 - Cuando el administrador anula el pago de $162.500
-- Entonces la vista previa y la anulación incluyen los dos pagos del grupo: se registran dos reversos, uno en cada ámbito, y los saldos vuelven a $262.500 en `owner` y $262.500 en `occupancy` O-1. No se puede anular uno solo.
+- Entonces la vista previa y la anulación incluyen los dos pagos con el `payment_group_id` G-1: se registran dos reversos, uno en cada ámbito, y los saldos vuelven a $262.500 en `owner` y $262.500 en `occupancy` O-1. No se puede anular uno solo.
+- Y si la anulación se pide el 2027-01-20, 47 días después del registro, cuando la clave de idempotencia del registro ya se borró (A-3.4), el resultado es el mismo: la anulación incluye los dos pagos de G-1, porque el grupo se identifica por `payment_group_id` y no por la clave (M-1).
+- Y si el administrador registra un pago "Ambos" con dos asignaciones al ámbito `owner`, recibe 422 `DUPLICATE_SCOPE` con "Cada deuda puede aparecer una sola vez en el pago".
 
 **CA-33 · Anular un gasto de un periodo emitido (Comunidad A)**
 
-- Dado `2026-10` emitido como en CA-1, con el Depto 101 pagado completo ($210.000) y el Depto 202 impago ($315.000)
+- Dado `2026-10` emitido como en CA-1, con el Depto 101 pagado completo ($210.000), el Depto 202 impago ($315.000), los Deptos 102 y 201 impagos ($262.500 cada uno) y el Depto 102 sin arrendatario, así que todos sus cargos están en el ámbito `owner` (H-26)
 - Cuando el 2026-11-20 el administrador anula el gasto "Aseo y artículos" de $50.000 sin indicar motivo
 - Entonces se rechaza con "Indica el motivo de la anulación" y nada cambia.
 - Cuando lo anula con el motivo "No correspondía a la comunidad"
@@ -1008,15 +1298,16 @@ Las comunidades A, B, C y D vienen de `docs/qa/comunidades-simuladas.md`.
 
 - Y el Depto 101 queda con $10.500 a favor (saldo −$10.500), porque su cargo ya estaba pagado y no tiene otra deuda.
 - Y el Depto 202 queda con ordinario $285.000 y fondo $14.250 pendientes: saldo $299.250.
+- Y los Deptos 102 y 201 quedan cada uno con ordinario $237.500 y fondo $11.875 pendientes: saldo $249.375.
 - Y el gasto aparece como "Anulado", con su motivo y su monto original de $50.000. Ningún movimiento de `2026-10` cambia.
 
 **CA-34 · Anular el único gasto de un grupo (Comunidad B)**
 
-- Dado `2026-10` emitido como en CA-16 (extraordinario $100.000 por casa; ordinario y fondo como en CA-2), con la Casa 1 pagada completa ($133.334) y la Casa 2 impaga ($133.333)
+- Dado `2026-10` emitido como en CA-16 (extraordinario $100.000 por casa; ordinario y fondo como en CA-2), con la Casa 1 pagada completa ($133.334) y las Casas 2 y 3 impagas ($133.333 cada una: ordinario $31.746, fondo $1.587 y extraordinario $100.000; H-26)
 - Cuando el administrador anula el extraordinario de $300.000, con el motivo "Obra aprobada dos veces"
 - Entonces el grupo (extraordinario, partes iguales) queda en $0 y el cargo correcto de cada casa es $0.
 - Y se crea una nota de crédito de −$100.000 en la cuenta `extraordinario` para cada casa. El ordinario y el fondo ($4.762) no cambian.
-- Y la Casa 1 queda con $100.000 a favor y la Casa 2 queda con $33.333 pendientes ($31.746 de ordinario y $1.587 de fondo).
+- Y la Casa 1 queda con $100.000 a favor, y las Casas 2 y 3 quedan cada una con $33.333 pendientes ($31.746 de ordinario y $1.587 de fondo).
 
 **CA-35 · Webpay iniciado antes del término de la ocupación y confirmado después (Comunidad A)**
 
@@ -1026,6 +1317,7 @@ Las comunidades A, B, C y D vienen de `docs/qa/comunidades-simuladas.md`.
 - Entonces el administrador ve "Hay un pago en línea en curso del arrendatario. Si se confirma, se aplicará a la deuda de la unidad".
 - Y se traspasan al ámbito `owner` el ordinario ($250.000) y el fondo ($12.500) de `2026-11`, que conservan su vencimiento del 2026-12-11. El ámbito `owner` queda en $525.000 y `occupancy` O-1 en $0.
 - Y el arrendatario pierde el acceso desde ese momento.
+- Y el propietario ve lo traspasado como "Traspaso desde arriendo terminado el 05-12-2026": la fecha de registro, no la declarada del 2026-12-04 (H-27).
 - Cuando a las 10:08 Transbank confirma $262.500 (`paid_on` 2026-12-05)
 - Entonces el crédito se registra en `occupancy` O-1, queda a favor y, en la misma transacción, se traspasa al ámbito `owner`.
 - Y en `owner` se imputa con el orden de F-5 al capital vencido de `2026-10`: ordinario $250.000 y fondo $12.500.
@@ -1037,7 +1329,8 @@ Las comunidades A, B, C y D vienen de `docs/qa/comunidades-simuladas.md`.
 - Cuando el 2026-12-15 el administrador corrige la electricidad de `2026-11` de $180.000 a $170.000
 - Entonces la nota de crédito del Depto 102 es −$2.500 de ordinario y −$125 de fondo, como en CA-13, y se registra en el ámbito `occupancy` O-1, que es el del cargo ajustado.
 - Y como ese cargo ya estaba saldado por el traspaso, se liberan $2.625, que quedan a favor en `occupancy` O-1 y se traspasan en la misma transacción al ámbito `owner`.
-- Y en `owner` se imputan al capital vencido más antiguo: el ordinario traspasado de `2026-11` (vencido el 2026-12-11) queda en $247.375, más el fondo de $12.500: saldo $259.875.
+- Y el crédito de traspaso que llega a `owner` lleva el `paid_on` de la nota de crédito que lo generó, es decir, el vencimiento del cargo ajustado, 2026-12-11 (reglas F-11 y F-13; H-25). Su fecha de referencia es máx(2026-12-11, 2026-12-05) = 2026-12-11, así que el ordinario traspasado de `2026-11` (vence el 2026-12-11) **no está vencido** a esa fecha.
+- Y en `owner` se imputan con el paso "lo no vencido" de F-5, al capital en orden ordinario → fondo: el ordinario traspasado de `2026-11` queda en $247.375, más el fondo de $12.500: saldo $259.875.
 - Y `occupancy` O-1 sigue en $0, sin deuda ni saldo a favor.
 
 **CA-37 · Ingreso y término retroactivos de un arrendatario (Comunidad A)**
@@ -1081,11 +1374,13 @@ Las comunidades A, B, C y D vienen de `docs/qa/comunidades-simuladas.md`.
   | **Suma** | **$1.010.000** | **$50.500** | **$1.060.500** |
 
 - Y si una vista previa pedida el 2026-10-31 se confirma el 2026-11-01, la respuesta también es 409, porque cambió la fecha de emisión.
-- Y con el flag `billing.interest` activo, un pago registrado en la comunidad entre la vista previa y la confirmación también produce 409. Con el flag apagado, no.
+- Y con el flag `billing.interest` activo, un pago registrado en la comunidad entre la vista previa y la confirmación también produce 409, porque cambia el capital y por lo tanto los intereses.
+- Y con el flag apagado (H-22), un pago produce 409 solo si cambia lo que escribe la emisión (regla A-7). En este escenario, que es la primera emisión y no hay deuda anterior, todo pago queda a favor y se imputaría al emitir (A-3.3.7), así que **también produce 409**. Por ejemplo, un pago manual de $10.000 al Depto 101 entre v2 y su confirmación da 409 con el mismo mensaje.
+- Y con el flag apagado, un pago que solo salda deuda de periodos anteriores sin dejar saldo a favor (por ejemplo, $262.500 del Depto 102 sobre su deuda de `2026-10` antes de emitir `2026-11`) no cambia los cargos ni las imputaciones de la emisión y **no** produce 409, aunque cambie el saldo anterior y el total a pagar del aviso.
 
 **CA-40 · Anulación de un pago confirmada contra su estado (Comunidad A)**
 
-- Dado el escenario de CA-12 antes de anular: el Depto 202 (ámbito `owner`) tiene P1 ($315.000, cheque, `origin = manual`, pago sin grupo) imputado a todo `2026-10` y P2 ($100.000, `origin = manual`) a favor
+- Dado el escenario de CA-12 antes de anular: el Depto 202 (ámbito `owner`) tiene P1 ($315.000, cheque, `origin = manual`, grupo de un solo pago con su propio `payment_group_id`) imputado a todo `2026-10` y P2 ($100.000, `origin = manual`) a favor
 - Cuando el 2026-11-20 el administrador pide la vista previa de la anulación de P1 y recibe el `previewHash` h1, con un saldo resultante de $215.000
 - Y antes de confirmar, otro administrador registra un pago en efectivo de $15.000 para el Depto 202, que queda a favor
 - Y el primer administrador confirma con h1 y una clave de idempotencia nueva
@@ -1093,31 +1388,33 @@ Las comunidades A, B, C y D vienen de `docs/qa/comunidades-simuladas.md`.
 - Cuando pide una vista previa nueva (h2) y la confirma
 - Entonces se registra el reverso de $315.000 en `2026-11` y se reimputan P2 ($100.000) y el pago en efectivo ($15.000) al ordinario de `2026-10`, que queda en $185.000 más el fondo de $15.000: saldo 315.000 − 115.000 = $200.000.
 - Cuando otro administrador intenta anular P1 de nuevo
-- Entonces la respuesta es 409 `PREVIEW_OUTDATED` con "El pago ya fue anulado".
-- Y si P1 hubiera sido parte de un grupo "Ambos" (CA-32), la vista previa y la anulación habrían incluido todos los pagos del grupo.
+- Entonces la respuesta es 409 `PAYMENT_ALREADY_VOIDED` con "El pago ya fue anulado", tanto en la vista previa como en la anulación.
+- Y si P1 hubiera sido parte de un grupo "Ambos" (CA-32), la vista previa y la anulación habrían incluido todos los pagos con su mismo `payment_group_id`, aunque hubieran pasado más de 30 días desde el registro.
 
 **CA-41 · Intento Webpay en revisión resuelto por Soporte ComVive (Comunidad A)**
 
 - Dado el estado de CA-5: el Depto 101 debe $110.000 (ordinario $100.000 y fondo $10.000 de `2026-10`, vencidos el 2026-11-11)
 - Cuando el 2026-11-25 el propietario inicia un pago Webpay de $110.000 con la orden `OC-2026-0002` y Transbank autoriza $11.000
 - Entonces no se registra ningún pago, el intento pasa a `in_review` y el saldo sigue en $110.000.
-- Y el propietario ve "Tu pago está en revisión. Te avisaremos cuando se resuelva", con el número de orden.
-- Y el administrador de la Comunidad A ve el intento en revisión, pero si intenta resolverlo recibe 403.
-- Cuando el 2026-11-26 Soporte ComVive pide la vista previa de `register_authorized` y la confirma con su `previewHash` y un motivo
-- Entonces se registra un `PAYMENT` con `origin = webpay` de $11.000, con `paid_on` 2026-11-25 y `external_ref` `OC-2026-0002`, en el borrador vigente `2026-11`, y el intento pasa a `resolved_paid`.
+- Y el propietario ve el estado "En revisión por ComVive" y debajo "Te avisaremos cuando se resuelva. Número de orden OC-2026-0002".
+- Y el administrador de la Comunidad A ve el intento en revisión (`webpay_attempt.read`), pero no tiene endpoint para resolverlo: si llama a la ruta de resolución `/platform/...`, recibe 404 `NOT_FOUND`, porque su sesión de comunidad no ve las rutas de plataforma (M-4).
+- Cuando el 2026-11-26 Soporte ComVive pide la vista previa de `register_authorized`
+- Entonces recibe solo los campos de EX-1 más el pago a crear: $11.000, tipo de ámbito final `owner`, periodo `2026-11`. No recibe la deuda de $110.000 ni la imputación.
+- Cuando la confirma con su `previewHash` y un motivo
+- Entonces se registra un `PAYMENT` con `origin = webpay` de $11.000, con `paid_on` 2026-11-25, `external_ref` `OC-2026-0002` y `payment_group_id` = id del intento, en el borrador vigente `2026-11`, y el intento pasa a `resolved_paid`.
 - Y se imputa al ordinario de `2026-10`, que queda en $89.000 más el fondo de $10.000: saldo $99.000.
 - Y la lectura y la resolución quedan en auditoría, con la persona de Soporte y el motivo.
 - Cuando Soporte intenta leer o resolver el mismo intento otra vez
 - Entonces recibe 404, porque un intento en `resolved_paid` ya no está en su vista (EX-1).
-- Y si en vez de registrar lo hubiera marcado para reverso (`mark_for_reversal`), no se registraría ningún pago, el intento pasaría a `reversal_pending`, el saldo seguiría en $110.000 y el propietario vería "Tu pago no se registró. Se solicitará la devolución del monto a Transbank". Al confirmar el reverso (`confirm_reversal`, con la referencia de Transbank), el intento pasaría a `reversed`.
+- Y si en vez de registrar lo hubiera marcado para reverso (`mark_for_reversal`), no se registraría ningún pago, el intento pasaría a `reversal_pending`, el saldo seguiría en $110.000 y el propietario vería "Tu pago no se registró. Se solicitará la devolución del monto a Transbank". Al confirmar el reverso (`confirm_reversal`, con la referencia de Transbank), el intento pasaría a `reversed` y el propietario vería "Tu pago fue anulado en Transbank. El reembolso a tu medio de pago depende de tu banco".
 - Y un intento en revisión que cubre dos ámbitos responde 422 `MULTI_SCOPE_REVIEW_REVERSAL_ONLY` con "Un pago que cubre dos deudas solo se puede marcar para reverso" si Soporte intenta registrarlo.
-- Y si el intento siguiera en `in_review` al terminar el 2026-12-02, que es el quinto día hábil después del 2026-11-25, el 2026-12-03 se enviaría la alerta automática de plazo vencido a Soporte ComVive y el intento quedaría marcado "Plazo vencido" (F-16).
+- Y si el intento siguiera en `in_review` al terminar el 2026-12-02, que es el quinto día hábil después del miércoles 2026-11-25 (jueves 26, viernes 27, lunes 30, martes 1 y miércoles 2; no hay feriados nacionales en ese tramo), el 2026-12-03 se enviaría la alerta automática de plazo vencido a Soporte ComVive y el intento quedaría marcado "Plazo vencido" (F-16).
 
 **CA-42 · Aislamiento del rol Soporte ComVive (EX-1)**
 
 - Dada una persona con el rol `platform_support` y el intento en revisión de CA-41
 - Cuando lee el intento
-- Entonces recibe solo id del intento, `buy_order`, comunidad, código de la unidad, tipo de ámbito (`owner`), monto iniciado ($110.000), monto autorizado ($11.000), estado y códigos de Transbank, y fechas. La respuesta no trae nombre, RUT, teléfono, correo, deuda ni saldo.
+- Entonces recibe solo id del intento, `buy_order`, comunidad, código de la unidad, tipo de ámbito del intento (`owner`), monto iniciado ($110.000), monto autorizado ($11.000), estado y códigos de Transbank, y fechas. La respuesta no trae nombre, RUT, teléfono, correo, deuda ni saldo.
 - Cuando pide los cargos, los pagos, el saldo o el aviso del Depto 101, o la lista de residentes de la Comunidad A
 - Entonces recibe 404 en todos los casos y no se entrega ningún dato.
 - Y cada una de esas lecturas queda en auditoría.
@@ -1131,21 +1428,30 @@ Las comunidades A, B, C y D vienen de `docs/qa/comunidades-simuladas.md`.
 - Cuando otorga el rol de comité al propietario del Depto 201, con la referencia "Asamblea ordinaria del 20-10-2026"
 - Entonces el rol queda otorgado y en auditoría.
 - Cuando intenta otorgar el rol de comité al arrendatario del Depto 102
-- Entonces se rechaza con "El rol de comité solo se otorga a propietarios registrados de la comunidad".
-- Cuando intenta otorgar el rol de administrador a cualquier persona, incluso en su propia comunidad
-- Entonces recibe 403 y nada cambia.
-- Dado un miembro del comité de la Comunidad A
+- Entonces se rechaza con 422 `COMMITTEE_REQUIRES_OWNER` y "El rol de comité solo se otorga a propietarios registrados de la comunidad".
+- Cuando intenta otorgar el rol de comité al propietario del Depto 202 sin referencia a la asamblea
+- Entonces se rechaza con 422 `ASSEMBLY_REFERENCE_REQUIRED` y "Indica la asamblea que eligió al comité: fecha y referencia".
+- Cuando intenta otorgar el rol de administrador a cualquier persona por la ruta de membresías de su propia comunidad, que sí ve
+- Entonces recibe 403 `FORBIDDEN` y nada cambia.
+- Cuando intenta usar la ruta de plataforma que otorga administradores (`/platform/...`)
+- Entonces recibe 404 `NOT_FOUND`, porque con su sesión de comunidad no ve esa ruta (M-4).
+- Dado un miembro del comité de la Comunidad A, que ve el registro de copropietarios
 - Cuando intenta otorgar el rol de comité a otra persona
-- Entonces recibe 403.
+- Entonces recibe 403 `FORBIDDEN`.
 - Dada una persona de Operaciones ComVive
 - Cuando otorga el rol de administrador de la Comunidad A a una persona
 - Entonces el rol queda otorgado y en auditoría.
+- Cuando intenta otorgar el rol de administrador de la Comunidad A al propietario del Depto 201, que integra el comité
+- Entonces recibe 422 `ADMIN_COMMITTEE_CONFLICT` con "Esta persona integra el comité de la comunidad. Primero se debe revocar su rol de comité" y nada cambia.
+- Dado que la propietaria del Depto 101 es además administradora de la Comunidad A
+- Cuando otro administrador intenta otorgarle el rol de comité
+- Entonces recibe 422 `ADMIN_COMMITTEE_CONFLICT` con "Esta persona es administradora de la comunidad. No puede integrar también el comité".
 - Cuando el administrador revoca el rol de comité del propietario del Depto 201
-- Entonces desde ese momento recibe 403 en las pantallas y acciones del comité, y sigue viendo su unidad como residente propietario.
+- Entonces desde ese momento el registro de copropietarios, la deuda de otras unidades y los reportes le responden 404 `NOT_FOUND`, porque ya no los ve (M-4), y sigue viendo su unidad como residente propietario.
 
 **CA-44 · Datos de copropietarios que ve el comité (Comunidad A)**
 
-- Dado el estado de CA-22 después de emitir `2026-11`, y que el propietario del Depto 102 tiene RUT 12.345.678-5, teléfono y correo registrados
+- Dado el estado de CA-22 después de emitir `2026-11`, y que el propietario del Depto 102 tiene RUT 12.345.670-K (distinto del RUT de la propietaria del Depto 101 en CA-46; H-24), teléfono y correo registrados
 - Cuando un miembro del comité lee el registro de copropietarios
 - Entonces para el Depto 102 recibe: nombre del propietario, alícuota 25,00 %, RUT `12.345.***-*`, ámbito propietario con deuda $262.500 y saldo a favor $0, y ámbito "Arrendatario" con deuda $262.500 y saldo a favor $0.
 - Y la respuesta de la API no trae teléfono, correo, RUT completo ni nombre o RUT del arrendatario.
@@ -1266,6 +1572,228 @@ Las comunidades A, B, C y D vienen de `docs/qa/comunidades-simuladas.md`.
 - Entonces la ventana empieza el 2026-12-01 y no vuelve al 2026-11-12. El interés suma $262.500 de `2026-10` durante 31 días (del 2026-12-01 al 2026-12-31) y $262.500 de `2026-11` durante 20 días (del 2026-12-12 al 2026-12-31): piso((262.500 × 31 + 262.500 × 20) × 1200 / 3.650.000) = piso(16.065.000.000 / 3.650.000) = piso(4.401,3698…) = $4.401.
 - Y el cargo de $1.639 vence con el aviso de `2026-12`, el 2027-01-11 (regla H-5).
 
+**CA-53 · Ingreso de arrendatario con fecha futura (Comunidad A, menor 13)**
+
+- Dado `2026-10` emitido como en CA-1, con el Depto 102 sin arrendatario, y `2026-11` como borrador vigente con los gastos de CA-1
+- Cuando el 2026-11-25 el administrador registra la ocupación O-4 con fecha de ingreso 2026-12-05
+- Entonces ve "El arriendo comienza el 05-12-2026. Hasta entonces, los cargos siguen siendo del propietario y {nombre} no tiene acceso", y O-4 queda programada con `effective_from` 2026-12-05.
+- Y el arrendatario de O-4 no tiene acceso a la unidad: cualquier pantalla del Depto 102 le responde 404.
+- Cuando el 2026-11-28 el administrador intenta registrar otro arrendatario para el Depto 102
+- Entonces recibe 409 `TENANT_ALREADY_ACTIVE` con "La unidad ya tiene un arrendatario vigente o programado. Registra su término o cancela el arriendo programado antes de agregar otro".
+- Cuando se emite `2026-11` el 2026-12-01
+- Entonces el cargo de $262.500 del Depto 102 va al ámbito `owner`, porque O-4 aún no está vigente, y el ámbito `owner` queda con $525.000 ($262.500 de `2026-10` y $262.500 de `2026-11`).
+- Y el arrendatario de O-4 no recibe la notificación del aviso.
+- Cuando el 2026-12-02 el administrador registra un pago manual de $100.000 dirigido a O-4
+- Entonces recibe 409 `OCCUPANCY_NOT_STARTED` con "El arriendo aún no comienza. Aplica el pago a la deuda del propietario", y no se escribe nada.
+- Cuando llega el 2026-12-05
+- Entonces O-4 pasa a vigente y su arrendatario obtiene acceso, con saldo $0 en su ámbito; los $525.000 del ámbito `owner` le responden 404.
+- Cuando se emite `2026-12` el 2027-01-01 con $262.500 para el Depto 102
+- Entonces ese cargo va al ámbito `occupancy` O-4.
+
+**CA-54 · Intento en revisión cuya ocupación termina antes de resolverse (Comunidad A, flag apagado, M-2)**
+
+- Dado el estado de CA-22 después de emitir `2026-11` el 2026-12-01: ámbito `owner` con $262.500 de `2026-10` (ordinario $250.000 y fondo $12.500, vencidos el 2026-11-11) y ámbito `occupancy` O-1 con $262.500 de `2026-11` (vence el 2026-12-11)
+- Cuando el 2026-12-05 el arrendatario inicia un pago Webpay de $262.500 con la orden `OC-2026-0003` y Transbank autoriza $200.000
+- Entonces el intento pasa a `in_review`, no se registra ningún pago y el arrendatario ve "En revisión por ComVive".
+- Cuando el 2026-12-06 Soporte ComVive pide la vista previa de `register_authorized`
+- Entonces recibe el pago a crear: $200.000, tipo de ámbito final `occupancy`, periodo `2026-12`, con la versión v1.
+- Cuando el 2026-12-07 el administrador pide la vista previa del término de O-1 con fecha 2026-12-07
+- Entonces ve "Hay un pago en línea del arrendatario en revisión por ComVive. Si se registra, se aplicará a la deuda de la unidad".
+- Cuando lo confirma
+- Entonces se traspasan al ámbito `owner` el ordinario ($250.000) y el fondo ($12.500) de `2026-11`, con su vencimiento del 2026-12-11. El ámbito `owner` queda en $525.000 y `occupancy` O-1 en $0, y el ex arrendatario pierde su membresía.
+- Cuando el 2026-12-09 Soporte confirma `register_authorized` con la versión v1
+- Entonces recibe 409 `PREVIEW_OUTDATED` con "El intento cambió desde la vista previa. Revisa la nueva vista previa antes de resolver", porque el tipo de ámbito final cambió.
+- Cuando pide una vista previa nueva
+- Entonces recibe el pago a crear: $200.000, tipo de ámbito final `owner`, periodo `2026-12`, sin la deuda ni la imputación.
+- Cuando la confirma con un motivo
+- Entonces, en una sola transacción, se registra un `PAYMENT` con `origin = webpay` de $200.000, `paid_on` 2026-12-05 y `payment_group_id` = id del intento, en `occupancy` O-1; queda a favor y se traspasa al ámbito `owner`.
+- Y en `owner` se imputa con F-5 al capital vencido de `2026-10`: ordinario $200.000. Los débitos traspasados de `2026-11` no están vencidos a su fecha de referencia (máx(2026-12-05, 2026-12-07) = 2026-12-07, antes del 2026-12-11).
+- Y el ámbito `owner` queda en $325.000 (ordinario `2026-10` $50.000, fondo `2026-10` $12.500 y $262.500 traspasados de `2026-11`), y `occupancy` O-1 en $0, sin deuda ni saldo a favor.
+- Y el intento pasa a `resolved_paid` y el ex arrendatario recibe al correo verificado de su cuenta, con el asunto "Tu pago en línea en Comunidad A", el texto "Tu pago en línea con número de orden OC-2026-0003 en Comunidad A se registró. Si tienes dudas, contacta a la administración de tu comunidad", sin montos. Si no tuviera correo verificado, recibiría el mismo texto por SMS.
+- Y el envío queda en auditoría.
+
+**CA-55 · Soporte ComVive: 404 fuera de la vista y 409 dentro de ella (M-5)**
+
+- Dado el intento `OC-2026-0002` de CA-41 en `in_review` ($110.000 iniciados, $11.000 autorizados)
+- Y que la persona de Soporte S1 pidió la vista previa de `register_authorized` y recibió la versión v1
+- Cuando la persona de Soporte S2 lo marca para reverso (`mark_for_reversal`) con un motivo
+- Entonces el intento pasa a `reversal_pending` y sigue en la vista de Soporte.
+- Cuando S1 confirma `register_authorized` con v1
+- Entonces recibe 409 `PREVIEW_OUTDATED` con "Esta resolución no corresponde al estado actual del intento. Revisa la nueva vista previa", y no se registra ningún pago.
+- Cuando S1 pide la vista previa de `register_authorized` sobre el intento en `reversal_pending`
+- Entonces recibe el mismo 409.
+- Cuando S1 pide la vista previa de `confirm_reversal`
+- Entonces recibe los campos de EX-1 y "pago a crear: ninguno".
+- Cuando la confirma sin la referencia de Transbank
+- Entonces recibe 422 `REVERSAL_REFERENCE_REQUIRED` con "Ingresa la referencia de la anulación en Transbank".
+- Cuando la confirma con la referencia y sin motivo
+- Entonces recibe 422 `REASON_REQUIRED` con "Indica el motivo de la resolución".
+- Cuando la confirma con la referencia y un motivo
+- Entonces el intento pasa a `reversed` y el propietario del Depto 101 ve "Tu pago fue anulado en Transbank. El reembolso a tu medio de pago depende de tu banco".
+- Cuando S1 o S2 piden el detalle, la vista previa o cualquier resolución del intento
+- Entonces reciben 404 `NOT_FOUND`, porque el intento salió de su vista.
+- Y si dos personas de Soporte hubieran confirmado `register_authorized` a la vez sobre el intento en `in_review`, la primera lo habría registrado y la segunda habría recibido 404, con un solo pago de $11.000.
+
+**CA-56 · Término de arriendo confirmado contra su vista previa (Comunidad A, flag apagado, M-6)**
+
+- Dado el estado de CA-22 después de emitir `2026-11` el 2026-12-01: ámbito `owner` con $262.500 de `2026-10` y ámbito `occupancy` O-1 con $262.500 de `2026-11` (ordinario $250.000 y fondo $12.500, vencen el 2026-12-11)
+- Cuando el 2026-12-08 el administrador pide la vista previa del término de O-1 con fecha 2026-12-10
+- Entonces recibe 422 `END_DATE_IN_FUTURE` con "Registra el término el día que ocurra".
+- Cuando la pide con fecha 2026-12-08
+- Entonces la vista previa (versión h1) muestra que pasan al ámbito `owner` el ordinario $250.000 y el fondo $12.500 de `2026-11`, con vencimiento 2026-12-11, y que el ámbito `owner` pasa de $262.500 a $525.000.
+- Y antes de confirmar, otro administrador registra un pago manual de $100.000 en `occupancy` O-1, con `paid_on` 2026-12-08, que se imputa al ordinario de `2026-11` (queda en $150.000)
+- Cuando el primer administrador confirma con h1
+- Entonces recibe 409 `PREVIEW_OUTDATED` con "La cuenta de la unidad cambió desde la vista previa. Revisa la nueva vista previa antes de confirmar", y no se escribe nada.
+- Cuando pide una vista previa nueva (h2) y la confirma
+- Entonces se traspasan al ámbito `owner` el ordinario $150.000 y el fondo $12.500 de `2026-11`, con vencimiento 2026-12-11: el ámbito `owner` queda en $425.000 y `occupancy` O-1 en $0.
+- Y el propietario ve el traspaso como "Traspaso desde arriendo terminado el 08-12-2026", sin el nombre del ex arrendatario.
+- Y el ex arrendatario recibe 404 en la unidad desde ese momento.
+- Cuando el administrador intenta terminar O-1 otra vez
+- Entonces recibe 409 `OCCUPANCY_ALREADY_ENDED` con "Este arriendo ya terminó".
+- Cuando intenta registrar un pago manual dirigido a O-1
+- Entonces recibe 409 `OCCUPANCY_ALREADY_ENDED` con "El arriendo de esta persona ya terminó. Aplica el pago a la deuda del propietario".
+
+**CA-57 · Miembro del comité que vende su única unidad (Comunidad A, M-7)**
+
+- Dado que Rosa Díaz, propietaria del Depto 201, integra el comité de la Comunidad A (CA-43), no es propietaria de otra unidad de la comunidad, y el Depto 201 debe $262.500 de `2026-10`
+- Cuando el 2026-11-15 el administrador pide la vista previa de la venta del Depto 201 a un nuevo propietario
+- Entonces ve que la deuda de $262.500 sigue a la unidad, y "Rosa Díaz integra el comité y dejará de ser propietario en la comunidad. Su rol de comité no se revoca automáticamente: decide si lo mantienes o lo revocas".
+- Cuando confirma la venta
+- Entonces no se crea ningún movimiento: el ámbito `owner` del Depto 201 sigue en $262.500, ahora a cargo del nuevo propietario.
+- Y en la misma transacción se crea la tarea abierta "Revisar rol de comité de Rosa Díaz" (`committee_member_not_owner`), visible en el inicio de cada administrador de la comunidad.
+- Y cada administrador recibe el push "Tienes una tarea pendiente sobre el comité de Comunidad A" y el correo "Rosa Díaz dejó de ser propietario en Comunidad A y sigue en el comité. Decide si mantienes o revocas su rol en Inicio > Tareas pendientes", sin montos.
+- Y Rosa Díaz conserva el rol de comité: sigue leyendo el registro de copropietarios, pero el Depto 201 como residente le responde 404.
+- Y la alerta, la tarea y la venta quedan en auditoría.
+- Cuando un miembro del comité pide la lista de tareas del administrador
+- Entonces recibe 404.
+- Cuando el administrador resuelve la tarea con "Mantener el rol" sin motivo
+- Entonces recibe 422 `REASON_REQUIRED` con "Indica el motivo de tu decisión".
+- Cuando la resuelve con "Revocar el rol" y el motivo "Ya no es copropietaria"
+- Entonces la membresía de comité de Rosa Díaz se revoca en la misma transacción, la tarea se cierra y desde ese momento el registro de copropietarios le responde 404.
+- Cuando otro administrador intenta resolver la misma tarea
+- Entonces recibe 409 `TASK_ALREADY_RESOLVED` con "Esta tarea ya fue resuelta".
+- Y si Rosa Díaz hubiera sido también propietaria del Depto 202, la venta del Depto 201 no habría creado tarea ni alerta.
+
+**CA-58 · Saldo de caja con $0, negativo y fecha de corte (Comunidad A, menor 6)**
+
+- Dado el borrador `2026-10` de CA-1
+- Cuando el 2026-11-01 el administrador pide la vista previa de emisión sin saldo de caja
+- Entonces recibe 422 `CASH_BALANCE_REQUIRED` con "Ingresa el saldo de caja y su fecha de corte. Puede ser $0".
+- Cuando ingresa −$10.000.000.000
+- Entonces recibe 422 `AMOUNT_TOO_LARGE` con "El monto supera el máximo permitido de $9.999.999.999".
+- Cuando ingresa −$350.000 con fecha de corte 2026-11-02
+- Entonces recibe 422 `CASH_BALANCE_DATE_IN_FUTURE` con "La fecha de corte no puede ser futura".
+- Cuando ingresa −$350.000 con fecha de corte 2026-10-31, pide la vista previa (h1) y, antes de confirmar, cambia el saldo a $0
+- Entonces la confirmación con h1 recibe 409 `PREVIEW_OUTDATED` con "El borrador cambió desde la vista previa. Revisa la nueva vista previa antes de emitir".
+- Cuando pide una vista previa nueva con −$350.000 y fecha de corte 2026-10-31 y la confirma
+- Entonces la emisión se hace con los cargos de CA-1 (total $1.050.000) y el aviso muestra "Saldo de caja al 31-10-2026: −$350.000".
+- Y un saldo de $0 también se habría aceptado.
+
+**CA-59 · Plazo de revisión en días hábiles con un feriado (Comunidad A, menor 8)**
+
+- Dado que un intento Webpay del Depto 101 entra a `in_review` el jueves 2026-12-03
+- Cuando se calcula su plazo de 5 días hábiles
+- Entonces se cuentan el viernes 4, el lunes 7, el miércoles 9, el jueves 10 y el viernes 11 de diciembre: el martes 8 es feriado nacional (Inmaculada Concepción) y el fin de semana no cuenta.
+- Y `review_due_on` es 2026-12-11.
+- Cuando el intento sigue en `in_review` al terminar el 2026-12-11
+- Entonces el 2026-12-12 se marca "Plazo vencido" y se envía la alerta a Soporte ComVive solo con el id del intento y su número de orden.
+- Y un feriado regional en esas fechas no se habría descontado.
+
+**CA-60 · Lo que ve el propietario del arrendatario (Comunidad A, menor 9)**
+
+- Dado el estado de CA-22 después de que el arrendatario de O-1 paga $262.500 por Webpay el 2026-12-05, y que su RUT, teléfono y correo están registrados
+- Cuando el propietario del Depto 102 abre la deuda del arrendatario
+- Entonces ve "Deuda del arrendatario {nombre}" con deuda $0 y saldo a favor $0, sus cargos de `2026-11` y el pago "Pagado por el arrendatario · $262.500 · 05-12-2026 · Webpay".
+- Y la respuesta de la API no trae el RUT, el teléfono ni el correo del arrendatario.
+- Y el detalle del intento Webpay del arrendatario le responde 404.
+- Y la lectura queda en auditoría.
+- Cuando el arrendatario abre su historial
+- Entonces ve el mismo pago como "Pagado por ti · $262.500 · 05-12-2026 · Webpay".
+- Y la invitación y la pantalla de primer ingreso del arrendatario muestran "El propietario de la unidad puede ver tu nombre, tu deuda de gasto común y los pagos que se aplican a ella. La administración de la comunidad ve todos tus datos de cobro".
+
+**CA-61 · Cancelación de un arriendo programado (Comunidad A, flag apagado)**
+
+- Dado el estado de CA-53 el 2026-11-26: la ocupación O-4 del Depto 102 está programada con `effective_from` 2026-12-05, y el ámbito `owner` del Depto 102 debe $262.500 de `2026-10`
+- Cuando un miembro del comité pide cancelar O-4
+- Entonces recibe 403 `FORBIDDEN` con "Tu rol no permite esta acción".
+- Cuando el administrador la cancela sin motivo
+- Entonces recibe 422 `REASON_REQUIRED` con "Indica el motivo de la cancelación", y no se escribe nada.
+- Cuando la cancela con el motivo "El arrendatario desistió del contrato"
+- Entonces O-4 queda **cancelada**, con fecha y hora de cancelación, quién la canceló y el motivo, sin fecha de término.
+- Y no se crea ningún movimiento ni traspaso: el ámbito `owner` del Depto 102 sigue en $262.500.
+- Y la membresía de residente que iba a nacer para el arrendatario de O-4 se termina; esa persona nunca tuvo acceso a la unidad.
+- Y el historial de ocupaciones del Depto 102 muestra O-4 como "Cancelada", y la cancelación queda en auditoría.
+- Cuando el administrador la cancela otra vez, con otra clave de idempotencia y sin motivo
+- Entonces recibe 409 `OCCUPANCY_CANCELLED` con "Este arriendo ya fue cancelado" (el estado se valida antes que el motivo), y no se escribe nada.
+- Cuando el 2026-11-27 registra un pago manual de $100.000 dirigido a O-4
+- Entonces recibe 409 `OCCUPANCY_CANCELLED` con "Este arriendo fue cancelado y nunca comenzó. Aplica el pago a la deuda del propietario", y no se escribe nada.
+- Cuando el 2026-11-28 registra un nuevo arrendatario (ocupación O-5) con fecha de ingreso 2026-12-10
+- Entonces se acepta y O-5 queda programada, porque O-4 ya no cuenta como programada.
+- Cuando se emite `2026-11` el 2026-12-01
+- Entonces el cargo de $262.500 del Depto 102 va al ámbito `owner` (ni O-4 ni O-5 están vigentes), que queda en $525.000.
+- Cuando el 2026-12-10 el administrador intenta cancelar O-5 con un motivo
+- Entonces recibe 409 `OCCUPANCY_ALREADY_STARTED` con "Este arriendo ya comenzó. Para terminarlo, registra su término", porque ese día O-5 ya está vigente.
+- Y cancelar O-1 de CA-56, ya terminada, responde 409 `OCCUPANCY_ALREADY_ENDED` con "Este arriendo ya terminó".
+- Y cancelar la ocupación del propietario del Depto 102 responde 422 `USE_OWNERSHIP_TRANSFER` con "Para cambiar al propietario, registra la venta".
+
+**CA-62 · Egresos del fondo de reserva: autorización, saldo negativo y corrección (Comunidad A, flag apagado)**
+
+- Dado que el saldo del fondo de reserva de la Comunidad A registrado en ComVive es $37.500 (recargos de `2026-10` imputados; sin intereses, multas ni egresos), y `2026-11` es el borrador vigente
+- Cuando el 2026-11-20 el administrador registra en `2026-11` el egreso del fondo "Reparación bomba de agua" por $30.000 sin referencia a la autorización
+- Entonces recibe 422 `AUTHORIZATION_REFERENCE_REQUIRED` con "Indica quién autorizó el uso del fondo de reserva: acuerdo del comité o de la asamblea, con su fecha", y no se escribe nada.
+- Cuando lo registra con la referencia "Acta comité 18-11-2026"
+- Entonces el egreso queda registrado y el saldo del fondo pasa a 37.500 − 30.000 = $7.500.
+- Cuando el 2026-11-25 registra el egreso del fondo "Cambio de cerradura portón" por $20.000 con la referencia "Acta comité 24-11-2026"
+- Entonces se registra y ve la advertencia "Con este egreso, el saldo del fondo de reserva registrado en ComVive queda en −$12.500. Revisa el monto; si el fondo tenía saldo antes de usar ComVive, ese saldo aún no está cargado".
+- Cuando se emite `2026-11` el 2026-12-01 sin pagos nuevos
+- Entonces el aviso muestra los dos egresos con su referencia y "Saldo del fondo de reserva: −$12.500".
+- Cuando el 2026-12-03 el administrador pide la vista previa de la corrección del egreso de la cerradura con monto correcto $15.000 y sin motivo
+- Entonces recibe 422 `REASON_REQUIRED` con "Indica el motivo de la corrección".
+- Cuando la pide con el motivo "La factura final fue de $15.000"
+- Entonces la vista previa muestra, en el borrador `2026-12`, una corrección de 15.000 − (20.000 + 0) = −$5.000, sin cargos ni notas de crédito a las unidades, y la advertencia "Con esta corrección, el saldo del fondo de reserva registrado en ComVive queda en −$7.500. Revisa el monto; si el fondo tenía saldo antes de usar ComVive, ese saldo aún no está cargado".
+- Cuando la confirma con su `previewHash`
+- Entonces el saldo del fondo pasa a −12.500 + 5.000 = −$7.500, y el aviso de `2026-12` mostrará "Corrección egreso del fondo periodo 2026-11: La factura final fue de $15.000".
+- Cuando pide otra corrección del mismo egreso con monto correcto $15.000
+- Entonces recibe 422 `CORRECTION_WITHOUT_CHANGE` con "El monto correcto es igual al monto vigente del egreso ($15.000). No hay nada que corregir", y no se escribe nada.
+- Cuando pide anularlo (monto correcto $0) sin motivo
+- Entonces recibe 422 `REASON_REQUIRED` con "Indica el motivo de la anulación".
+- Cuando lo anula con el motivo "La cerradura la pagó la constructora en garantía"
+- Entonces se registra una corrección de 0 − (20.000 − 5.000) = −$15.000 y el saldo del fondo pasa a −7.500 + 15.000 = $7.500, sin advertencia.
+- Y pedir anularlo otra vez responde 422 `CORRECTION_WITHOUT_CHANGE` con "Este egreso ya está anulado. No hay nada que corregir".
+- Y una corrección con monto correcto −$1.000 responde 422 `INVALID_AMOUNT` con "El monto correcto debe ser un número entero de pesos, mayor o igual que $0. Usa $0 solo para anular".
+- Y el egreso original de $20.000 de `2026-11` no cambia: sigue visible con su referencia y sus dos correcciones.
+
+**CA-63 · El propietario nuevo ve los pagos del propietario anterior sin etiqueta (Comunidad A, flag apagado)**
+
+- Dado que el Depto 201 debe $262.500 de `2026-10` (ordinario $250.000 y fondo $12.500, vencen el 2026-11-11)
+- Y que el 2026-11-05 la administración registra un pago manual de $150.000 por transferencia en el ámbito `owner`, que se imputa al ordinario de `2026-10` (queda en $100.000 más el fondo de $12.500: $112.500)
+- Y que el 2026-11-08 el propietario de entonces paga por Webpay la deuda completa de su ámbito, $112.500, con la orden `OC-2026-0004` (el pago Webpay es siempre por la deuda completa del ámbito, F-12)
+- Cuando el 2026-11-15 se registra la venta del Depto 201 a un nuevo propietario
+- Entonces la venta no crea movimientos: el ámbito `owner` queda en $0, sin deuda ni saldo a favor.
+- Cuando el propietario nuevo abre "Tu deuda" del Depto 201
+- Entonces ve los dos pagos de la historia del ámbito `owner`: "Registrado por la administración · $150.000 · 05-11-2026 · Transferencia" y "$112.500 · 08-11-2026 · Webpay", este último sin etiqueta de quién pagó.
+- Y la respuesta de la API trae `payerKind` nulo en el pago Webpay y no trae nombre, RUT ni contacto del propietario anterior.
+- Cuando se emite `2026-11` el 2026-12-01 con $262.500 para el Depto 201 y el propietario nuevo lo paga por Webpay el 2026-12-04
+- Entonces ve ese pago como "Pagado por ti · $262.500 · 04-12-2026 · Webpay".
+- Y el propietario anterior, sin membresía, recibe 404 en la unidad (CA-21).
+
+**CA-64 · Orden de los errores al otorgar el rol de comité (Comunidad A)**
+
+- Dado el administrador de la Comunidad A, que no es propietario de ninguna unidad, y que la propietaria del Depto 101 es además administradora de la comunidad (CA-43)
+- Cuando otorga el rol de comité al arrendatario del Depto 102 sin fecha ni referencia de asamblea
+- Entonces recibe 422 `ASSEMBLY_REFERENCE_REQUIRED` con "Indica la asamblea que eligió al comité: fecha y referencia", aunque el arrendatario tampoco sea propietario.
+- Cuando lo otorga al mismo arrendatario con la referencia "Asamblea ordinaria del 20-10-2026"
+- Entonces recibe 422 `COMMITTEE_REQUIRES_OWNER` con "El rol de comité solo se otorga a propietarios registrados de la comunidad".
+- Cuando otorga el rol de comité a la propietaria del Depto 101 sin referencia
+- Entonces recibe 422 `ASSEMBLY_REFERENCE_REQUIRED`.
+- Cuando se lo otorga con la referencia "Asamblea ordinaria del 20-10-2026"
+- Entonces recibe 422 `ADMIN_COMMITTEE_CONFLICT` con "Esta persona es administradora de la comunidad. No puede integrar también el comité".
+- Cuando se otorga el rol de comité a sí mismo con la referencia
+- Entonces recibe 422 `COMMITTEE_REQUIRES_OWNER`, que va antes que `ADMIN_COMMITTEE_CONFLICT`.
+- Cuando otorga el rol de comité al propietario del Depto 201, que ya lo integra (CA-43), con la referencia
+- Entonces recibe 409 `ALREADY_COMMITTEE_MEMBER` con "Esta persona ya integra el comité".
+- Y en ningún caso cambia una membresía.
+
 ## Casos borde
 
 - **Unidad con peso 0:** no tiene cargo ni movimiento y su aviso muestra $0 (CA-18).
@@ -1310,7 +1838,7 @@ Las comunidades A, B, C y D vienen de `docs/qa/comunidades-simuladas.md`.
 - **Unidad con arrendatario y sin propietario registrado:** se emite con advertencia y aviso a nombre de "Propietario sin registrar" (regla F-15, CA-38).
 - **Unidad sin propietario ni arrendatario registrados:** sus cargos van al ámbito `owner` y aplica la misma advertencia (regla F-15).
 - **Otro administrador cambia el borrador entre la vista previa y la emisión:** 409 y nueva vista previa (regla A-7, CA-39).
-- **Dos administradores anulan el mismo pago:** el segundo recibe 409 (regla A-7, CA-40).
+- **Dos administradores anulan el mismo pago:** el segundo recibe 409 `PAYMENT_ALREADY_VOIDED` (regla F-4, CA-40).
 - **Monto autorizado por Transbank distinto del iniciado:** el intento queda en revisión y lo resuelve Soporte ComVive (regla F-16, CA-41).
 - **Pago manual tardío de un ex arrendatario:** se registra en el ámbito `owner`, porque ningún pago nuevo se dirige a una ocupación terminada (regla F-9); los intereses ya emitidos en el ámbito de la ocupación no se recalculan (regla E-11, P-26).
 - **Notificación del aviso que no llega:** el vencimiento no cambia y la unidad aparece en "Avisos sin notificar" (regla G-6, CA-45).
@@ -1323,6 +1851,23 @@ Las comunidades A, B, C y D vienen de `docs/qa/comunidades-simuladas.md`.
 - **Monto sobre $9.999.999.999 o fondo sobre 50 %:** se rechaza (reglas B-6 y D-2).
 - **Misma clave de idempotencia con otro cuerpo:** 422 `IDEMPOTENCY_KEY_REUSED` (regla A-3.4).
 - **Comunidad con un solo trabajador:** la línea agregada "Remuneraciones del personal" revela su remuneración (regla G-8, P-23).
+- **Anulación de un grupo de pagos después de 30 días:** el grupo se identifica por `payment_group_id`, no por la clave de idempotencia (regla F-4, CA-32).
+- **Ocupación que termina mientras su intento Webpay está en revisión:** `register_authorized` crea el pago en la ocupación y lo traspasa al ámbito `owner`; el ex arrendatario recibe un correo o SMS sin montos (regla F-13, CA-54).
+- **Dos personas de Soporte resuelven el mismo intento:** 404 si el intento salió de la vista; 409 si sigue en ella con otro estado (regla F-16, CA-55).
+- **Ingreso de arrendatario con fecha futura:** la ocupación queda programada y rige desde esa fecha (regla F-14, CA-53).
+- **Término o venta con fecha futura:** se rechaza (regla F-14, CA-56).
+- **Pago manual a una ocupación programada o terminada:** 409 (regla F-9, CA-53 y CA-56).
+- **Comité que vende su última unidad:** conserva el rol hasta que el administrador decida; alerta y tarea pendiente (CA-57).
+- **Saldo de caja $0 o negativo:** se acepta; la fecha de corte no puede ser futura (regla G-4, CA-58).
+- **Plazo de revisión con feriados:** se cuentan solo días hábiles (CA-59).
+- **Egreso del fondo mal registrado en un periodo emitido o cerrado:** corrección de egreso del fondo en el borrador vigente (regla B-3, P-33, CA-62).
+- **Corrección de un egreso del fondo por su mismo monto vigente, o anulación de uno ya anulado:** 422 `CORRECTION_WITHOUT_CHANGE`; nunca se registra una corrección de $0 (regla B-3, CA-62).
+- **Egreso del fondo sin referencia a la autorización:** se rechaza (regla B-3, S-49, CA-62).
+- **Egreso que deja el saldo del fondo negativo:** se acepta con advertencia y el aviso muestra el saldo con signo (reglas B-3 y D-5, S-50, CA-62).
+- **Cancelar un arriendo programado el día de su inicio, o uno terminado o ya cancelado:** 409 (regla F-14, CA-61).
+- **Pago manual a una ocupación cancelada:** 409 `OCCUPANCY_CANCELLED` (regla F-9, CA-61).
+- **Propietario nuevo que ve pagos Webpay del propietario anterior:** se muestran sin etiqueta de quién pagó (regla F-12, S-51, CA-63).
+- **Comité otorgado con varios errores a la vez:** se responde el primero en el orden fijo (S-34, CA-64).
 
 ## Fuera de alcance
 
@@ -1371,8 +1916,8 @@ Las comunidades A, B, C y D vienen de `docs/qa/comunidades-simuladas.md`.
 | S-21 | La categoría CMF por defecto para el tope es el interés corriente de operaciones no reajustables en moneda nacional de menos de 90 días. | El gasto común es una obligación mensual en pesos, sin reajuste y de corto plazo (vence a los 10 días). La Ley 18.010, art. 6, define el interés corriente por tipo de operación, y la CMF publica esa categoría en sus certificados. No se encontró una fuente que fije la categoría para la Ley 21.442; queda por validar (P-5). |
 | S-22 | Los intereses de días ya cobrados se recalculan en ambos sentidos: nota de crédito si baja el capital, débito de ajuste si sube. | Evita cobrar intereses sobre deuda pagada y no perder intereses de pagos anulados. Usa la misma fórmula de ajustes (regla H-2). |
 | S-23 | La fecha efectiva de una imputación es máx(`paid_on`, vencimiento del cargo). | El dinero se recibió en `paid_on`. Antes del vencimiento no hay mora, así que adelantar la fecha no cambia el interés. |
-| S-24 | Un cobro que cubre dos ámbitos es una sola transacción (un intento Webpay o un registro manual) que genera un `PAYMENT` por ámbito, agrupados, con el reparto fijado al iniciar. Lo que sobra en un ámbito queda a favor en ese ámbito. El grupo se anula entero. | Decisión del líder (2026-11-07) de que el propietario pueda pagar ambos ámbitos. Es el modelo de `docs/arquitectura.md` §4 (ADR 0007): una transacción Webpay, un `buy_order` y un abono en la cartola, y un pago por ámbito que mantiene el invariante F-6 sin compensar ámbitos. La unicidad (`origin`, `external_ref`, ámbito) permite dos pagos con el mismo `buy_order`. Convención propia. |
-| S-25 | El arrendatario ve los pagos de su ámbito con monto, fecha, medio y quién pagó ("Pagado por ti", "Pagado por el propietario"), pero no la deuda del ámbito `owner` ni el total de un intento de dos ámbitos. Un pago manual se muestra como "Registrado por la administración". | "Pagado por el propietario": decisión del líder (2026-11-07, P-22 cerrada). No mostrar el total ni la deuda del propietario: minimización de datos (Ley 21.719) y S-19. La etiqueta del pago manual es un supuesto del analista: el administrador registra el ámbito, no siempre sabe quién transfirió. |
+| S-24 | Un cobro que cubre dos ámbitos es una sola transacción (un intento Webpay o un registro manual) que genera un `PAYMENT` por ámbito, agrupados por un `payment_group_id` que no vence (el id del intento, o uno generado al registrar el pago manual), con el reparto fijado al iniciar. Lo que sobra en un ámbito queda a favor en ese ámbito. El grupo se anula entero. | Decisión del líder (2026-11-07) de que el propietario pueda pagar ambos ámbitos. Es el modelo de `docs/arquitectura.md` §4 (ADR 0007): una transacción Webpay, un `buy_order` y un abono en la cartola, y un pago por ámbito que mantiene el invariante F-6 sin compensar ámbitos. La unicidad (`origin`, `external_ref`, ámbito) permite dos pagos con el mismo `buy_order`. Convención propia. |
+| S-25 | El arrendatario ve los pagos de su ámbito con monto, fecha, medio y quién pagó ("Pagado por ti", "Pagado por el propietario"), pero no la deuda del ámbito `owner` ni el total de un intento de dos ámbitos. Un pago manual se muestra como "Registrado por la administración". | "Pagado por el propietario": decisión del líder (2026-11-07, P-22 cerrada). No mostrar el total ni la deuda del propietario: minimización de datos (Ley 21.719) y S-19. La etiqueta del pago manual, "Registrado por la administración", la fijó el líder el 2026-11-07 (M-8): el administrador registra el ámbito, no siempre sabe quién transfirió. |
 | S-26 | Un ámbito de ocupación terminada queda siempre en $0: lo que se registra en él después del término se traspasa en la misma transacción al ámbito `owner`. El capital traspasado conserva cuenta, periodo y vencimiento, y para el interés cuenta en `owner` desde el día siguiente al último día cobrado en la ocupación. | Ley 21.442, art. 6 (la deuda es de la unidad y sigue al dueño). Mantiene la trazabilidad (cada movimiento apunta a su original) sin dejar saldos en un ámbito que nadie ve. Convención propia (P-21, P-26). |
 | S-27 | Los ingresos y términos de ocupación con fecha pasada producen efecto desde su registro: no cambian el ámbito de lo ya emitido ni recalculan intereses. | Hace cumplir el ámbito fijo (S-19) y la inmutabilidad de periodos (regla 6 de `CLAUDE.md`). Las diferencias entre propietario y arrendatario por el periodo no registrado son un asunto privado entre ellos. Confirmado por el líder el 2026-11-07 (P-27 cerrada). |
 | S-28 | Una unidad sin propietario registrado no bloquea la emisión: se emite con advertencia y su aviso dice "Propietario sin registrar". | Bloquear toda la comunidad por una unidad atrasa el cobro de todas las demás. La ley obliga a llevar un registro de copropietarios, así que la advertencia empuja a completarlo (Ley 21.442; artículo por verificar en P-1). Validez del aviso en P-20. |
@@ -1381,15 +1926,30 @@ Las comunidades A, B, C y D vienen de `docs/qa/comunidades-simuladas.md`.
 | S-31 | El resumen de gastos para residentes muestra cada gasto, salvo las remuneraciones del personal, que van en una sola línea. Los honorarios del administrador van en una línea propia. El arrendatario ve el mismo resumen. | Ley 21.442, art. 31 (el aviso informa ingresos y egresos) y protección de datos del personal (Ley 21.719). ComunidadFeliz publica el detalle de egresos en la boleta. El arrendatario paga los gastos y tiene interés en su composición. P-23. |
 | S-32 | Soporte ComVive tiene solo dos resoluciones de fondo: registrar por el monto autorizado o marcar para reverso (y luego confirmar el reverso). Un intento de dos ámbitos solo se puede reversar. | Quién resuelve y el plazo de 5 días hábiles con alerta automática son decisiones del líder (2026-11-07; P-17 cerrada). Limitar las resoluciones evita decisiones contables fuera de la comunidad, y reversar los intentos de dos ámbitos evita repartir un monto distinto entre deudores distintos. Convención propia. |
 | S-33 | El comité ve la deuda del ámbito del arrendatario como "Arrendatario", sin nombre ni RUT. | Decisión del líder (2026-11-07) para copropietarios; para los arrendatarios se extiende el mismo criterio de minimización (Ley 21.719): el comité supervisa la cobranza y necesita el monto, no la identidad. P-25. |
-| S-34 | El administrador otorga el rol de comité solo a propietarios registrados de la comunidad, con una referencia obligatoria a la asamblea que lo eligió. | El comité lo integran copropietarios elegidos por la asamblea (glosario de `CLAUDE.md`; Ley 21.442, artículo por verificar en P-1). La referencia deja trazabilidad del origen del rol. P-25. |
+| S-34 | El administrador otorga el rol de comité solo a propietarios registrados de la comunidad, con una referencia obligatoria a la asamblea que lo eligió. Si fallan varias reglas, se responde la primera en el orden `ASSEMBLY_REFERENCE_REQUIRED` → `COMMITTEE_REQUIRES_OWNER` → `ADMIN_COMMITTEE_CONFLICT`. | El comité lo integran copropietarios elegidos por la asamblea (glosario de `CLAUDE.md`; Ley 21.442, artículo por verificar en P-1). La referencia deja trazabilidad del origen del rol. El orden (primero el dato faltante del formulario, luego la persona) es el supuesto de `docs/arquitectura.md` §3 y da una respuesta única por caso. P-25. |
 | S-35 | "Anular gasto" es una corrección con monto correcto $0, calculada con la fórmula H-2, y el gasto queda visible como "Anulado". | Reutiliza la fórmula de ajustes (H-2) y la inmutabilidad de periodos (regla 6 de `CLAUDE.md`) sin crear un mecanismo nuevo. Convención propia. |
 | S-36 | La clave de idempotencia es única por persona, endpoint y clave (ligada a la comunidad en las rutas de comunidad) y se conserva 30 días. Reutilizarla con otro cuerpo responde 422 `IDEMPOTENCY_KEY_REUSED`. | `docs/arquitectura.md` §4 (`IDEMPOTENCY_KEY`, ADR 0003). 30 días cubre de sobra los reintentos de red y de doble clic. |
 | S-37 | Ningún monto ingresado ni la suma de gastos de un periodo supera $9.999.999.999. El motor calcula con `bigint`. | Protección contra errores de digitación. El límite de 2^53 − 1 de `number` se supera con T > $9.007.199.254 (H-11), así que el `bigint` es obligatorio aunque haya tope (`docs/arquitectura.md` §1; ADR 0004). El valor del tope es una propuesta del analista (P-32). |
 | S-38 | El fondo de reserva no puede superar 5000 pb (50 %). | La ley fija solo el mínimo (Ley 21.442, art. 39). El máximo es una protección contra digitar 5000 en vez de 500 (P-28). |
 | S-39 | "Vencido" se evalúa a máx(`paid_on` del crédito, fecha de creación del débito), no a la fecha de registro. | Código Civil, art. 1596: no se puede preferir una deuda no devengada a una devengada, y eso se mide cuando se paga. Así el resultado no depende de cuándo el administrador digita el pago (P-30). |
 | S-40 | El arrendatario descarga un "Comprobante de cobro" en PDF con el contenido de G-7. No es el aviso legal. | El arrendatario no es el deudor legal (Ley 21.442, art. 6), pero necesita un documento para su arriendo y sus gastos. Minimización de datos (Ley 21.719): no incluye nada del ámbito `owner`. |
+| S-41 | Días hábiles = lunes a viernes sin feriados nacionales legales de Chile; los feriados regionales no se descuentan. Los carga el equipo de ComVive en `PUBLIC_HOLIDAY` y el plazo se fija al entrar a revisión (`review_due_on`). | Definición: decisión del líder (2026-11-07). Fuente: calendario oficial de feriados legales (Ley 2.977 y leyes que agregan feriados). Excluir los regionales y fijar el plazo al entrar a revisión son convenciones propias. |
+| S-42 | El pagador que ya no tiene membresía recibe, por correo verificado o, si no tiene, por SMS, un aviso del resultado de su propio intento, con número de orden y comunidad y sin montos, deudas ni unidad. | Es su propio cobro con tarjeta y debe saber si se registró o se devolverá; minimización de datos (Ley 21.719): sin datos de la deuda de la unidad, que ya no le corresponde ver (S-14). P-37. |
+| S-43 | Una persona no puede ser administradora y comité en la misma comunidad (422 `ADMIN_COMMITTEE_CONFLICT`). La tarea "Revisar rol de comité" no vence y exige motivo en ambas decisiones. | El comité supervisa al administrador (Ley 21.442; artículo por verificar en P-1). La tarea es la mitigación decidida por el líder (2026-11-07) para que el rol no quede olvidado; el motivo deja trazabilidad. P-35. |
+| S-44 | El propietario ve del arrendatario vigente su nombre, la deuda de su ámbito y los pagos aplicados a ella, nunca su RUT ni su contacto. El arrendatario es informado en la invitación y el primer ingreso. Cada lectura del propietario se audita. | El propietario responde de la deuda (Ley 21.442, art. 6) y necesita verla; deber de información y minimización (Ley 21.719); regla 7 de `CLAUDE.md` (auditoría de deudas). P-34. |
+| S-45 | El saldo de caja es obligatorio al emitir, acepta $0 y negativos, su valor absoluto no supera $9.999.999.999 y su fecha de corte no es futura. | Es un dato informativo (Ley 21.442, art. 31), y una cuenta corriente puede estar sobregirada. Propuesta del diseño (UX-27) que adopta la spec. |
+| S-46 | Un egreso del fondo de un periodo emitido o cerrado se corrige con una corrección de egreso en el borrador vigente, por la diferencia acumulada, sin cargos a las unidades. Una corrección con diferencia $0 se rechaza (422 `CORRECTION_WITHOUT_CHANGE`). La corrección no pide una autorización nueva. | Misma lógica de ajustes de la sección H y regla 6 de `CLAUDE.md`. Rechazar la diferencia $0 evita filas sin efecto en el aviso y en la rendición. Convención propia; P-33. |
+| S-47 | Un ingreso de arrendatario con fecha futura queda programado y rige desde esa fecha; un término o una venta con fecha futura se rechazan. | Evita registrar hechos que aún no ocurren en lo que corta accesos o mueve deuda; el ingreso futuro es útil para un contrato ya firmado. `effective_from` de `docs/arquitectura.md` §4 y supuesto UX-35 del diseño. |
+| S-48 | Etiquetas de quién pagó vistas por el propietario ("Pagado por ti", "Pagado por el arrendatario", "Registrado por la administración"), texto de `reversed` y texto de `ONLINE_PAYMENT_NOT_AVAILABLE`. | Completan los textos que fijó el líder (M-8). El texto de `reversed` refleja que tras la anulación en Transbank el reembolso lo ejecuta el banco emisor (P-31). |
+| S-49 | Todo egreso del fondo de reserva exige una referencia de texto libre a la autorización (acuerdo del comité o de la asamblea, con su fecha); sin ella, 422 `AUTHORIZATION_REFERENCE_REQUIRED`. ComVive no valida ni modela el acuerdo. | Ley 21.442, art. 39 (texto en modulor.cl): "Corresponderá al comité de administración autorizar la utilización de recursos de este fondo"; la asamblea, por mayoría absoluta de los derechos, puede autorizar su uso en gastos ordinarios de mantención o reparación. Pedir solo la referencia deja trazabilidad para la rendición de cuentas sin modelar acuerdos (fuera de este módulo). Numeración por verificar en P-1. P-38. |
+| S-50 | El saldo del fondo registrado en ComVive puede quedar negativo: un egreso o una corrección no se bloquean, se advierte y el aviso lo muestra con signo. | La ley no fija un saldo mínimo del fondo ni prohíbe agotarlo (Ley 21.442, art. 39; no se encontró regla de reposición). El saldo de ComVive no incluye el saldo previo a ComVive (apertura reservada, F-10), así que bloquear impediría registrar egresos reales autorizados. Mismo criterio que el saldo de caja negativo (S-45). P-39. |
+| S-51 | El propietario nuevo ve la historia completa del ámbito `owner`; los pagos Webpay que inició un propietario anterior se muestran sin etiqueta de quién pagó (`payerKind` nulo) y sin datos de esa persona. | La deuda sigue a la unidad (Ley 21.442, art. 6), así que el propietario nuevo necesita ver cómo se formó. No identificar al pagador anterior es minimización de datos (Ley 21.719). Es el supuesto de `docs/arquitectura.md` §4 ("Visibilidad por ámbito") y su pregunta 14 de §8. P-40. |
+| S-52 | Textos canónicos propuestos por el analista a partir del diseño: estado del pago propio en proceso, confirmaciones de la consola de Soporte, cierre de la tarea de comité, traspaso de saldo a favor, advertencias de término y venta con fecha pasada, ayuda del motivo y los errores `ALREADY_COMMITTEE_MEMBER` y `CORRECTION_WITHOUT_CHANGE` de gastos. | Diseño (UX-46, UX-48 y UX-49) ajustado a las reglas: sin nombres en lo que ve Soporte (EX-1), sin datos del ex arrendatario (S-44) y un solo texto por caso (F-17). No son textos legales. **Aprobados por el líder del proyecto (2026-11-07).** |
+| S-53 | El residente no ve la configuración de cobro, el borrador, el periodo como recurso ni el gasto como recurso (404); solo su aviso o comprobante, sus movimientos y el resumen de gastos. El comprobante del arrendatario lo descargan él, el administrador y el comité; el propietario no. | Minimización de datos (Ley 21.719) y regla de 404 del líder (M-4). El comité ve todo el gasto común en solo lectura (decisión del líder, 2026-11-07). El propietario ya ve los datos del ámbito del arrendatario (S-44), así que el documento no le agrega información necesaria. |
+| S-54 | El crédito que traspasa un saldo a favor de una ocupación terminada al ámbito `owner` hereda el `paid_on` del crédito que lo generó (pago, o la fecha de F-11 si fue una nota de crédito), dividido por crédito de origen. | Coherente con S-39 y S-23: la imputación y los intereses dependen de cuándo se pagó, no de cuándo se registró el término o la confirmación. Usar la fecha del traspaso podría cobrar intereses por días en que el dinero ya estaba pagado. Convención propia; P-41. |
+| S-55 | El tope de $9.999.999.999 sobre la suma de gastos y cargos directos del periodo se valida al escribir, en la vista previa de emisión y al emitir, sin contar los egresos ni el recargo del fondo. | Protección contra errores de digitación (S-37); validar al escribir da el error donde está la causa, y validar al emitir cubre escrituras concurrentes. |
 
-El supuesto S-13 de la versión anterior (autorización de egresos del fondo) se eliminó por estar fuera del alcance de este módulo.
+El supuesto S-13 de la versión anterior (autorización de egresos del fondo) se eliminó por estar fuera del alcance de este módulo. S-49 no lo revive: ComVive no modela ni valida la autorización, solo exige que el egreso guarde su referencia.
 
 ## Preguntas abiertas
 
@@ -1417,6 +1977,15 @@ El supuesto S-13 de la versión anterior (autorización de egresos del fondo) se
 - [ ] **P-30** (contador y abogado): ¿es correcto evaluar si una deuda está vencida a la fecha de pago (`paid_on`) y no a la de registro (S-39)?
 - [ ] **P-31** (líder y arquitecto): ¿cómo se ejecuta la devolución en Transbank de un intento en `reversal_pending` (supuesto de la arquitectura: API de anulación de Webpay Plus, ADR 0007), en qué plazo, y cómo se avisa al pagador cuando se completa?
 - [ ] **P-32** (líder): ¿es adecuado el monto máximo de $9.999.999.999 por monto ingresado y por periodo (S-37)?
+- [ ] **P-33** (contador): ¿cómo se corrige un egreso del fondo de reserva mal registrado en un periodo emitido o cerrado? Supuesto S-46: corrección de egreso en el borrador vigente, por la diferencia, sin cargos a las unidades. ¿Requiere además una nueva autorización (asamblea o comité) y cómo se rinde en la rendición de cuentas?
+- [ ] **P-34** (abogado): ¿basta informar al arrendatario en la invitación y el primer ingreso que el propietario ve su nombre, su deuda y sus pagos (S-44), o se requiere otra base de licitud o su consentimiento según la Ley 21.719? ¿Debe auditarse cada lectura del propietario?
+- [ ] **P-35** (abogado y líder): ¿la Ley 21.442 o su reglamento hacen perder la calidad de miembro del comité a quien deja de ser copropietario? Si es así, la mitigación de M-7 (tarea pendiente) debería pasar a revocación automática.
+- [ ] **P-36** (líder): ¿se exige segundo factor a los administradores antes del Piloto? Hoy es opcional (decisión del líder, 2026-11-07).
+- [ ] **P-37** (abogado y líder): ¿se acepta el aviso por correo o SMS, sin datos de deuda, al ex residente cuyo pago se confirma o resuelve después de perder el acceso (S-42)? Es la misma pregunta 16 de `docs/arquitectura.md` §8.
+- [ ] **P-38** (abogado y contador): ¿basta exigir una referencia de texto libre a la autorización de cada egreso del fondo de reserva (S-49), o ComVive debe distinguir si la autorizó el comité (gastos extraordinarios, urgentes o imprevistos) o la asamblea por mayoría absoluta de los derechos (gastos ordinarios de mantención o reparación, Ley 21.442, art. 39) y guardar el acuerdo como documento? ¿El DS N° 7 de 2025 agrega requisitos?
+- [ ] **P-39** (contador): ¿es aceptable que el saldo del fondo de reserva registrado en ComVive quede negativo, con advertencia y mostrado con signo en el aviso (S-50)? ¿O debe bloquearse el egreso, o mostrarse en el aviso el saldo bancario del fondo declarado por el administrador, como el saldo de caja?
+- [ ] **P-40** (abogado y líder): ¿qué debe ver el propietario nuevo de los pagos del propietario anterior en el ámbito `owner` (S-51)? Supuesto: la historia completa con monto, fecha y medio, y los pagos Webpay del anterior sin etiqueta de quién pagó ni datos suyos. ¿Es compatible con la Ley 21.719, o debe ver solo la deuda vigente heredada? Es la pregunta 14 de `docs/arquitectura.md` §8.
+- [ ] **P-41** (contador): ¿es correcto que el saldo a favor traspasado de una ocupación terminada al ámbito `owner` conserve la fecha de pago (`paid_on`) del crédito que lo originó para imputar y calcular intereses (S-54), en lugar de la fecha del traspaso?
 
 Preguntas cerradas:
 
@@ -1443,6 +2012,7 @@ Preguntas cerradas:
 - **Código Civil:**
   - Art. 50 (cómputo de plazos).
   - Arts. 1595 a 1597 (imputación del pago): <https://leyes-cl.com/codigo_civil/1595.htm>, <https://leyes-cl.com/codigo_civil/1596.htm>, <https://leyes-cl.com/codigo_civil/1597.htm>.
+- **Feriados legales de Chile (días hábiles):** calendario oficial de feriados legales del Gobierno de Chile (<https://www.gob.cl>) y Ley 2.977 y leyes que agregan feriados nacionales, en LeyChile (BCN). La URL exacta del calendario la fija el equipo que carga `PUBLIC_HOLIDAY`.
 - **Ley 18.010:** art. 6 (interés corriente por tipo de operación) y art. 9 (capitalización).
 - **Certificados de tasas de la CMF en el Diario Oficial:** <https://www.diariooficial.interior.gob.cl/publicaciones/2026/10/15/44574/01/2885690.pdf>.
 - **ComunidadFeliz:**
@@ -1453,6 +2023,7 @@ Preguntas cerradas:
   - `docs/qa/plan-de-pruebas.md`: casos de aislamiento, incluido ISO-8.
   - `docs/arquitectura.md` §4 y §5.
   - `docs/revisiones/2026-11-07-diseno-rev2.md`: revisión crítica 2 del diseño (M1 a M9 y menores), origen de la revisión 3.
+  - `docs/revisiones/2026-11-07-diseno-rev3.md`: revisión crítica 3 del diseño (M-1 a M-8 y menores), origen de la revisión 4.
   - `docs/design/mapa-de-usuarios.md`: formato del RUT enmascarado (`12.345.***-*`).
   - `docs/qa/casos/gasto-comun.md`: hallazgos H-1 a H-19 de QA sobre esta spec.
 - **ADR:**

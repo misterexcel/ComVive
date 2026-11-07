@@ -12,12 +12,16 @@ Referencias en `docs/specs/gasto-comun.md`:
 - Intereses: E-3 y CA-7, con el flag `billing.interest`.
 - Ocupaciones: F-9, F-14 y F-15. Apertura: F-10.
 - Otorgamiento de roles: sección "Otorgamiento de roles".
+- Pago en línea: F-12 (un código de comercio Transbank por comunidad, decisión del líder del proyecto, 2026-11-07).
+- Códigos y mensajes de error: tabla de la spec.
 
-Otras referencias: `docs/arquitectura.md` §2, §3 ("Quién otorga cada rol": `POST /platform/communities` crea la comunidad y su primer administrador) y §8, pregunta 14 (un código de comercio Transbank por comunidad).
+Otras referencias: `docs/arquitectura.md` §2 y §3 ("Quién otorga cada rol": `POST /platform/communities` crea la comunidad y su primer administrador).
+
+> **Revisión crítica 3 (`docs/revisiones/2026-11-07-diseno-rev3.md`): cambios aplicados.** Menor 1: referencias vigentes. Menor 5: textos del fondo de reserva de la spec. UX-32 cerrada: en el MVP Operaciones ComVive crea las comunidades. La portada de la web se llama "Inicio".
 
 ## Reglas de pantalla
 
-- **Quién crea la comunidad:** Operaciones ComVive, en la consola de plataforma, con nombre, RUT de la comunidad y el RUT y contacto del primer administrador (arquitectura §3). El administrador no ve un botón "Nueva comunidad"; ve la comunidad nueva en "Mis comunidades" con la etiqueta "Configuración pendiente" (pregunta UX-32 sobre el autoservicio).
+- **Quién crea la comunidad:** Operaciones ComVive, en la consola de plataforma, con nombre, RUT de la comunidad y el RUT y contacto del primer administrador (decisión del líder del proyecto, 2026-11-07; arquitectura §3). El administrador no ve un botón "Nueva comunidad"; ve la comunidad nueva en "Mis comunidades" con la etiqueta "Configuración pendiente" (UX-32 cerrada).
 - **Lista de puesta en marcha:** la comunidad muestra, hasta completarla, una lista de pasos con su estado. El último es el pago en línea, que no depende del administrador.
 - **Pago en línea (Webpay):** cada comunidad necesita su propio código de comercio Transbank. Mientras no lo tenga, la comunidad opera solo con pagos manuales: la app no muestra el botón de pago y la lista muestra "Pago en línea: pendiente". El administrador no ingresa credenciales: son un secreto que carga ComVive (regla 9 de `CLAUDE.md`).
 
@@ -60,7 +64,7 @@ flowchart TD
 2. **Datos de la comunidad:** nombre, dirección, comuna, tipo (edificio o condominio) y RUT de la comunidad (los dos últimos los trae Operaciones y se pueden revisar).
    - **Medios de pago** que aparecerán en el aviso y en "Cómo pagar" de la app (G-2): banco, tipo y número de cuenta, titular, RUT del titular y correo para comprobantes.
 3. **Cobro** (`community.billing.configure`):
-   - Fondo de reserva en porcentaje. El mínimo es 5,00 % (D-2) y un valor menor se rechaza con "El fondo de reserva no puede ser menor a 5 %".
+   - Fondo de reserva en porcentaje, entre 5,00 % y 50,00 % (D-2). Un valor menor se rechaza con "El fondo de reserva no puede ser menor que 5,00 % (Ley 21.442, art. 39)" y uno mayor con "El fondo de reserva no puede superar 50,00 %. Si el reglamento fija más, contacta a soporte".
    - Plazo de vencimiento en días corridos, 10 por defecto (E-1).
    - **Primer mes a cobrar:** mes y año, por ejemplo "Octubre 2026". Con ese dato se crea el primer borrador vigente (A-2). Ayuda: "Se cobra mes vencido: los gastos de octubre se emiten a comienzos de noviembre" (S-2).
    - **Intereses:** ver "Configuración > Cobro > Intereses" en `arquitectura-de-informacion.md`. En el alta solo se puede cargar la tasa del reglamento; activarlos es una acción aparte (menor 18).
@@ -75,7 +79,7 @@ flowchart TD
 6. **Resumen:** unidades, suma de alícuotas, configuración de cobro, primer mes a cobrar, medios de pago y ocupantes cargados. Botón "Guardar configuración".
 7. Al guardar, se ofrece "Invitar residentes ahora" o "Más tarde".
 
-**Lista de puesta en marcha** (en Resumen, hasta completarla):
+**Lista de puesta en marcha** (en Inicio, hasta completarla):
 
 | Paso | Estado posible | Quién lo completa |
 | --- | --- | --- |
@@ -111,7 +115,8 @@ flowchart TD
 | RUT faltante o inválido | "Ingresa un RUT válido. Revisa el dígito verificador" | Fila marcada |
 | El mismo RUT con datos distintos en la planilla | "El RUT 12.345.678-9 aparece con nombres distintos" | Fila marcada |
 | Formato de archivo no soportado | "Sube un archivo CSV o Excel con la plantilla de ComVive" | No se procesa |
-| Fondo de reserva bajo 5 % | "El fondo de reserva no puede ser menor a 5 %" | El campo no se acepta |
+| Fondo de reserva bajo 5,00 % (422 `RESERVE_RATE_BELOW_MINIMUM`) | "El fondo de reserva no puede ser menor que 5,00 % (Ley 21.442, art. 39)" | El campo no se acepta |
+| Fondo de reserva sobre 50,00 % (422 `RESERVE_RATE_ABOVE_MAXIMUM`) | "El fondo de reserva no puede superar 50,00 %. Si el reglamento fija más, contacta a soporte" | El campo no se acepta |
 
 ## Carga
 
@@ -122,4 +127,4 @@ flowchart TD
 
 - La configuración es un asistente de 4 pasos que se puede pausar.
 - Las alícuotas se pueden editar después de la primera emisión: ver UX-15.
-- El administrador no crea comunidades (UX-32).
+- El autoservicio (que el administrador cree comunidades por su cuenta) queda fuera del MVP y se revisará después del Piloto (Supuesto (a validar); UX-32 cerrada para el MVP).
