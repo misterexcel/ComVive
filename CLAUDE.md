@@ -84,14 +84,21 @@ Flujo del tablero: Backlog → Especificación → Lista para desarrollo → En 
 
 ## Mapa del repositorio
 
-```
+```text
 CLAUDE.md               este archivo
 .claude/agents/         definición de cada agente
+.github/workflows/      integración continua (lint de Markdown y detección de secretos)
+docs/arquitectura.md    componentes, modelo de datos y flujos técnicos
 docs/specs/             especificaciones por módulo
 docs/adr/               decisiones de arquitectura
 docs/design/            flujos, wireframes, design system
 docs/qa/                plan de pruebas, comunidades simuladas, pruebas de oro
+docs/operaciones/       ambientes y procedimientos (desde la Etapa 2)
 docs/contexto/          investigación de mercado y plan de puesta en marcha
 apps/api | web | mobile se crean en la Etapa 2
 packages/shared         se crea en la Etapa 2
 ```
+
+## Integración continua
+
+Cada pull request y cada cambio a `main` corre `.github/workflows/ci.yml`. Para revisar la documentación en local antes de subir: `npx markdownlint-cli2@0.17.2` (con `--fix` corrige lo automático).
