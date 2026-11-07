@@ -1,0 +1,39 @@
+name: CI
+
+# Etapa 0: verifica documentación y ausencia de secretos.
+# En la Etapa 2 se suman build, tipos y pruebas del monorepo (pruebas de oro y de aislamiento).
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  docs:
+    name: Lint de Markdown
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npx --yes markdownlint-cli2@0.17.2
+
+  secrets:
+    name: Detección de secretos
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Gitleaks
+        run: >
+          docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.21.2
+          detect --source /repo --redact --verbose --no-banner

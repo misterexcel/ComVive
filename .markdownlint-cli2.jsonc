@@ -1,0 +1,13 @@
+{
+  // Reglas de estilo para la documentación de ComVive.
+  "config": {
+    "default": true,
+    "MD013": false, // largo de línea: los párrafos van en una sola línea
+    "MD024": { "siblings_only": true }, // títulos repetidos permitidos en secciones distintas
+    "MD033": false, // HTML en línea permitido
+    "MD036": false, // énfasis usado como etiqueta (p. ej. **CA-1 · nombre**)
+    "MD041": false // no exige título en la primera línea
+  },
+  "globs": ["**/*.md"],
+  "ignores": ["node_modules/**", "**/node_modules/**"]
+}

@@ -46,7 +46,7 @@ code .
 
 ## 4. Instalar Claude Code
 
-Sigue la guía oficial de instalación para Windows: https://docs.claude.com/en/docs/claude-code/setup
+Sigue la guía oficial de instalación para Windows: <<https://docs.claude.com/en/docs/claude-code/setup>>
 
 Luego, dentro de la carpeta del repositorio:
 
