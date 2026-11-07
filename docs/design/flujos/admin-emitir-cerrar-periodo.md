@@ -4,112 +4,123 @@ Estado: Borrador
 Actor: administrador (el comité ve las mismas pantallas en modo lectura)
 Superficie: web de administración
 Alcance: MVP
-Referencias: `docs/specs/gasto-comun.md` secciones A, B, C, E, G y H; CA-1, CA-12, CA-16, CA-17
+Referencias en `docs/specs/gasto-comun.md`:
 
-Este flujo no define montos ni cálculos: todo cálculo lo hace la API según la spec. La interfaz solo ordena los pasos y muestra lo que la API devuelve.
+- Ciclo del periodo: A-2, A-3.1 a A-3.5 y A-5.
+- Gastos y cargos: B-1 a B-5.
+- Aviso de cobro: G-4 y G-5.
+- Intereses: E-7, solo con el flag `billing.interest`.
+- Criterios de aceptación: CA-1, CA-19, CA-20, CA-24 y CA-25.
+
+Otras referencias: `docs/arquitectura.md` §4 (`issue-preview`).
+
+Este flujo no define montos ni cálculos: los calcula la API según la spec. La interfaz ordena los pasos y muestra lo que devuelve la API. En los mensajes, `{dato}` marca un valor variable.
 
 ## Diagrama
 
 ```mermaid
 flowchart TD
-  A["Gasto común: lista de periodos"] --> B{"¿Hay periodo en Borrador?"}
-  B -->|No| C["Crear periodo siguiente"]
-  C --> D["Detalle del periodo en Borrador"]
-  B -->|Sí| D
-  D --> E["Agregar o editar gastos"]
-  D --> F["Cargos individuales y lecturas"]
-  D --> G["Egresos del fondo y ajustes"]
-  E --> H["Preparar emisión"]
-  F --> H
-  G --> H
-  H --> I["Ingresar saldo de caja"]
-  I --> J["Validaciones"]
-  J --> K{"¿Bloqueos?"}
-  K -->|Sí| L["Lista de bloqueos con enlace para corregir"]
-  L --> D
-  K -->|No| M{"¿Advertencias?"}
-  M -->|Sí| N["Mostrar advertencias y pedir confirmación"]
-  N --> O{"¿Continuar?"}
-  O -->|No| D
-  O -->|Sí| P["Vista previa de cargos por unidad"]
-  M -->|No| P
-  P --> Q["Confirmar emisión con resumen"]
-  Q --> R["Emitiendo"]
-  R --> S{"¿Emisión correcta?"}
-  S -->|No| T["Error: no se emitió nada"]
-  T --> D
-  S -->|Sí| U["Periodo Emitido: avisos generados"]
-  U --> V["Notificar a residentes"]
-  V --> W["Seguimiento de pagos del periodo"]
-  W --> X["Cerrar periodo"]
-  X --> Y{"¿Advertencias de cierre?"}
-  Y -->|Sí| Z["Pagos sin conciliar o antes del vencimiento"]
-  Z --> AA{"¿Cerrar igual?"}
-  AA -->|No| W
-  AA -->|Sí| AB["Confirmar cierre irreversible"]
-  Y -->|No| AB
-  AB --> AC["Periodo Cerrado: foto de saldos"]
+  A["Gasto común: periodos"] --> B["Borrador vigente"]
+  B --> C["Gastos"]
+  B --> D["Cargos directos"]
+  B --> E["Egresos del fondo"]
+  C --> F["Preparar emisión"]
+  D --> F
+  E --> F
+  F --> G["Ingresar saldo de caja"]
+  G --> H["Vista previa y validaciones de la API"]
+  H --> I{"¿Bloqueos?"}
+  I -->|Sí| J["Lista de bloqueos con enlace para corregir"]
+  J --> B
+  I -->|No| K{"¿Advertencias?"}
+  K -->|Sí| L["Mostrar advertencias"]
+  L --> M{"¿Continuar?"}
+  M -->|No| B
+  M -->|Sí| N["Confirmar emisión con resumen"]
+  K -->|No| N
+  N --> O["Emitiendo con clave de idempotencia"]
+  O --> P{"Respuesta"}
+  P -->|Correcta| Q["Periodo Emitido y nuevo borrador creado"]
+  P -->|Error| R["No se emitió nada"]
+  R --> B
+  P -->|409| S["El periodo ya fue emitido"]
+  S --> Q
+  P -->|Corte de conexión| T["Consultar estado del periodo"]
+  T --> U{"¿Quedó emitido?"}
+  U -->|Sí| Q
+  U -->|No| N
+  Q --> V["Avisos generados y notificación a residentes"]
+  V --> W["Cerrar periodo"]
+  W --> X["Confirmar cierre irreversible"]
+  X --> Y["Periodo Cerrado con foto de saldos"]
 ```
 
 ## Pasos
 
-**Borrador**
+**Borrador vigente**
 
-1. En "Periodos" el administrador abre el periodo en Borrador o crea el siguiente (solo puede haber uno, A-2).
-2. **Gastos:** tabla con concepto, tipo, subcategoría, criterio de distribución, monto y respaldo. Formulario lateral para agregar:
-   - Tipo: ordinario (con subcategoría: administración, mantención, reparación, uso o consumo), extraordinario (B-1, B-2).
-   - Criterio: por alícuota (por defecto), partes iguales, por consumo (C-1).
-   - Monto en pesos enteros mayor que 0 (B-5). El campo no acepta coma decimal.
-3. **Cargos individuales:** multa (con motivo y referencia al reglamento, B-4), consumo medido u otro cargo directo, por unidad.
-4. **Lecturas de consumo:** tabla de unidades con un campo por lectura, para gastos por consumo.
-5. **Egresos del fondo de reserva** con referencia a la autorización (B-3) y **ajustes** de periodos anteriores con motivo (sección H).
-6. Totales en vivo devueltos por la API: ordinarios, extraordinarios, consumos, fondo de reserva y total.
+1. Siempre existe un único borrador vigente (A-2). "Periodos" lo muestra arriba. No hay botón para crear periodos.
+2. **Gastos:** tabla con concepto, cuenta, subcategoría, base de pesos, monto y respaldo. El formulario lateral para agregar tiene:
+   - **Cuenta:** ordinario, con una subcategoría (administración, mantención, reparación, uso o consumo), o extraordinario (B-1, B-2).
+   - **Base:** alícuota (por defecto) o partes iguales. Con partes iguales se eligen las unidades del conjunto.
+   - **Monto:** campo de dígitos con máscara de miles y mayor que 0 (B-5).
+3. **Cargos directos** por unidad (B-4):
+   - Consumo individual: se ingresa el monto, que se calcula fuera de ComVive.
+   - Multa: con motivo y referencia al reglamento o al acuerdo.
+   - Otro: a la cuenta ordinario o extraordinario.
+4. **Egresos del fondo de reserva:** monto y referencia de texto libre a la autorización (B-3).
+5. **Ajustes recibidos:** lista de solo lectura con los ajustes que dejaron las correcciones de periodos anteriores (ver `admin-corregir-gasto.md`).
 
 **Emisión**
 
-1. "Preparar emisión" pide el **saldo de caja**: monto, fecha de corte y cuenta bancaria (G-4, S-16).
-2. **Validaciones** (la API las evalúa; la pantalla las agrupa):
-   - Bloqueos: periodo anterior en Borrador (A-3); alícuotas no suman 100 % (C-4); grupo por consumo sin lecturas (casos borde).
-   - Advertencias: periodo sin gastos (CA-17); comunidad con intereses sin tope CMF del mes (E-6); tasa del reglamento sobre el tope (CA-7).
-3. **Vista previa:** tabla por unidad con columnas por cuenta (ordinario, fondo de reserva, extraordinario, consumos, intereses, multas, ajustes) y fila de suma por cuenta. Cada columna muestra "Cuadra con el total" (A-3.2). Supuesto: la vista previa viene de una simulación de la API (UX-5).
-4. **Confirmación:** "Vas a emitir el periodo octubre 2026: 4 avisos, total $1.050.000, vencimiento 11-11-2026. Después no podrás editar sus gastos." Botón "Emitir periodo".
-5. Resultado: periodo **Emitido**, avisos en PDF disponibles, opción "Notificar a residentes" (UX-6, UX-19).
+1. "Preparar emisión" pide el **saldo de caja**: monto y fecha de corte (G-4, S-16).
+2. La pantalla llama a `issue-preview` (arquitectura §4) y muestra:
+   - **Bloqueos:**
+     - Las alícuotas no suman 100 %, solo si algún grupo usa alícuota (A-3.1).
+     - Un grupo tiene total y ninguna unidad con participación (A-3.2).
+   - **Advertencias:**
+     - Periodo sin gastos (CA-20).
+     - Falta la tasa CMF, solo con el flag `billing.interest` activo (E-7).
+   - **Vista previa:** tabla por unidad con una columna por cuenta (ordinario, fondo de reserva, extraordinario, intereses, multas y ajustes) y la suma de cada columna. Las unidades con $0 aparecen con $0 (C-5).
+3. **Confirmación:** "Vas a emitir el periodo octubre 2026: 4 avisos, total $1.050.000, vencimiento 11-11-2026. Después no podrás editar sus gastos. Se creará el borrador de noviembre 2026." Botón "Emitir periodo".
+4. **Envío:** la confirmación lleva una clave de idempotencia (A-3.4). Si el administrador hace doble clic o reintenta con la misma clave, recibe el mismo resultado (CA-25).
+5. **Resultado:** el periodo queda **Emitido**, con los avisos en PDF disponibles, y el borrador M+1 queda creado. El botón "Notificar a residentes" envía las notificaciones (UX-6, UX-19).
 
 **Cierre**
 
-1. Desde el periodo Emitido, "Cerrar periodo".
-2. Advertencias no bloqueantes (A-5.2): "Hay 3 pagos de octubre sin conciliar" o "Aún no vence el plazo de pago (11-11-2026)".
-3. Confirmación: "Al cerrar, el periodo no admite más cambios. Las correcciones se harán con ajustes en el periodo siguiente." Escribir el nombre del periodo para confirmar (p. ej. `2026-10`).
-4. Resultado: periodo **Cerrado** y foto de saldos de cierre descargable.
+1. Desde el periodo Emitido, "Cerrar periodo" (A-5).
+2. Confirmación: "Al cerrar octubre 2026 no se podrá modificar. Las correcciones se harán con ajustes en el borrador vigente." Para confirmar, el administrador escribe el periodo (`2026-10`).
+3. Resultado: el periodo queda **Cerrado** y la foto de saldos se puede descargar.
+4. El cierre no muestra advertencias (decisión del coordinador; ver UX-20 sobre A-5.2).
 
 ## Estados vacíos
 
-- **Sin periodos:** "Crea el primer periodo para registrar los gastos del mes." con "Crear periodo".
-- **Periodo sin gastos:** "Aún no hay gastos en este periodo." con "Agregar gasto"; la emisión pide confirmación (CA-17).
-- **Sin cargos individuales:** "No hay multas ni consumos este mes."
-- **Comité sin periodos emitidos:** "Todavía no hay periodos emitidos para revisar."
+- **Borrador sin gastos:** "Aún no hay gastos en este periodo." con "Agregar gasto". La emisión pide confirmación (CA-20).
+- **Sin cargos directos:** "No hay multas ni consumos este mes."
+- **Sin periodos emitidos (vista del comité):** "Todavía no hay periodos emitidos para revisar."
 
 ## Errores
 
 | Caso | Mensaje | Comportamiento |
 | --- | --- | --- |
-| Alícuotas no suman 100 % | "Las alícuotas suman X %; deben sumar 100 %" (C-4) | Bloqueo con enlace a Unidades |
-| Periodo anterior en Borrador | "Primero emite el periodo septiembre 2026" | Bloqueo con enlace |
-| Consumo sin lecturas | "No hay consumos para distribuir $X" (casos borde) | Bloqueo; sugiere cambiar el criterio |
-| Monto 0, negativo o con decimales | "Ingresa un monto en pesos, mayor que 0 y sin decimales" | Campo inválido |
-| Falla al emitir | "No se pudo emitir. No se creó ningún cargo. Intenta de nuevo." | Periodo sigue en Borrador (A-3.2) |
-| Otro usuario emitió o editó a la vez | "Este periodo cambió mientras lo revisabas. Revisa la vista previa de nuevo." | Recarga la vista previa |
-| Intento de editar periodo Emitido o Cerrado | Acciones de edición no se muestran; enlace "Registrar ajuste en el periodo siguiente" | Sección H |
-| Sin permiso (comité) | Botones de acción no se muestran | CA-20 |
+| Alícuotas no suman 100 % | "Las alícuotas suman 99,9900 %; deben sumar 100,0000 %" (A-3.1, CA-19) | Bloqueo con enlace a Unidades |
+| Grupo sin participación | "El grupo {cuenta} / {base} no tiene unidades con participación para repartir ${total}" (A-3.2) | Bloqueo con enlace al gasto |
+| Periodo sin gastos | "El periodo no tiene gastos. Se emitirán avisos con cargo $0" (CA-20) | Pide confirmación |
+| Falta tasa CMF (solo con el flag activo) | "Falta la tasa de referencia CMF desde {fecha}. Se emitirá sin intereses y se cobrarán en la próxima emisión" (E-7) | Advertencia; se puede emitir |
+| Monto 0 o vacío | "Ingresa un monto mayor que $0" | El campo no acepta otros caracteres (B-5) |
+| Falla en la emisión | "No se pudo emitir. No se creó ningún cargo. Intenta de nuevo." | El periodo sigue en Borrador (A-3.3) |
+| Otra emisión con otra clave | "El periodo ya fue emitido" (409, A-3.4) | Recarga el periodo |
+| Corte de conexión al emitir | "Revisando si el periodo quedó emitido…" | Consulta el estado antes de permitir reintentar |
+| Intento de editar un periodo Emitido o Cerrado | Los botones de edición no se muestran; aparece "Corregir gasto" | Sección H |
+| Comité | Los botones de acción no se muestran | 403 en la API (CA-24) |
 
 ## Carga
 
-- Totales y vista previa: esqueleto de tabla mientras responde la API.
-- Emisión: pantalla bloqueante con "Emitiendo periodo… no cierres esta ventana" y pasos (calculando cargos, generando avisos). Si los PDF tardan, el periodo ya figura Emitido y los avisos muestran "Generando" por unidad.
-- Cierre: indicador en el botón y bloqueo de doble clic.
+- **Vista previa:** esqueleto de tabla mientras responde `issue-preview`.
+- **Emisión:** pantalla bloqueante "Emitiendo periodo… no cierres esta ventana". Si los PDF tardan, el periodo ya figura como Emitido y cada aviso muestra "Generando".
+- **Cierre:** indicador en el botón y bloqueo del doble clic.
 
 ## Supuestos (a validar)
 
-- La creación del periodo siguiente es manual, con el mes propuesto (S-2).
-- El administrador ve la vista previa antes de emitir (UX-5).
-- El cierre se confirma escribiendo el periodo, por ser irreversible.
+- El cierre se confirma escribiendo el periodo, porque es irreversible.
+- La notificación a residentes es una acción separada de la emisión (UX-6).

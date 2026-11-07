@@ -1,76 +1,85 @@
 # Flujo: primer ingreso por invitación
 
 Estado: Borrador
-Actor: residente propietario o arrendatario (inicia el administrador)
+Actor: residente propietario o arrendatario (el flujo lo inicia el administrador)
 Superficie: web de administración (invitar) y app residente (aceptar)
 Alcance: MVP
-Referencias: `docs/arquitectura.md` §2 (identidad global, membresía por comunidad) y §5 (Ley 21.719); `docs/specs/gasto-comun.md` S-14
+Referencias:
 
-El método de autenticación depende del ADR 0005. **Supuesto (a validar; UX-7):** enlace de invitación más código de un solo uso, sin contraseña.
+- `docs/arquitectura.md` §2 (identidad global por RUT y membresía por comunidad), §4 (RUT para pagar) y §5 (Ley 21.719).
+- `docs/specs/gasto-comun.md`: F-9 y S-14 (ventana del arrendatario y pérdida de acceso).
+
+El método de autenticación depende del ADR 0005. **Supuesto (a validar; UX-7, UX-8):** el residente ingresa su RUT y un código de un solo uso enviado al contacto que registró el administrador, sin contraseña. La persona se reconoce por su RUT, nunca por correo ni teléfono.
 
 ## Diagrama
 
 ```mermaid
 flowchart TD
-  A["Admin: Unidades y residentes"] --> B["Seleccionar residentes"]
+  A["Admin: Unidades y residentes"] --> B["Seleccionar residentes con RUT y contacto"]
   B --> C["Enviar invitación"]
-  C --> D["Mensaje con enlace al residente"]
+  C --> D["Mensaje genérico con enlace"]
   D --> E{"¿Tiene la app?"}
   E -->|No| F["Tienda de apps y descarga"]
   F --> G["Abrir app con la invitación"]
   E -->|Sí| G
   G --> H{"¿Invitación vigente?"}
-  H -->|No| I["Invitación vencida: pedir una nueva al administrador"]
-  H -->|Sí| J["Bienvenida: comunidad y unidad"]
-  J --> K["Enviar código al teléfono o correo"]
-  K --> L["Ingresar código"]
-  L --> M{"¿Código correcto?"}
-  M -->|No| N["Código incorrecto: reintentar o reenviar"]
-  N --> L
-  M -->|Sí| O{"¿Persona ya tiene cuenta?"}
-  O -->|Sí| P["Se agrega la comunidad a su cuenta"]
-  O -->|No| Q["Confirmar nombre"]
-  Q --> R["Privacidad y términos"]
-  P --> R
-  R --> S["Activar notificaciones"]
-  S --> T["Inicio: estado de cuenta"]
+  H -->|No| I["Invitación vencida: pedir otra a la administración"]
+  H -->|Sí| J["Bienvenida genérica sin datos de la comunidad"]
+  J --> K["Ingresar RUT"]
+  K --> L["Enviar código al contacto registrado"]
+  L --> M["Ingresar código"]
+  M --> N{"¿RUT y código coinciden con la invitación?"}
+  N -->|No| O["No pudimos validar tus datos"]
+  O --> M
+  N -->|Sí| P["Mostrar comunidad, unidad y relación"]
+  P --> Q{"¿El RUT ya tiene cuenta?"}
+  Q -->|Sí| R["Se agrega la membresía a su cuenta"]
+  Q -->|No| S["Confirmar nombre"]
+  R --> T["Privacidad y términos"]
+  S --> T
+  T --> U["Activar notificaciones"]
+  U --> V["Inicio: estado de cuenta"]
 ```
 
 ## Pasos
 
-1. **Administrador:** en "Unidades y residentes" selecciona uno o varios residentes con teléfono o correo y toca "Enviar invitación" (acción masiva). Ve el estado de cada invitación: pendiente, aceptada, vencida.
-2. **Residente** recibe: "La administración de Edificio Los Aromos te invita a ComVive para ver y pagar tu gasto común del Depto 101." con enlace.
-3. Si no tiene la app, el enlace lleva a la tienda y, al abrir la app, retoma la invitación.
-4. **Bienvenida:** muestra comunidad, unidad y relación (propietario o arrendatario). "¿No eres tú? Avísale a tu administración."
-5. **Código:** se envía al contacto que registró el administrador; 6 dígitos, campo con teclado numérico y autocompletado del sistema.
-6. Si la persona ya usa ComVive en otra comunidad, se agrega la membresía sin pedir datos de nuevo.
-7. **Privacidad:** texto breve sobre qué datos se tratan y para qué (Ley 21.719), con enlace a la política completa. Botón "Aceptar y continuar".
-8. **Notificaciones:** "Te avisaremos cuando llegue tu gasto común y cuando se confirme un pago." con "Activar" y "Ahora no".
-9. Llega a **Inicio** con su estado de cuenta.
+1. **Administrador:** en "Unidades y residentes" selecciona uno o varios residentes que tengan RUT y contacto, y toca "Enviar invitación" (acción masiva). Ve el estado de cada invitación: pendiente, aceptada o vencida.
+2. **Mensaje al residente**, genérico para no exponer datos si el contacto está equivocado: "Te invitaron a ComVive para ver y pagar tu gasto común. Abre el enlace para continuar."
+3. Si no tiene la app, el enlace lleva a la tienda y la app retoma la invitación al abrirse.
+4. **Bienvenida genérica:** "Para continuar, ingresa tu RUT." No muestra la comunidad ni la unidad.
+5. **RUT:** con formato automático (`12.345.678-9`) y validación del dígito verificador.
+6. **Código:** se envía al contacto registrado por el administrador. Son 6 dígitos, con teclado numérico y autocompletado del sistema.
+7. **Validación:** solo si el RUT y el código coinciden con la invitación, la app muestra "Edificio Los Aromos · Depto 101 · Propietario". Si no coinciden, el mensaje es genérico y no revela cuál de los dos falló.
+8. Si el RUT ya tiene cuenta en ComVive, se agrega la membresía sin pedir datos de nuevo.
+9. **Privacidad:** texto breve sobre qué datos se tratan y para qué (Ley 21.719), con enlace a la política completa. Botón "Aceptar y continuar".
+10. **Notificaciones:** "Te avisaremos cuando llegue tu gasto común y cuando se confirme un pago. Los avisos no muestran montos en la pantalla bloqueada." Opciones "Activar" y "Ahora no".
+11. Llega a **Inicio**. El arrendatario ve solo su ventana (F-9).
 
 ## Estados vacíos
 
-- **Admin sin residentes con contacto:** "Agrega teléfono o correo a los residentes para invitarlos."
-- **Residente sin periodos emitidos:** Inicio muestra "Tu comunidad todavía no emite gastos comunes en ComVive."
+- **Administrador sin residentes invitables:** "Agrega RUT y teléfono o correo a los residentes para invitarlos."
+- **Propietario sin periodos emitidos:** "Tu comunidad todavía no emite gastos comunes en ComVive."
+- **Arrendatario sin cargos en su ventana:** "Aún no hay cobros desde tu ingreso el {dd-mm-aaaa}."
 
 ## Errores
 
 | Caso | Mensaje | Comportamiento |
 | --- | --- | --- |
 | Invitación vencida | "Esta invitación venció. Pide una nueva a tu administración." | Sin acceso |
-| Invitación ya usada | "Esta invitación ya fue usada. Ingresa con tu teléfono o correo." | Lleva a ingreso |
-| Código incorrecto | "El código no es correcto. Te quedan 2 intentos." | Tras 3 fallos, espera de 5 minutos (supuesto) |
+| Invitación ya usada | "Esta invitación ya fue usada. Ingresa con tu RUT." | Lleva al ingreso |
+| RUT con dígito verificador inválido | "Revisa tu RUT" | El campo es inválido |
+| RUT o código que no coinciden | "No pudimos validar tus datos. Te quedan 2 intentos." | Tras 3 fallos, espera de 5 minutos (supuesto) |
 | Código vencido | "El código venció. Te enviamos uno nuevo." | Reenvío |
-| Contacto equivocado | "¿No te llegó el código? Revisa con tu administración que tu teléfono o correo esté bien." | Sin cambio de contacto desde la app (supuesto, evita suplantación) |
-| Ocupación aún no vigente (arrendatario con fecha futura) | "Tu acceso comienza el 01-12-2026." | Sin datos hasta la fecha |
+| No llega el código | "¿No te llegó el código? Pide a tu administración que revise tu teléfono o correo." | El contacto no se cambia desde la app (supuesto, para evitar suplantación) |
+| Ocupación con fecha futura | "Tu acceso comienza el {dd-mm-aaaa}." | Sin datos hasta esa fecha |
 
 ## Carga
 
-- Envío masivo: progreso "Enviando 12 de 40" y resumen final con enviadas y fallidas.
-- Envío de código: botón "Enviando…" y temporizador visible de 60 segundos para reenviar.
+- **Envío masivo:** progreso "Enviando 12 de 40" y un resumen final de enviadas y fallidas.
+- **Envío del código:** botón "Enviando…" y temporizador visible de 60 segundos para reenviar.
 
 ## Supuestos (a validar)
 
-- Vigencia de la invitación: 14 días; del código: 10 minutos.
+- La invitación dura 14 días y el código, 10 minutos.
 - El residente no cambia su contacto desde la app; lo corrige el administrador.
-- Datos mínimos para invitar: ver UX-8.
+- El RUT es obligatorio para invitar (UX-8).

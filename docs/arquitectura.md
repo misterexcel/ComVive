@@ -117,6 +117,13 @@ erDiagram
   PERIOD ||--o{ LEDGER_ENTRY : "se registra en"
   LEDGER_ENTRY o|--o{ LEDGER_ENTRY : "ajusta a"
   UF_VALUE ||--o{ EXPENSE : convierte
+  UNIT_OCCUPANCY o|--o{ LEDGER_ENTRY : "ámbito de"
+  LEDGER_ENTRY ||--o{ ALLOCATION : "crédito imputado"
+  LEDGER_ENTRY ||--o{ ALLOCATION : "débito cubierto"
+  UNIT_OCCUPANCY o|--o{ INTEREST_STATE : "ámbito de"
+  UNIT ||--o{ INTEREST_STATE : "lleva"
+  COMMUNITY ||--o{ INTEREST_RATE_RULE : "fija"
+  UNIT ||--o{ WEBPAY_ATTEMPT : "intenta"
   PERIOD ||--o{ PERIOD_UNIT_SHARE : "congela"
   UNIT ||--o{ PERIOD_UNIT_SHARE : "participa en"
   PAYMENT ||--o{ RECONCILIATION_MATCH : "se asigna en"
@@ -131,7 +138,11 @@ erDiagram
   EXPENSE { uuid period_id  string account  string concept  bigint amount_clp  bigint amount_uf_e4  date uf_date }
   CHARGE { uuid id  uuid unit_id  uuid period_id  string account  bigint amount_clp }
   PAYMENT { uuid id  uuid unit_id  bigint amount_clp  string method  string external_ref  date paid_on  timestamp recorded_at }
-  LEDGER_ENTRY { uuid id  uuid unit_id  uuid period_id  string kind  string account  bigint amount_clp  uuid adjusts_entry_id }
+  LEDGER_ENTRY { uuid id  uuid unit_id  uuid period_id  string kind  string type  string account  string scope  uuid occupancy_id  bigint amount_clp  date due_on  uuid adjusts_entry_id }
+  ALLOCATION { uuid credit_entry_id  uuid debit_entry_id  bigint amount_clp  date effective_on  int version  bool superseded }
+  INTEREST_STATE { uuid unit_id  string scope  uuid occupancy_id  date last_charged_on }
+  INTEREST_RATE_RULE { date valid_from  bigint monthly_rate_e6  string source }
+  WEBPAY_ATTEMPT { uuid unit_id  uuid person_id  string token  string status  timestamp started_at }
   UF_VALUE { date date  bigint value_clp_e2 }
   BANK_STATEMENT_LINE { uuid id  string account_no  date posted_on  bigint amount_clp  string description  int position }
   RECONCILIATION_MATCH { uuid payment_id  uuid line_id  bigint amount_clp }
@@ -150,7 +161,7 @@ Todas las tablas de negocio llevan `community_id` (omitido en el diagrama), `cre
 - **Supuesto (a validar):** dos bases de prorrateo; cada cuenta declara cuál usa:
   - **Alícuota legal:** `aliquot_e6`, entero en escala 10^-6 (18,50 % = 185000; 100 % = 1000000).
   - **Partes iguales o pesos relativos:** `share_weight` entero (1 para partes iguales).
-- **Supuesto (a validar):** si las alícuotas no suman exactamente 1000000, la emisión se bloquea hasta corregir el dato (alineado con `docs/specs/gasto-comun.md`, regla C-4 y CA-16). El motor de cálculo igual reparte por `peso ÷ suma de pesos`, lo que sirve para partes iguales y pesos relativos.
+- **Supuesto (a validar):** si las alícuotas no suman exactamente 1000000, la emisión se bloquea hasta corregir el dato (alineado con `docs/specs/gasto-comun.md`, regla A-3.1 y CA-19). El motor de cálculo igual reparte por `peso ÷ suma de pesos`, lo que sirve para partes iguales y pesos relativos.
 - **Método del resto mayor** (`docs/qa/comunidades-simuladas.md`) con aritmética entera: cargo base = `total * peso / suma` (división entera); resto = `total * peso mod suma`. Los pesos faltantes van a los mayores restos.
 - **Desempate:** `UNIT.sort_order`, entero estable y único por comunidad (menor `sort_order` gana). No se usa el código de la unidad.
 - **Supuesto (a validar):** cada cuenta (gasto ordinario, fondo de reserva, extraordinarios) se prorratea por separado y la suma de sus cargos cuadra con su propio total. Así, el total del periodo también cuadra.
@@ -160,13 +171,34 @@ Todas las tablas de negocio llevan `community_id` (omitido en el diagrama), `cre
 **Libro de movimientos** *(ADR 0004)*
 
 - `LEDGER_ENTRY` es de solo inserción (sin `UPDATE` ni `DELETE`, reforzado con permisos de base de datos y trigger). `kind` = `debit` (cargo, interés, multa) o `credit` (pago, nota de crédito); `amount_clp` siempre positivo; `account` separa gasto ordinario, fondo de reserva y otros.
-- **Apertura:** tipo de movimiento `opening` (débito o crédito por unidad y cuenta, con referencia de origen) para cargar saldos iniciales en la migración. El detalle queda para una spec futura de migración.
-- **El libro es la fuente de verdad.** `CHARGE` es el detalle del cargo; invariante: cada cargo tiene exactamente un movimiento con el mismo monto, cuenta, unidad y periodo, y ambos se crean en la misma transacción.
-- **Saldo** de una unidad = débitos − créditos. No existe columna de saldo editable; si por rendimiento se necesita, se usa una vista o saldos de cierre generados al cerrar, verificables contra el libro.
+- `type` detalla el origen: `charge`, `interest`, `fine`, `payment`, `credit_note`, `reversal`, `transfer` y `opening`.
+- **Apertura:** tipo `opening` (débito o crédito por unidad, cuenta y ámbito, con referencia de origen) para cargar saldos iniciales en la migración. Es el único nombre de código para este tipo; el detalle queda para una spec futura de migración.
+- **El libro es la fuente de verdad.** `CHARGE` es el detalle del cargo; invariante: cada cargo tiene exactamente un movimiento con el mismo monto, cuenta, unidad, periodo y ámbito, y ambos se crean en la misma transacción.
+
+**Ámbito de deuda** (`docs/specs/gasto-comun.md`)
+
+- Cada cargo y cada débito lleva un **ámbito fijo desde su creación**: `owner` (propietario de la unidad) u `occupancy` (una ocupación concreta, `occupancy_id` de `UNIT_OCCUPANCY`, p. ej. un arrendatario).
+- Los intereses heredan el ámbito del capital que los genera. Los ajustes, reversos y notas de crédito heredan el ámbito del movimiento al que apuntan (`adjusts_entry_id`).
+- **Saldo** = débitos − créditos, **por unidad y ámbito**; el saldo de la unidad es la suma de sus ámbitos. No existe columna de saldo editable; si por rendimiento se necesita, se usa una vista o saldos de cierre generados al cerrar, verificables contra el libro.
+- Al terminar una ocupación, lo pendiente de su ámbito pasa al ámbito `owner` con un par de movimientos `transfer` (crédito en el ámbito de la ocupación, débito en `owner`, misma cuenta y monto, enlazados). Nada se edita.
+
+**Imputación** (regla de negocio en la spec, F-5)
+
+- `ALLOCATION` registra qué crédito cubre qué débito: monto y **fecha efectiva = máx(`paid_on` del crédito, vencimiento `due_on` del débito)**. La suma imputada nunca supera el crédito ni el débito.
+- Las imputaciones se derivan del libro: ante un pago, nota de crédito o reverso se **reimputa** el ámbito afectado. La versión anterior queda marcada como reemplazada (`superseded`), no se borra, y la reimputación se audita.
+
+**Intereses** (detrás del flag `billing.interest`)
+
+- `INTEREST_STATE` guarda el último día con interés cobrado por unidad y ámbito, para no cobrar dos veces el mismo tramo.
+- `INTEREST_RATE_RULE` versiona por fecha (`valid_from`) la tasa del reglamento de cada comunidad. El tope legal se valida contra la tasa de interés corriente de la CMF (dato global, sección 2).
+- Si llega un crédito con fecha efectiva anterior a intereses ya cobrados, se emite automáticamente una nota de crédito de intereses por la diferencia, en el borrador vigente.
 
 **Periodos** *(ADR 0004)*
 
 - Estados `draft` → `issued` → `closed`. Al emitir se generan cargos y movimientos en una transacción y se verifica que cada cuenta cuadre con su total. **Al emitir el periodo M se crea automáticamente el borrador M+1**, así siempre existe un único borrador vigente.
+- **Simulación de emisión:** `POST /communities/{communityId}/periods/{periodId}/issue-preview` devuelve los cargos por unidad, ámbito y cuenta, más las validaciones, **sin persistir nada**. Usa el mismo módulo de cálculo que la emisión real, así la vista previa y la emisión coinciden con los mismos datos de entrada.
+- **Simulación de corrección de gasto:** `POST /communities/{communityId}/expenses/{expenseId}/correction-preview` devuelve las notas de crédito y débitos de ajuste por unidad, ámbito y cuenta (spec H-2, con la foto de participaciones del periodo original), **sin persistir nada**. La corrección real recibe el mismo cuerpo más una clave de idempotencia.
+- **Estado del pago en curso:** `GET /communities/{communityId}/units/{unitId}/webpay-attempts/current` devuelve el intento Webpay en curso de la unidad (o ninguno) para que la app muestre "Hay un pago en proceso".
 - Un periodo `closed` no admite inserciones con su `period_id` (trigger).
 - **Regla única:** todo ajuste, pago tardío o reverso que llega después de emitir un periodo se registra en el **periodo en borrador vigente**. Los ajustes y reversos llevan `adjusts_entry_id` al movimiento original; los pagos conservan `paid_on` (fecha real de pago) y `recorded_at` (fecha de registro).
 
@@ -176,7 +208,8 @@ Todas las tablas de negocio llevan `community_id` (omitido en el diagrama), `cre
 - **Supuesto (a validar):** conciliación N:M mediante `RECONCILIATION_MATCH`. Una línea de cartola puede cubrir varios pagos (p. ej. una transferencia por varias unidades del mismo dueño) y la suma asignada nunca supera el monto de la línea.
 - Huella única de la línea de cartola por comunidad: `(account_no, posted_on, amount_clp, description, position)`, para que reimportar una cartola no duplique líneas.
 - Conciliar crea registros de asignación; nunca edita el pago ni la línea.
-- La imputación de un pago a cargos específicos sigue pendiente (pregunta abierta).
+- **Webpay:** un solo pago en curso por unidad (índice único parcial sobre `WEBPAY_ATTEMPT` con estado en curso). Si no llega confirmación en 15 minutos, la API consulta el estado en Transbank antes de liberar o confirmar el intento. Para pagar se exige identificar a la persona por su RUT.
+- La imputación de pagos a cargos sigue la sección "Imputación" y la spec de gasto común (F-5).
 
 **Reproducibilidad:** con el libro, los gastos, la foto de participaciones del periodo y los valores UF, cualquier cargo y saldo se puede recalcular y comparar.
 
@@ -214,7 +247,7 @@ Todas las tablas de negocio llevan `community_id` (omitido en el diagrama), `cre
 1. **0001 Monorepo y herramientas:** gestor de paquetes y orquestador de tareas (p. ej. pnpm workspaces y Turborepo).
 2. **0002 Aislamiento multi-comunidad:** `community_id`, cliente Prisma obligatorio, FK compuestas, datos globales, códigos 404/403 y RLS sujeta al prototipo con su criterio para posponer.
 3. **0003 Contratos de API y autorización:** OpenAPI primero, montos CLP en JSON, acciones por rol y matriz de permisos.
-4. **0004 Libro de movimientos, periodos y prorrateo:** solo inserción, cierre, ajustes, bases de participación, resto mayor con `sort_order`, UF.
+4. **0004 Libro de movimientos, periodos y prorrateo:** solo inserción, ámbitos, imputación, intereses, cierre, ajustes, bases de participación, resto mayor con `sort_order`, UF.
 5. **0005 Autenticación, auditoría y datos personales:** identidad (propia o Google Identity Platform), qué se audita, cifrado de RUT.
 
 **Cuando haga falta:** tareas en segundo plano, proveedor de WhatsApp (fuera del stack, requiere aprobación), integración Webpay, ambientes y feature flags.
@@ -225,9 +258,8 @@ Todas las tablas de negocio llevan `community_id` (omitido en el diagrama), `cre
 2. **Empresa administradora:** ¿el administrador es siempre una persona, o hay que modelar una empresa con varios empleados?
 3. **Comité:** ¿qué acciones debe aprobar según la Ley 21.442 o el reglamento (p. ej. cierre de periodo, gastos extraordinarios)?
 4. **Conserje:** ¿qué datos de residentes necesita realmente para visitas y encomiendas?
-5. **Imputación de pagos:** ¿un pago parcial se aplica primero a la deuda más antigua, a intereses y multas, o según reglamento?
-6. **Intereses y multas por mora:** ¿entran al MVP?
-7. **UF:** ¿qué fuente oficial se usa para el valor diario?
-8. **Retención de datos:** plazos para visitas, bitácora y ex residentes (requiere asesoría legal, Ley 21.719).
-9. **Transferencia internacional:** Sentry y el proveedor de WhatsApp procesan datos fuera de Chile. ¿Se acepta con datos minimizados?
-10. **Periodo:** ¿siempre es un mes calendario?
+5. **Intereses y multas por mora:** ¿se activan en el MVP (flag `billing.interest`) o después?
+6. **UF:** ¿qué fuente oficial se usa para el valor diario?
+7. **Retención de datos:** plazos para visitas, bitácora y ex residentes (requiere asesoría legal, Ley 21.719).
+8. **Transferencia internacional:** Sentry y el proveedor de WhatsApp procesan datos fuera de Chile. ¿Se acepta con datos minimizados?
+9. **Periodo:** ¿siempre es un mes calendario?

@@ -13,12 +13,26 @@ Aprobación: líder del proyecto
 >   - Los días no cobrados no se pierden.
 > - **Grupos y fondo (M-1, M-2):** la clave de grupo es (cuenta, base de pesos) y hay un fondo por cada grupo ordinario. El prorrateo por consumo sale del MVP.
 > - **Movimientos posteriores a la emisión (M-3, M-11):** regla única: van al borrador vigente.
-> - **Acceso (M-4, M-5):** el arrendatario tiene una ventana de cargos propia y los ex residentes pierden acceso.
+> - **Acceso (M-4, M-5):** el arrendatario ve solo sus propios cargos (en la revisión 2 esto pasó a ser su ámbito) y los ex residentes pierden acceso.
 > - **Ajustes (M-6):** acumulan las correcciones previas y usan la foto de participaciones del periodo original.
 > - **Imputación (M-7, M-8):** el invariante impide que coexistan deuda y saldo a favor, y el orden de imputación se reescribió.
 > - **Participación y desempate (M-9, M-10):** `aliquot_e6`, `sort_order` y la Comunidad D.
 > - **Apertura (M-12):** se reserva el movimiento de apertura.
 > - **Otros:** cargos $0 sin movimiento, códigos HTTP exactos, casos borde nuevos y simplificaciones de alcance.
+>
+> **Revisión crítica 2: Aprobado con cambios → cambios aplicados.** No se renumeró ninguna regla ni ningún CA existente; las reglas y los CA nuevos van al final de su serie. Cambios:
+>
+> - **Ámbito de cada cargo (M-A):** se fija al crearlo. Los saldos se calculan por ámbito, el interés se calcula por ámbito y el ámbito del arrendatario pasa al de la unidad cuando termina su ocupación. Reglas F-9 y E-6, permisos, CA-22 y CA-26 nuevo.
+> - **Débito de ajuste (M-B):** pertenece al borrador donde se registra y vence con ese aviso (CA-14).
+> - **Fecha efectiva de imputación (M-C):** máx(`paid_on`, vencimiento del cargo). Regla F-11 y CA-27 nuevos.
+> - **Recálculo de intereses ya cobrados (M-D):** se hace en ambos sentidos. Regla E-10 y CA-28 nuevos; P-12 queda cerrada.
+> - **Fondo de reserva (m-D):** se redondea hacia arriba (techo). Cambia la Comunidad D (CA-4, GOLD-D-04).
+> - **Intereses (m-A, m-B, m-C, m-E, m-K):**
+>   - Base actual/actual (días del año calendario).
+>   - Tasa del reglamento versionada por fecha.
+>   - Categoría CMF por defecto.
+>   - Flag activo con fecha explícita en CA-6 y CA-8.
+> - **Otros (m-F a m-J):** criterios simples para el débito nuevo, la reclasificación, el cierre y la fecha de emisión. El movimiento de apertura usa el código `opening`. CA-9 queda coherente con la Comunidad A.
 
 ## Objetivo
 
@@ -36,7 +50,7 @@ La especificación cubre el MVP. Donde la ley o la práctica contable no son cla
 - **Cuenta:** clasificación de cargos y abonos:
   - **Cuentas de cargo:** `ordinario`, `fondo_reserva`, `extraordinario`, `intereses`, `multas`.
   - **Cuenta técnica de pagos:** `pago`.
-  - **Movimiento reservado:** `apertura` (regla F-10).
+  - **Movimiento reservado:** apertura, con código `opening` (regla F-10).
 - **Base de pesos:** de dónde salen los pesos de prorrateo. En el MVP hay tres:
   - `alicuota`: `aliquot_e6` de todas las unidades de la comunidad.
   - `partes_iguales`: peso 1 para cada unidad de un conjunto explícito de unidades.
@@ -48,6 +62,10 @@ La especificación cubre el MVP. Donde la ley o la práctica contable no son cla
 - **`aliquot_e6`:** alícuota legal como entero en escala 10^-6 (18,50 % = 185000; 100 % = 1000000), según `docs/arquitectura.md` §4.
 - **`sort_order`:** entero único por comunidad que fija el orden de desempate de las unidades.
 - **Foto de participaciones:** copia, guardada al emitir, de las unidades que participaron en el periodo, con su `aliquot_e6`, su `sort_order`, los conjuntos de partes iguales y el porcentaje del fondo.
+- **Ámbito:** responsable de un débito dentro de la unidad. Es un atributo fijo que se asigna al crear el movimiento y nunca cambia, salvo el traspaso de la regla F-9.
+  - `unidad`: el propietario.
+  - `ocupacion:<id>`: un arrendatario concreto, durante su ocupación.
+- **Saldo por ámbito:** Σ débitos del ámbito − Σ créditos imputados o disponibles en ese ámbito. La suma de los saldos de todos los ámbitos es el saldo de la unidad.
 
 ## Usuarios y permisos
 
@@ -56,14 +74,14 @@ La especificación cubre el MVP. Donde la ley o la práctica contable no son cla
 | Administrador | Todo el gasto común de las comunidades donde tiene membresía vigente | Configurar porcentaje del fondo, plazo de vencimiento, tasa del reglamento y `sort_order` (`community.billing.configure`). Crear, editar y eliminar gastos y cargos directos en el borrador vigente (`expense.write`). Emitir (`period.issue`) y cerrar (`period.close`). Registrar y anular pagos manuales (`payment.register`, `payment.void`). Registrar ajustes (`adjustment.create`) |
 | Comité | Lo mismo que el administrador, solo de su comunidad y solo lectura | Descargar avisos y reportes. Nada más (ver P-4) |
 | Residente propietario | Avisos de cobro, cargos, pagos, imputaciones y saldo de **sus** unidades, completos. Resumen de gastos y saldo de caja de la comunidad | Pagar en línea (Webpay). Descargar sus avisos |
-| Residente arrendatario | Solo los cargos de **su ventana**: los emitidos con fecha de emisión ≥ su fecha de ingreso (regla F-9) | Pagar en línea los cargos de su ventana |
+| Residente arrendatario | Solo los movimientos de **su ámbito** (`ocupacion:<id>`), es decir, los cargos emitidos mientras era el ocupante responsable y sus intereses y ajustes (regla F-9) | Pagar en línea; sus pagos se imputan solo a su ámbito |
 | Conserje | Nada de este módulo | Nada |
 | Ex propietario o ex residente | Nada: pierde el acceso al vencer su membresía (S-14) | Pedir su historial al administrador |
 
 Respuestas de error:
 
 - **403:** un rol con membresía vigente en la comunidad intenta una acción que su rol no permite. Por ejemplo, el comité intenta emitir, o el conserje intenta leer un aviso.
-- **404:** el recurso pertenece a otra comunidad, la membresía está vencida, o un residente pide una unidad que no es suya o un cargo fuera de su ventana. Se devuelve 404 para no revelar que el recurso existe (`docs/qa/plan-de-pruebas.md`, ISO-8).
+- **404:** el recurso pertenece a otra comunidad, la membresía está vencida, o un residente pide una unidad que no es suya o un movimiento fuera de su ámbito. Se devuelve 404 para no revelar que el recurso existe (`docs/qa/plan-de-pruebas.md`, ISO-8).
 
 Auditoría:
 
@@ -89,7 +107,8 @@ Auditoría:
       - Se crean los cargos y sus débitos.
       - Se imputan los saldos a favor existentes (regla F-6).
       - Se verifica que cada grupo cuadre con su total.
-      - Se fijan la fecha de emisión y la de vencimiento.
+      - Se fijan la fecha de emisión y la de vencimiento. La fecha de emisión la fija el servidor (fecha actual en hora de Chile); el cliente no la envía.
+      - Se asigna el ámbito de cada cargo (regla F-9).
       - Se crea el borrador M+1.
 
       Si algo falla, no queda nada escrito.
@@ -100,8 +119,10 @@ Auditoría:
    - Un periodo emitido o cerrado no recibe movimientos nuevos.
 5. **Cierre** (`period.close`, solo administrador; S-1):
    1. Requisito: el periodo está emitido.
-   2. Si hay pagos del mes sin conciliar, el sistema muestra una advertencia, pero no bloquea el cierre.
-   3. Al cerrar se guarda una foto de saldos por unidad y por cuenta, verificable contra el libro.
+   2. El cierre no hace verificaciones de conciliación, porque la conciliación queda fuera del alcance de esta spec. Nota: la advertencia de pagos sin conciliar se agregará cuando exista la spec de conciliación.
+   3. Al cerrar se guarda una foto de saldos por unidad, ámbito y cuenta, verificable contra el libro.
+      - La foto considera solo las imputaciones con `recorded_at` ≤ momento del cierre.
+      - Las reimputaciones posteriores no la cambian.
    4. Un periodo cerrado es inmutable y rechaza cualquier movimiento con su identificador (regla 6 de `CLAUDE.md`).
 6. **Calendario (S-2):** se cobra "mes vencido": los gastos del mes M se emiten a comienzos de M+1. El sistema no fuerza la fecha de emisión.
 
@@ -150,7 +171,7 @@ Auditoría:
    - El sistema rechaza valores bajo 500.
 3. **Un fondo por cada grupo ordinario (S-4):**
    - Por cada grupo `ordinario` con base `alicuota` o `partes_iguales` y total `O_g`, se forma un grupo `fondo_reserva` con la misma base de pesos.
-   - Su total es `F_g = (O_g × pb + 5.000) div 10.000` (redondeo al peso, mitad hacia arriba; S-6).
+   - Su total es `F_g = (O_g × pb + 9.999) div 10.000`, es decir, redondeado hacia arriba al peso (techo; S-6). Así el fondo nunca queda bajo el porcentaje mínimo.
    - `F_g` se reparte con el método del resto mayor y los mismos pesos de su grupo ordinario.
    - Los cargos directos ordinarios, los extraordinarios, los intereses, las multas y los egresos del fondo no generan recargo.
 4. **Otros ingresos del fondo:** lo recaudado por multas e intereses va al fondo (Ley 21.442, art. 39). El reporte del fondo suma como ingreso lo imputado a cargos de las cuentas `intereses` y `multas`.
@@ -158,7 +179,7 @@ Auditoría:
 
 ### E. Vencimiento, intereses y multas
 
-**Feature flag:** los intereses (reglas E-3 a E-8) quedan detrás del flag `billing.interest`, desactivado por defecto. Son una rebanada posterior dentro del MVP. Con el flag apagado, la emisión no calcula intereses.
+**Feature flag:** los intereses (reglas E-3 a E-8 y E-10) quedan detrás del flag `billing.interest`, desactivado por defecto. Son una rebanada posterior dentro del MVP. Con el flag apagado, la emisión no calcula intereses.
 
 1. **Vencimiento:** el plazo de pago es de 10 días desde el aviso de cobro, salvo que el reglamento fije otro (Ley 21.442, art. 7).
    - El plazo es configurable. Por defecto son 10 días corridos (S-7).
@@ -169,29 +190,42 @@ Auditoría:
    - La comunidad configura la tasa como **tasa anual** en puntos base.
    - Si el reglamento la expresa mensual, se convierte multiplicando por 12 (S-10).
    - Ejemplo: 1,00 % mensual = 1200 pb anuales.
+   - **Versiones:** la tasa del reglamento se guarda con fecha de inicio de vigencia. Cada cambio crea una versión nueva y nunca edita las anteriores. `tasa_reglamento_d` es la versión vigente el día d.
+   - El flag no se puede activar en una comunidad sin una tasa del reglamento vigente a la fecha de activación. El mensaje es: "Configura la tasa de interés del reglamento antes de activar los intereses".
 4. **Tasa de referencia CMF (S-11):**
    - Es un dato **global**, no de cada comunidad, igual que `UF_VALUE`.
    - Cada registro tiene fecha de inicio de vigencia, categoría de operación, tasa anual en puntos base y fuente (certificado CMF en el Diario Oficial).
    - Lo carga el equipo de ComVive, no el administrador.
+   - **Categoría por defecto (S-21):** interés corriente para operaciones no reajustables en moneda nacional de menos de 90 días. P-5 sigue abierta para validarla.
    - Tope diario: `tope_d = (tasa_corriente_vigente_el_día_d × 50) div 100`, en pb anuales.
 5. **Base del interés (S-9):**
    - Devenga interés solo el capital: la parte impaga de los cargos vencidos de las cuentas `ordinario`, `fondo_reserva` y `extraordinario`.
    - Los intereses y las multas no devengan interés.
-   - El capital de cada día se mide al cierre del día según `paid_on`.
-6. **Cálculo (S-10):** interés simple diario en base 365, calculado al emitir.
+   - El capital de cada día se mide al cierre del día, según la fecha efectiva de las imputaciones (regla F-11).
+6. **Cálculo (S-10):** interés simple diario con base actual/actual, es decir, con los días del año calendario de cada día (365 o 366). Se calcula al emitir, **una vez por cada ámbito** de la unidad que tenga capital en mora en la ventana.
 
    ```text
-   interés = piso( Σ_d capital_d × min(tasa_reglamento_d, tope_d) / (10.000 × 365) )
+   interés_ámbito = piso( Σ_d capital_ámbito_d × min(tasa_reglamento_d, tope_d) × k_d / (10.000 × 133.590) )
    ```
 
+   - `k_d = 366` si el año de d tiene 365 días, y `k_d = 365` si tiene 366. El número 133.590 es 365 × 366. Con esto, cada día pesa `1 / días_del_año(d)` y el cálculo es entero y exacto.
+   - En un año de 365 días, la fórmula equivale a `piso( Σ_d capital_d × tasa_d / 3.650.000 )`.
    - `d` recorre los días desde el inicio de la ventana de intereses hasta el día anterior a la fecha de emisión, ambos incluidos.
    - La ventana empieza el día siguiente al último día ya cobrado. Si nunca se ha cobrado, empieza el día siguiente al vencimiento o en la fecha de activación del flag, lo que sea posterior (S-20).
    - El resultado se trunca al peso, a favor del deudor.
-   - Se calcula un monto por unidad y **tramo de responsable** (regla F-9): uno para el capital de cargos del propietario y otro para el de la ventana de cada arrendatario.
-   - Si el resultado es mayor que $0, se crea un cargo de cuenta `intereses` en el periodo que se emite.
+   - Si el resultado es mayor que $0, se crea un cargo de cuenta `intereses`, con el ámbito del capital que lo generó, en el periodo que se emite.
 7. **Días sin tope:** si al emitir falta la tasa CMF de algún día de la ventana, el sistema advierte: "Falta la tasa de referencia CMF desde <fecha>. Se emitirá sin intereses y se cobrarán en la próxima emisión". La emisión sigue sin intereses y lo deja en auditoría. **Los días no se pierden:** la ventana no avanza y esos días se cobran en el siguiente cálculo con tope disponible.
 8. **Aviso al pagar:** si el flag está activo y la unidad tiene deuda vencida, la pantalla de pago muestra: "Tu deuda está vencida. Se pueden generar intereses hasta la fecha de tu pago, que se cobrarán en el próximo aviso".
 9. **Suspensión de servicios:** la ley la permite con 3 o más cuotas impagas (Ley 21.442, art. 36). El MVP no suspende servicios; solo muestra el número de cuotas impagas (regla F-8).
+10. **Recálculo de días ya cobrados (S-22).** Aplica cuando un evento cambia el capital de días ya cobrados. Los eventos son:
+    - Un crédito con fecha efectiva dentro de esos días: pago manual tardío, confirmación Webpay tardía, nota de crédito o reimputación.
+    - La anulación de un pago.
+
+    En ese caso, al registrar el evento el sistema recalcula, con la fórmula E-6, el interés de cada cargo de intereses afectado del ámbito, sobre su misma ventana y con el capital corregido. La diferencia se registra con la fórmula H-2 (`correcto − (original + ajustes previos)`):
+    - Si la diferencia es negativa, es una **nota de crédito** en la cuenta `intereses`.
+    - Si es positiva, es un **débito de ajuste** en la cuenta `intereses`.
+
+    Ambos se registran en el borrador vigente, con `adjusts_entry_id` apuntando al cargo de intereses original y con su ámbito. Así P-12 queda resuelta: los intereses se corrigen hacia atrás en ambos sentidos.
 
 ### F. Pagos, imputación y saldos
 
@@ -217,7 +251,7 @@ Auditoría:
    - **Crédito nuevo (pago):** se imputa con el orden de F-5 y el remanente queda a favor.
    - **Nota de crédito:** se imputa primero al cargo que ajusta. Si ese cargo ya estaba pagado, la parte liberada del pago se reimputa con el orden de F-5, conservando el `paid_on` original del pago.
    - **Reverso de un pago:** sus cargos vuelven a quedar pendientes y los saldos a favor del ámbito se aplican a ellos, del crédito más antiguo al más reciente.
-   - **Débito nuevo (emisión o ajuste de débito):** se le aplican los saldos a favor del ámbito.
+   - **Débito nuevo (emisión o ajuste de débito):** los saldos a favor del ámbito se aplican a todos los débitos pendientes del ámbito, incluido el nuevo, con el orden de F-5.
 
    Las imputaciones no son movimientos del libro: no cambian el saldo total, solo su reparto. Cada cambio queda registrado y auditado.
 7. **Saldos:** siempre se calculan desde el libro (regla 5 de `CLAUDE.md`).
@@ -226,12 +260,32 @@ Auditoría:
 8. **Cuotas impagas:** cantidad de periodos emitidos y vencidos con capital pendiente. Se muestra por unidad.
 9. **Responsable y ámbito (S-14, S-19):**
    - **Deuda y aviso legal:** la deuda es de la unidad y sigue al dueño, incluidas las deudas anteriores a su adquisición (Ley 21.442, art. 6). El aviso legal se dirige al propietario registrado a la fecha de emisión.
-   - **Ventana del arrendatario:** son los cargos de periodos cuya fecha de emisión es ≥ su fecha de ingreso, más los intereses que esos cargos generen. Solo ve esa ventana. Su vista del aviso muestra como saldo anterior solo el de su ventana.
-   - **Ámbito de los pagos:** los pagos del arrendatario se imputan solo a cargos de su ventana, y su remanente queda a favor dentro de esa ventana. La deuda anterior sigue siendo del propietario y el arrendatario no la ve.
-   - **Ámbito del propietario:** sus pagos, y los manuales que registra el administrador salvo que indique otra cosa, tienen como ámbito la unidad completa.
+   - **Ámbito de cada débito.** Se asigna al crearlo y es fijo:
+     - **Cargos del periodo:** van al ámbito del ocupante responsable a la fecha de emisión. Si hay un arrendatario con ocupación vigente ese día, el ámbito es `ocupacion:<id>`; si no, es `unidad`.
+     - **Intereses:** van al ámbito del capital que los genera (regla E-6).
+     - **Ajustes y notas de crédito:** van al ámbito del movimiento al que apuntan (`adjusts_entry_id`).
+     - **Cargo nuevo por reclasificación** (regla H-3): va al ámbito de los cargos originales de la unidad en ese periodo.
+   - **Ámbito de los créditos:**
+     - Los pagos del arrendatario van a su ámbito.
+     - Los pagos del propietario van al ámbito `unidad`.
+     - En un pago manual, el administrador elige el ámbito. Por defecto es el ámbito `unidad`.
+     - Cada crédito se imputa solo a débitos de su ámbito, y su remanente queda a favor en ese mismo ámbito.
+   - **Visibilidad:**
+     - El arrendatario ve solo su ámbito. Su vista del aviso muestra como saldo anterior solo el de su ámbito.
+     - El propietario ve todos los ámbitos de su unidad.
+   - **Aviso legal:** muestra, por cada ámbito, la deuda bruta y el saldo a favor, **sin compensarlos entre ámbitos**, y además el total de la unidad.
+   - **Fin de la ocupación:** al terminar la ocupación de un arrendatario, la deuda y el saldo a favor de su ámbito pasan al ámbito `unidad`. El traspaso queda registrado en auditoría y se reimputa según la regla F-6.
 10. **Saldos de apertura (reservado):**
-    - Se reserva el tipo de movimiento `apertura`: un débito o crédito por unidad y cuenta, con referencia de origen (sistema anterior, documento, fecha de corte).
+    - Se reserva el tipo de movimiento apertura, con código `opening`: un débito o crédito por unidad, ámbito y cuenta, con referencia de origen (sistema anterior, documento, fecha de corte).
     - Su carga, validación y conciliación se definen en una especificación propia de migración, que aún no existe.
+11. **Fecha efectiva de imputación (S-23):** toda imputación o reimputación tiene una fecha efectiva:
+
+    ```text
+    fecha_efectiva = máx(paid_on del crédito, fecha de vencimiento del cargo imputado)
+    ```
+
+    - Para una nota de crédito, `paid_on` es la fecha de vencimiento del cargo que ajusta.
+    - El capital de un cargo deja de contar para el interés desde el cierre del día de la fecha efectiva (regla E-5).
 
 ### G. Aviso de cobro
 
@@ -266,7 +320,12 @@ Auditoría:
 3. **Reclasificación:**
    - Si un gasto cambia de cuenta o de base de pesos, se generan dos ajustes: la reversión de su efecto en el grupo de origen y su aplicación en el grupo de destino, ambos con la fórmula H-2.
    - Si solo cambia la subcategoría (misma cuenta y base), no hay movimiento. Queda como nota en el aviso del borrador vigente.
+   - Si en el grupo de destino la unidad no tenía un cargo original, el ajuste es un **cargo nuevo** en el borrador vigente que apunta al gasto corregido (no a un movimiento). Su ámbito sigue la regla F-9.
 4. **Avisos anteriores:** los ajustes no modifican ningún cargo ni aviso anterior. Aparecen en el aviso siguiente como "Ajuste periodo AAAA-MM: motivo".
+5. **Periodo y vencimiento de un débito de ajuste:**
+   - El débito pertenece al periodo del borrador donde se registra y vence con el aviso de ese borrador: `fecha_emisión del borrador + plazo`.
+   - Devenga interés desde el día siguiente a ese vencimiento, nunca desde el vencimiento del cargo original.
+   - Las notas de crédito también se registran en el borrador vigente, pero se imputan al cargo que ajustan (regla F-6).
 
 ## Criterios de aceptación
 
@@ -284,7 +343,7 @@ Las comunidades A, B, C y D vienen de `docs/qa/comunidades-simuladas.md`.
 
 - Dado que la Comunidad A tiene el borrador `2026-10` con un grupo (ordinario, alícuota) de $1.000.000 (conserje $650.000, electricidad $180.000, ascensor $120.000, aseo $50.000)
 - Cuando el administrador lo emite el 2026-11-01
-- Entonces se crea el grupo de fondo (fondo de reserva, alícuota) con F = (1.000.000 × 500 + 5.000) div 10.000 = $50.000.
+- Entonces se crea el grupo de fondo (fondo de reserva, alícuota) con F = (1.000.000 × 500 + 9.999) div 10.000 = 500.009.999 div 10.000 = $50.000.
 - Y los cargos son:
 
   | Unidad | Ordinario | Fondo | Total |
@@ -303,7 +362,7 @@ Las comunidades A, B, C y D vienen de `docs/qa/comunidades-simuladas.md`.
 - Dado un grupo (ordinario, partes iguales {Casa 1, Casa 2, Casa 3}) de $95.238 y alícuotas no cargadas
 - Cuando se emite
 - Entonces la emisión no exige que las alícuotas sumen 100 %, porque no hay grupos por alícuota.
-- Y el fondo es (95.238 × 500 + 5.000) div 10.000 = 47.624.000 div 10.000 = $4.762.
+- Y el fondo es (95.238 × 500 + 9.999) div 10.000 = 47.628.999 div 10.000 = $4.762 (techo de 4.761,9).
 - Y el ordinario es 95.238 / 3 = $31.746 exacto para cada casa.
 - Y el fondo de cada casa es 4.762 div 3 = 1.587, con resto 1 para cada una. El peso que falta va a la Casa 1 por su `sort_order` menor.
 - Y los totales son Casa 1 $33.334, Casa 2 $33.333 y Casa 3 $33.333, que suman $100.000.
@@ -312,7 +371,7 @@ Las comunidades A, B, C y D vienen de `docs/qa/comunidades-simuladas.md`.
 
 - Dado un grupo (ordinario, alícuota) de $1.175.778 con `aliquot_e6` 185000, 195000, 200000, 210000 y 210000
 - Cuando se emite
-- Entonces el fondo es (1.175.778 × 500 + 5.000) div 10.000 = 587.894.000 div 10.000 = $58.789.
+- Entonces el fondo es (1.175.778 × 500 + 9.999) div 10.000 = 587.898.999 div 10.000 = $58.789 (techo de 58.788,9).
 - Y en el ordinario los productos 217.518.930.000, 229.276.710.000, 235.155.600.000, 246.913.380.000 y 246.913.380.000 (÷ 1.000.000) dan partes enteras que suman 1.175.775. Los 3 pesos que faltan van a los restos 930.000 (Depto 11), 710.000 (Depto 12) y 600.000 (Depto 21).
 - Y en el fondo los productos 10.875.965.000, 11.463.855.000, 11.757.800.000, 12.345.690.000 y 12.345.690.000 dan partes enteras que suman 58.785. Los 4 pesos que faltan van a los restos 965.000, 855.000 y 800.000, y en el empate de 690.000 gana el Depto 22 (`sort_order` 4) sobre el Depto 31 (`sort_order` 5).
 - Y los cargos son:
@@ -332,7 +391,8 @@ Las comunidades A, B, C y D vienen de `docs/qa/comunidades-simuladas.md`.
 
 - Dado un grupo (ordinario, alícuota) de $876.543 con `aliquot_e6` 187345, 243218, 256789 y 312648
 - Cuando se emite
-- Entonces el fondo es (876.543 × 500 + 5.000) div 10.000 = 438.276.500 div 10.000 = $43.827.
+- Entonces el fondo es (876.543 × 500 + 9.999) div 10.000 = 438.281.499 div 10.000 = $43.828. Es el techo de 43.827,15; con el redondeo anterior (mitad hacia arriba) era $43.827.
+- Y en el fondo los productos 43.828 × `aliquot_e6` son 8.210.956.660, 10.659.758.504, 11.254.548.292 y 13.702.736.544. Las partes enteras suman 8.210 + 10.659 + 11.254 + 13.702 = 43.825, y los 3 pesos que faltan van a los restos 956.660 (Depto 1), 758.504 (Depto 2) y 736.544 (Depto 4).
 - Y los cargos son:
 
   | Prueba | Unidad | Ordinario | Fondo | Total |
@@ -340,8 +400,10 @@ Las comunidades A, B, C y D vienen de `docs/qa/comunidades-simuladas.md`.
   | GOLD-D-01 | Depto 1 | $164.216 | $8.211 | $172.427 |
   | GOLD-D-02 | Depto 2 | $213.191 | $10.660 | $223.851 |
   | GOLD-D-03 | Depto 3 | $225.087 | $11.254 | $236.341 |
-  | GOLD-D-04 | Depto 4 | $274.049 | $13.702 | $287.751 |
-  | | **Suma** | **$876.543** | **$43.827** | **$920.370** |
+  | GOLD-D-04 | Depto 4 | $274.049 | $13.703 | $287.752 |
+  | | **Suma** | **$876.543** | **$43.828** | **$920.371** |
+
+- **Diferencia con la prueba de oro D:** `docs/qa/comunidades-simuladas.md` usa un fondo fijo de $43.827 y espera $287.751 en GOLD-D-04. Con el techo de la regla D-3, la emisión da un fondo de $43.828 y $287.752 en GOLD-D-04. GOLD-D-01 a 03 no cambian. QA debe actualizar la prueba de oro D (P-15).
 
 **CA-5 · Pago parcial e imputación (Comunidad A)**
 
@@ -352,7 +414,8 @@ Las comunidades A, B, C y D vienen de `docs/qa/comunidades-simuladas.md`.
 
 **CA-6 · Interés por mora y pago posterior (Comunidad A, flag activo)**
 
-- Dado que la Comunidad A tiene una tasa del reglamento de 1200 pb anuales (1,00 % mensual × 12) y una tasa CMF de referencia de 3000 pb (dato de prueba) vigente desde antes del 2026-11-01, con tope diario de 1500 pb
+- Dado que la Comunidad A tiene el flag `billing.interest` activo desde el 2026-11-01, una tasa del reglamento de 1200 pb anuales (1,00 % mensual × 12) vigente desde el 2026-11-01 y una tasa CMF de referencia de 3000 pb (dato de prueba) vigente desde antes del 2026-11-01, con tope diario de 1500 pb
+- Y el Depto 101 no tiene arrendatario, así que todo está en el ámbito `unidad`
 - Y el Depto 101 tiene $110.000 de capital vencido desde el 2026-11-12, como en CA-5
 - Cuando se emite `2026-11` el 2026-12-01, con los mismos gastos de CA-1
 - Entonces la ventana va del 2026-11-12 al 2026-11-30 (19 días) y el interés es piso(110.000 × 19 × 1200 / 3.650.000) = piso(2.508.000.000 / 3.650.000) = piso(687,12) = $687.
@@ -375,15 +438,17 @@ Las comunidades A, B, C y D vienen de `docs/qa/comunidades-simuladas.md`.
 
 **CA-8 · Mes de 31 días con tasa igual al tope (flag activo)**
 
-- Dado que el Depto 202 de la Comunidad A tiene $315.000 de capital vencido durante todo diciembre de 2026 (31 días), con tasa del reglamento 1500 pb igual al tope de 1500 pb
-- Cuando se emite el 2027-01-01
-- Entonces el interés es piso(315.000 × 31 × 1500 / 3.650.000) = piso(14.647.500.000 / 3.650.000) = piso(4.013,01) = $4.013.
+- Dado que la Comunidad A tiene el flag activo desde el 2026-11-01, una tasa del reglamento de 1500 pb vigente desde el 2026-11-01 y una tasa CMF de 3000 pb, con tope de 1500 pb, igual a la tasa del reglamento
+- Y el Depto 202 tiene $315.000 impagos de `2026-10` (vencido el 2026-11-11) y ningún pago
+- Y `2026-11` se emitió el 2026-12-01 sin gastos, con cargos $0 (como en CA-20). En esa emisión se cobraron intereses hasta el **2026-11-30**, que es el último día cobrado, así que el capital vencido de diciembre se mantiene en $315.000
+- Cuando se emite `2026-12` el 2027-01-01
+- Entonces la ventana va del 2026-12-01 al 2026-12-31 (31 días) en un año de 365 días, y el interés es piso(315.000 × 31 × 1500 / 3.650.000) = piso(14.647.500.000 / 3.650.000) = piso(4.013,01) = $4.013.
 - Y no supera el tope legal proporcional a los días: 315.000 × 15 % × 31 / 365 = 4.013,01. La tasa efectiva anualizada es exactamente 15 %.
 - Y no da el resultado de la convención de 30 días de la versión anterior, que cobraba 315.000 × 1,25 % × 31 / 30 = 4.068,75 y superaba el tope.
 
 **CA-9 · Pago mayor a la deuda (Comunidad A)**
 
-- Dado que el Depto 102 debe $262.500 de `2026-10` y no tiene arrendatario
+- Dado que el Depto 201, ocupado por su propietario según la Comunidad A, debe $262.500 de `2026-10`
 - Cuando su propietario paga $300.000 el 2026-11-08
 - Entonces se imputan $250.000 al ordinario y $12.500 al fondo, y quedan $37.500 a favor (saldo −$37.500).
 - Cuando se emite `2026-11` con cargos de $250.000 de ordinario y $12.500 de fondo
@@ -431,9 +496,9 @@ Las comunidades A, B, C y D vienen de `docs/qa/comunidades-simuladas.md`.
 
 **CA-14 · Dos correcciones sucesivas del mismo grupo (Comunidad A)**
 
-- Dado CA-13 aplicado
-- Cuando en `2027-01` se descubre que la factura real era de $175.000
-- Entonces el cargo correcto se calcula con O = $995.000 y F = (995.000 × 500 + 5.000) div 10.000 = $49.750.
+- Dado CA-13 aplicado, y que el Depto 101 no tiene deuda ni saldo a favor al registrar esta segunda corrección
+- Cuando en el borrador vigente `2027-01` se registra que la factura real era de $175.000
+- Entonces el cargo correcto se calcula con O = $995.000 y F = (995.000 × 500 + 9.999) div 10.000 = 497.509.999 div 10.000 = $49.750.
 - Y el fondo exacto es 9.950; 12.437,5; 12.437,5 y 14.925. Las partes enteras suman 49.749 y el peso que falta se lo lleva el Depto 102 en el empate con el Depto 201, por su menor `sort_order`.
 - Y con ajuste = correcto − (original + ajustes previos), los débitos son:
 
@@ -446,6 +511,9 @@ Las comunidades A, B, C y D vienen de `docs/qa/comunidades-simuladas.md`.
   | **Suma** | **$995.000** | **+$5.000** | **$49.750** | **+$250** |
 
 - Y para cada unidad, original + ajuste 1 + ajuste 2 es igual al cargo correcto.
+- Y los débitos de ajuste pertenecen al periodo `2027-01`, donde se registran (regla H-5), no a `2026-10`. Si `2027-01` se emite el 2027-02-01, vencen el 2027-02-11.
+- Y el Depto 101 queda con $1.050 pendientes no vencidos ($1.000 de ordinario y $50 de fondo de `2027-01`, ámbito `unidad`), que aparecen en su aviso de `2027-01` como "Ajuste periodo 2026-10: corrección factura electricidad".
+- Y con el flag activo, ese monto devengaría interés solo desde el 2027-02-12.
 
 **CA-15 · Pago tardío después del cierre: periodo exacto**
 
@@ -498,12 +566,16 @@ Las comunidades A, B, C y D vienen de `docs/qa/comunidades-simuladas.md`.
 
 **CA-22 · Arrendatario que paga con deuda anterior en la unidad (Comunidad A)**
 
-- Dado que el Depto 102 debe $262.500 de `2026-10` y tiene un arrendatario con ingreso el 2026-11-15
-- Cuando se emite `2026-11` el 2026-12-01 (fecha ≥ ingreso), con $262.500 para el Depto 102
-- Entonces el arrendatario ve solo los cargos de `2026-11`: total $262.500, saldo anterior $0.
+- Dado que la ocupación del arrendatario anterior del Depto 102 terminó el 2026-10-31
+- Y que `2026-10` se emitió el 2026-11-01 sin arrendatario vigente, así que su cargo de $262.500 quedó en el ámbito `unidad` y está impago
+- Y que un nuevo arrendatario (ocupación O-1) ingresa el 2026-11-15
+- Cuando se emite `2026-11` el 2026-12-01 con $262.500 para el Depto 102
+- Entonces ese cargo queda en el ámbito `ocupacion:O-1`, porque O-1 es el ocupante responsable a la fecha de emisión.
+- Y el arrendatario ve solo su ámbito: total $262.500 y saldo anterior $0.
 - Cuando el arrendatario paga $262.500 por Webpay el 2026-12-05
-- Entonces el pago se imputa solo a su ventana: ordinario `2026-11` $250.000 y fondo `2026-11` $12.500. No se aplica a `2026-10`, aunque sea más antiguo.
-- Y el arrendatario ve saldo $0, mientras que el propietario ve saldo $262.500, correspondiente a `2026-10`.
+- Entonces el pago se imputa solo a su ámbito: ordinario `2026-11` $250.000 y fondo `2026-11` $12.500. No se aplica a `2026-10`, aunque sea más antiguo.
+- Y el saldo del ámbito `ocupacion:O-1` es $0 y el del ámbito `unidad` es $262.500.
+- Y el aviso legal al propietario muestra las dos líneas por separado, sin compensarlas: ámbito `unidad` con deuda $262.500 y saldo a favor $0; ámbito arrendatario con deuda $0 y saldo a favor $0. El total de la unidad es $262.500.
 - Y si el arrendatario pide un cargo de `2026-10`, recibe 404.
 
 **CA-23 · Aislamiento entre comunidades y unidades**
@@ -532,21 +604,71 @@ Las comunidades A, B, C y D vienen de `docs/qa/comunidades-simuladas.md`.
 - Cuando llega una petición con otra clave
 - Entonces la respuesta es 409 con el mensaje "El periodo ya fue emitido".
 
+**CA-26 · Intereses por ámbito con arrendatario y deuda anterior del propietario (Comunidad A, flag activo)**
+
+- Dado el escenario de CA-22, con el flag activo desde el 2026-11-01, una tasa del reglamento de 1200 pb vigente desde el 2026-11-01 y una tasa CMF de 3000 pb (tope 1500 pb)
+- Cuando se emite `2026-11` el 2026-12-01
+- Entonces el ámbito `unidad` genera un interés de piso(262.500 × 19 × 1200 / 3.650.000) = piso(5.985.000.000 / 3.650.000) = piso(1.639,72) = $1.639, por los días del 2026-11-12 al 2026-11-30.
+- Y el ámbito `ocupacion:O-1` no genera interés, porque aún no tiene capital vencido.
+- Cuando el arrendatario paga $262.500 por Webpay con `paid_on` 2026-12-20, después del vencimiento del 2026-12-11
+- Entonces se imputa al ordinario ($250.000) y al fondo ($12.500) de `2026-11` de su ámbito, con fecha efectiva máx(2026-12-20, 2026-12-11) = 2026-12-20.
+- Cuando se emite `2026-12` el 2027-01-01, con $262.500 para el Depto 102 (ámbito `ocupacion:O-1`)
+- Entonces el interés del ámbito `unidad` es piso(262.500 × 31 × 1200 / 3.650.000) = piso(9.765.000.000 / 3.650.000) = piso(2.675,34) = $2.675, por los días del 2026-12-01 al 2026-12-31.
+- Y el interés del ámbito `ocupacion:O-1` es piso(262.500 × 8 × 1200 / 3.650.000) = piso(2.520.000.000 / 3.650.000) = piso(690,41) = $690, por los días del 2026-12-12 al 2026-12-19.
+- Y el aviso legal de `2026-12` al propietario muestra:
+
+  | Ámbito | Deuda bruta | Saldo a favor |
+  | --- | --- | --- |
+  | `unidad` | 262.500 + 1.639 + 2.675 = $266.814 | $0 |
+  | `ocupacion:O-1` | 262.500 + 690 = $263.190 | $0 |
+  | **Total de la unidad** | **$530.004** | **$0** |
+
+- Y el arrendatario ve solo $263.190.
+- Cuando la ocupación O-1 termina el 2027-01-31 sin más pagos
+- Entonces los $263.190 pasan al ámbito `unidad`, que queda con $530.004.
+
+**CA-27 · Fecha efectiva al reimputar después de anular un pago (Comunidad A, flag activo)**
+
+- Dado el escenario de CA-12, con el flag activo desde el 2026-11-01, una tasa del reglamento de 1200 pb y un tope de 1500 pb
+- Cuando el 2026-11-20 se anula P1 y los $100.000 de P2 (`paid_on` 2026-11-06) se reimputan al ordinario de `2026-10`
+- Entonces la fecha efectiva de esa reimputación es máx(2026-11-06, 2026-11-11) = 2026-11-11, no el 2026-11-20.
+- Y al emitir `2026-11` el 2026-12-01, el capital es $215.000 en todos los días del 2026-11-12 al 2026-11-30 (19 días). El interés es piso(215.000 × 19 × 1200 / 3.650.000) = piso(4.902.000.000 / 3.650.000) = piso(1.343,01) = $1.343.
+- Y no es $1.606, que es lo que daría tomar el 2026-11-20 como fecha efectiva: 315.000 × 8 días + 215.000 × 11 días.
+- Y el saldo tras emitir es 215.000 + 1.343 + 315.000 = $531.343.
+
+**CA-28 · Pago registrado con fecha dentro de días ya cobrados, y su anulación (Comunidad A, flag activo)**
+
+- Dado el estado de CA-6 inmediatamente después de emitir `2026-11` el 2026-12-01: el interés de $687 cubre del 2026-11-12 al 2026-11-30 y el saldo es $320.687
+- Cuando el 2026-12-03 el administrador registra una transferencia de $110.000 con `paid_on` 2026-11-20, que el propietario había hecho y no se había registrado (en lugar del pago de $150.000 de CA-6)
+- Entonces se imputa al capital vencido: ordinario `2026-10` $100.000 y fondo `2026-10` $10.000, con fecha efectiva máx(2026-11-20, 2026-11-11) = 2026-11-20.
+- Y el interés recalculado de esa ventana es piso(110.000 × 8 × 1200 / 3.650.000) = piso(1.056.000.000 / 3.650.000) = piso(289,31) = $289, por los días del 2026-11-12 al 2026-11-19.
+- Y se registra automáticamente en `2026-12` una nota de crédito de intereses por 289 − 687 = −$398, que apunta al cargo de interés de $687 y se imputa a él, que queda en $289 pendiente.
+- Y el saldo es 320.687 − 110.000 − 398 = $210.289 ($210.000 de `2026-11` más $289 de interés).
+- Cuando el 2026-12-10 se anula esa transferencia
+- Entonces el interés recalculado vuelve a $687 y se registra un débito de ajuste de intereses por 687 − (687 − 398) = +$398.
+- Y el saldo vuelve a 210.289 + 110.000 + 398 = $320.687.
+
 ## Casos borde
 
 - **Unidad con peso 0:** no tiene cargo ni movimiento y su aviso muestra $0 (CA-18).
 - **Grupo con total > 0 y todos los pesos en 0:** la emisión se bloquea (regla A-3.2).
 - **Comunidad sin unidades:** no se puede emitir.
 - **Cambio de propietario a mitad de mes:** no hay prorrateo por días. El aviso va al propietario vigente a la fecha de emisión y el anterior pierde el acceso (CA-21).
-- **Cambio de arrendatario:** la ventana del nuevo empieza con el primer periodo emitido desde su ingreso. El arrendatario anterior pierde el acceso.
+- **Cambio de arrendatario:** los cargos emitidos desde el ingreso del nuevo arrendatario van a su ámbito. La deuda y el saldo a favor del arrendatario anterior pasan al ámbito `unidad`, y el arrendatario anterior pierde el acceso (regla F-9).
+- **Saldo a favor en un ámbito y deuda en otro:** no se compensan automáticamente. El aviso legal los muestra por separado (regla F-9). Al terminar la ocupación, todo pasa al ámbito `unidad` y ahí se compensan (regla F-6).
 - **Pago duplicado:**
   - Webpay: idempotente (CA-10).
   - Manual: se advierte y se corrige con una anulación (CA-11).
 - **Pago mayor a la deuda:** el excedente queda a favor y se aplica en la emisión siguiente (CA-9).
 - **Pago anterior a la primera emisión:** queda a favor en el borrador vigente.
 - **Pago con `paid_on` futuro:** se rechaza.
-- **Confirmación Webpay que llega después de cerrar el periodo de su mes:** va al borrador vigente, con su `paid_on` real.
-- **Anulación de un pago antiguo:** el reverso va al borrador vigente, sus cargos vuelven a quedar pendientes y se reimputan los saldos a favor (CA-12). Los intereses ya cobrados no se recalculan (P-12).
+- **Confirmación Webpay que llega después de cerrar el periodo de su mes:** va al borrador vigente, con su `paid_on` real. Si su fecha efectiva cae en días con intereses ya cobrados, se genera una nota de crédito de intereses (regla E-10).
+- **Anulación de un pago antiguo:** el reverso va al borrador vigente, sus cargos vuelven a quedar pendientes y se reimputan los saldos a favor (CA-12 y CA-27). Si afecta días ya cobrados, se genera un débito de ajuste de intereses (regla E-10 y CA-28).
+- **Crédito con `paid_on` dentro de días ya cobrados:** se genera automáticamente una nota de crédito de intereses por la diferencia (CA-28).
+- **Reimputación tardía:** la fecha efectiva es máx(`paid_on`, vencimiento del cargo), no la fecha en que se reimputa (CA-27).
+- **Débito de ajuste:** vence con el aviso del borrador donde se registra (regla H-5 y CA-14).
+- **Cambio de la tasa del reglamento:** se crea una versión nueva con fecha de inicio. Los días anteriores usan la versión anterior.
+- **Año bisiesto:** los días de 2028 pesan 1/366 (regla E-6).
 - **Periodo sin gastos:** se emite con confirmación (CA-20).
 - **Corrección de un periodo emitido o cerrado:** se hace con ajustes en el borrador vigente (CA-13 y CA-14).
 - **Reclasificar un gasto:**
@@ -586,20 +708,23 @@ Las comunidades A, B, C y D vienen de `docs/qa/comunidades-simuladas.md`.
 | S-3 | El desempate usa `sort_order` único por comunidad. El orden natural del código solo propone el valor inicial. | `docs/qa/comunidades-simuladas.md` y `docs/arquitectura.md` §4. |
 | S-4 | Hay un fondo por cada grupo ordinario con base alícuota o partes iguales. No se aplica recargo a los cargos directos, a los extraordinarios, a los intereses ni a las multas. | Ley 21.442, art. 8 letra d: recargo "sobre los gastos comunes ordinarios". Excluir los consumos directos es una decisión prudente (P-3). |
 | S-5 | El mínimo de 5 % aplica a toda comunidad. | Ley 21.442, art. 39. Queda P-2 para viviendas sociales. |
-| S-6 | `F_g` se redondea al peso, con la mitad hacia arriba. | Redondeo comercial habitual. |
+| S-6 | `F_g` se redondea hacia arriba al peso (techo). | Con mitad hacia arriba, el fondo podía quedar bajo el mínimo legal de 5 % (Ley 21.442, art. 39), como en la Comunidad D (43.827 < 43.827,15). |
 | S-7 | Los 10 días del plazo son corridos y el vencimiento no se corre si cae en día inhábil. | Ley 21.442, art. 7, y Código Civil, art. 50. |
 | S-8 | Las multas son manuales. | Ley 21.442, art. 8 letra e: la ley remite las multas al reglamento. |
 | S-9 | Solo el capital devenga interés; los intereses y las multas no. El fondo de reserva sí es parte del capital. | Ley 18.010, art. 9 (anatocismo), y Ley 21.442, art. 37 (el régimen de cobro se extiende al fondo). |
-| S-10 | Interés simple diario en base 365 con tasas anuales. Una tasa mensual del reglamento se multiplica por 12. El interés se calcula al emitir, por tramo de responsable, y se trunca al peso. | El tope legal es una tasa anual (Ley 21.442, art. 7), y la base 365 impide superarlo en meses de 31 días (CA-8). ComunidadFeliz también calcula el interés devengado día a día. |
-| S-11 | El tope es el 50 % de la tasa de interés corriente CMF vigente cada día. Es un dato global que carga el equipo de ComVive. | Ley 21.442, art. 7. Certificados CMF publicados en el Diario Oficial. La categoría a usar está pendiente (P-5). |
+| S-10 | Interés simple diario con base actual/actual y tasas anuales. Una tasa mensual del reglamento se multiplica por 12. El interés se calcula al emitir, una vez por ámbito, y se trunca al peso. | El tope legal es una tasa anual (Ley 21.442, art. 7). Los certificados de la CMF expresan las tasas en moneda chilena no reajustable "en forma lineal anual", así que un interés simple diario no supera el tope en meses de 31 días (CA-8). ComunidadFeliz también calcula el interés devengado día a día. |
+| S-11 | El tope es el 50 % de la tasa de interés corriente CMF vigente cada día. Es un dato global que carga el equipo de ComVive. | Ley 21.442, art. 7. Certificados CMF publicados en el Diario Oficial. |
 | S-12 | ComVive imputa los pagos como lo haría el acreedor, con este orden: intereses vencidos → capital vencido (del más antiguo al más reciente) → multas vencidas → lo no vencido. El pagador no elige. | Código Civil: art. 1595 (los intereses se pagan antes que el capital, salvo que el acreedor consienta otra cosa); art. 1596 (el deudor puede elegir la deuda, pero no preferir una no devengada a una devengada; si no elige, imputa el acreedor en la carta de pago); art. 1597 (sin imputación de ninguna de las partes, se prefiere la deuda devengada). No dejar elegir al deudor es una restricción del MVP (P-7). Poner las multas después del capital y el orden entre cuentas son convenciones propias. |
-| S-14 | El arrendatario ve solo su ventana. El ex propietario y el ex residente pierden el acceso (404) y su historial se entrega a pedido. | Ley 21.719 (minimización de datos) y `docs/qa/plan-de-pruebas.md` ISO-8. |
+| S-14 | El arrendatario ve solo su ámbito. El ex propietario y el ex residente pierden el acceso (404) y su historial se entrega a pedido. | Ley 21.719 (minimización de datos) y `docs/qa/plan-de-pruebas.md` ISO-8. |
 | S-15 | El aviso tiene contenido adicional al mínimo legal y muestra las remuneraciones agregadas. | Práctica de mercado (boleta de ComunidadFeliz) y protección de datos del personal. |
 | S-16 | El administrador ingresa a mano el saldo de caja. | Ley 21.442, art. 31. El MVP no tiene integración bancaria. |
 | S-17 | Todo movimiento posterior a la emisión va al borrador vigente, con `paid_on` y `recorded_at`. | Hace cumplir la inmutabilidad de periodos con una sola regla (`docs/arquitectura.md` §4). |
 | S-18 | Deuda y saldo a favor nunca coexisten en un mismo ámbito, y las notas de crédito se imputan primero al cargo que ajustan. | Consistencia del estado de cuenta. Convención propia. |
-| S-19 | El aviso legal va al propietario. El arrendatario tiene una vista restringida a su ventana y sus pagos solo se imputan a esa ventana. | Ley 21.442, art. 6 (la deuda sigue al dueño) y minimización de datos. |
+| S-19 | Cada débito tiene un ámbito fijo: el del ocupante responsable a la fecha de emisión, o el del movimiento al que apunta. Los pagos del arrendatario solo se imputan a su ámbito. El aviso legal va al propietario y muestra cada ámbito por separado, sin compensarlos. Al terminar la ocupación, todo pasa al ámbito `unidad`. | Ley 21.442, art. 6 (la deuda sigue al dueño) y minimización de datos (Ley 21.719). Convención propia para separar responsables (P-14). |
 | S-20 | No se cobran intereses por días anteriores a la activación del flag o de la tasa en la comunidad. | Evita cobros retroactivos sorpresivos. |
+| S-21 | La categoría CMF por defecto para el tope es el interés corriente de operaciones no reajustables en moneda nacional de menos de 90 días. | El gasto común es una obligación mensual en pesos, sin reajuste y de corto plazo (vence a los 10 días). La Ley 18.010, art. 6, define el interés corriente por tipo de operación, y la CMF publica esa categoría en sus certificados. No se encontró una fuente que fije la categoría para la Ley 21.442; queda por validar (P-5). |
+| S-22 | Los intereses de días ya cobrados se recalculan en ambos sentidos: nota de crédito si baja el capital, débito de ajuste si sube. | Evita cobrar intereses sobre deuda pagada y no perder intereses de pagos anulados. Usa la misma fórmula de ajustes (regla H-2). |
+| S-23 | La fecha efectiva de una imputación es máx(`paid_on`, vencimiento del cargo). | El dinero se recibió en `paid_on`. Antes del vencimiento no hay mora, así que adelantar la fecha no cambia el interés. |
 
 El supuesto S-13 de la versión anterior (autorización de egresos del fondo) se eliminó por estar fuera del alcance de este módulo.
 
@@ -609,16 +734,18 @@ El supuesto S-13 de la versión anterior (autorización de egresos del fondo) se
 - [ ] **P-2** (abogado): ¿el mínimo de 5 % del fondo aplica también a las viviendas sociales o de interés público?
 - [ ] **P-3** (contador): ¿los consumos directos (agua por remarcador) deben pagar el recargo del fondo?
 - [ ] **P-4** (líder): ¿el comité debe aprobar la emisión o el cierre?
-- [ ] **P-5** (abogado o contador): ¿qué categoría de interés corriente de la CMF se usa para el tope? ¿Es correcto convertir una tasa mensual del reglamento multiplicándola por 12?
+- [ ] **P-5** (abogado o contador): validar la categoría CMF por defecto (S-21) y si es correcto convertir una tasa mensual del reglamento multiplicándola por 12.
 - [ ] **P-6** (abogado): ¿qué tipo de firma electrónica necesita el aviso para tener mérito ejecutivo (Ley 19.799)?
 - [ ] **P-7** (contador y abogado): ¿es válido el orden de imputación de S-12? ¿Hay que permitir que el pagador elija a qué deuda aplicar su pago (Código Civil, art. 1596) o que cada comunidad configure el orden?
 - [ ] **P-8** (líder): ¿el MVP necesita gastos en UF? Si es así, ¿con la UF de qué fecha se convierten?
 - [ ] **P-10** (líder): ¿algún reglamento real usa alícuotas con más de 4 decimales de porcentaje, que `aliquot_e6` no puede representar?
 - [ ] **P-11** (líder): ¿cómo se tratan los depósitos que llegan sin unidad identificada?
-- [ ] **P-12** (contador): si se anula un pago antiguo, ¿hay que cobrar retroactivamente los intereses de los días en que la deuda se dio por pagada?
 - [ ] **P-14** (abogado): ¿es aceptable que el pago de un arrendatario no se impute a la deuda anterior del propietario, aunque esa deuda sea más antigua y esté vencida? Ver S-19 frente a la regla del Código Civil, art. 1597.
+- [ ] **P-15** (ingeniero QA): actualizar la prueba de oro D en `docs/qa/comunidades-simuladas.md`, porque con el techo (S-6) el fondo es $43.828 y GOLD-D-04 pasa a $287.752 (CA-4). La otra opción es que la prueba de oro D mantenga un fondo fijo de $43.827, como prueba del prorrateo puro.
 
 Preguntas cerradas:
+
+- **P-12:** los intereses de días ya cobrados se recalculan en ambos sentidos (regla E-10 y S-22).
 
 - **P-9:** `docs/qa/comunidades-simuladas.md` ya separa la prueba de oro C y agrega la Comunidad D.
 - **P-13:** el ex propietario pierde el acceso y su historial se entrega a pedido (S-14).
@@ -631,7 +758,7 @@ Preguntas cerradas:
 - **Código Civil:**
   - Art. 50 (cómputo de plazos).
   - Arts. 1595 a 1597 (imputación del pago): <https://leyes-cl.com/codigo_civil/1595.htm>, <https://leyes-cl.com/codigo_civil/1596.htm>, <https://leyes-cl.com/codigo_civil/1597.htm>.
-- **Ley 18.010, art. 9.**
+- **Ley 18.010:** art. 6 (interés corriente por tipo de operación) y art. 9 (capitalización).
 - **Certificados de tasas de la CMF en el Diario Oficial:** <https://www.diariooficial.interior.gob.cl/publicaciones/2026/10/15/44574/01/2885690.pdf>.
 - **ComunidadFeliz:**
   - Intereses: <https://ayuda.comunidadfeliz.com/c%C3%B3mo-fijo-la-tasa-de-inter%C3%A9s-de-la-comunidad>.
