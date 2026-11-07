@@ -36,6 +36,7 @@ TypeScript across the monorepo · NestJS · PostgreSQL + Prisma · Next.js · Re
 | `docs/adr/` | Architecture decision records |
 | `docs/design/` | User map, flows, wireframes and design system |
 | `docs/qa/` | Test plan, simulated communities and golden tests |
+| `docs/revisiones/` | Critical review reports and how each was resolved |
 | `docs/contexto/` | Market research and launch plan |
 
 ## Continuous integration

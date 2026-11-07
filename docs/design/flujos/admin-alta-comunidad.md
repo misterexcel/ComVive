@@ -1,8 +1,8 @@
 # Flujo: alta de comunidad y unidades
 
 Estado: Borrador
-Actor: administrador
-Superficie: web de administración
+Actor: Operaciones ComVive (crea la comunidad y su primer administrador) y administrador (completa la configuración)
+Superficie: consola de plataforma (Operaciones) y web de administración
 Alcance: MVP
 Referencias en `docs/specs/gasto-comun.md`:
 
@@ -10,16 +10,24 @@ Referencias en `docs/specs/gasto-comun.md`:
 - Prorrateo: A-3.1 y CA-19 (alícuotas), C-4 (`sort_order`), S-3.
 - Cobro: D-2 (fondo de reserva), E-1 (vencimiento).
 - Intereses: E-3 y CA-7, con el flag `billing.interest`.
-- Apertura: F-10.
+- Ocupaciones: F-9, F-14 y F-15. Apertura: F-10.
+- Otorgamiento de roles: sección "Otorgamiento de roles".
 
-Otras referencias: `docs/arquitectura.md` §2 y §4.
+Otras referencias: `docs/arquitectura.md` §2, §3 ("Quién otorga cada rol": `POST /platform/communities` crea la comunidad y su primer administrador) y §8, pregunta 14 (un código de comercio Transbank por comunidad).
+
+## Reglas de pantalla
+
+- **Quién crea la comunidad:** Operaciones ComVive, en la consola de plataforma, con nombre, RUT de la comunidad y el RUT y contacto del primer administrador (arquitectura §3). El administrador no ve un botón "Nueva comunidad"; ve la comunidad nueva en "Mis comunidades" con la etiqueta "Configuración pendiente" (pregunta UX-32 sobre el autoservicio).
+- **Lista de puesta en marcha:** la comunidad muestra, hasta completarla, una lista de pasos con su estado. El último es el pago en línea, que no depende del administrador.
+- **Pago en línea (Webpay):** cada comunidad necesita su propio código de comercio Transbank. Mientras no lo tenga, la comunidad opera solo con pagos manuales: la app no muestra el botón de pago y la lista muestra "Pago en línea: pendiente". El administrador no ingresa credenciales: son un secreto que carga ComVive (regla 9 de `CLAUDE.md`).
 
 ## Diagrama
 
 ```mermaid
 flowchart TD
-  A["Mis comunidades"] --> B["Nueva comunidad"]
-  B --> C["Paso 1: datos de la comunidad"]
+  OP["Operaciones ComVive: crea la comunidad y su primer administrador"] --> INV["Invitación al administrador"]
+  INV --> A["Mis comunidades: Configuración pendiente"]
+  A --> C["Paso 1: datos de la comunidad y medios de pago"]
   C --> D["Paso 2: cobro y primer mes a cobrar"]
   D --> E{"¿Cómo cargar unidades y residentes?"}
   E -->|Planilla| F["Descargar plantilla y subir archivo"]
@@ -36,47 +44,60 @@ flowchart TD
   N --> O{"¿Guardar igual?"}
   O -->|No| K
   O -->|Sí| P["Alerta: no se podrán emitir grupos por alícuota"]
-  M -->|Sí| Q["Paso 4: residentes con RUT"]
+  M -->|Sí| Q["Paso 4: ocupantes con RUT"]
   P --> Q
   Q --> R["Resumen y confirmar"]
-  R --> S["Comunidad creada con el primer borrador"]
+  R --> S["Comunidad configurada con el primer borrador"]
   S --> T["Invitar residentes"]
+  S --> W{"¿Tiene código de comercio Transbank?"}
+  W -->|No| X["Pago en línea: pendiente; solo pagos manuales"]
+  W -->|Sí| Y["Pago en línea activo"]
 ```
 
 ## Pasos
 
-1. **Datos de la comunidad:** nombre, dirección, comuna, tipo (edificio o condominio) y RUT de la comunidad.
-2. **Cobro** (`community.billing.configure`):
+1. **Operaciones ComVive** crea la comunidad y otorga el rol de administrador (ver `admin-usuarios-y-roles.md`). El administrador recibe la invitación e ingresa a la web con su RUT.
+2. **Datos de la comunidad:** nombre, dirección, comuna, tipo (edificio o condominio) y RUT de la comunidad (los dos últimos los trae Operaciones y se pueden revisar).
+   - **Medios de pago** que aparecerán en el aviso y en "Cómo pagar" de la app (G-2): banco, tipo y número de cuenta, titular, RUT del titular y correo para comprobantes.
+3. **Cobro** (`community.billing.configure`):
    - Fondo de reserva en porcentaje. El mínimo es 5,00 % (D-2) y un valor menor se rechaza con "El fondo de reserva no puede ser menor a 5 %".
    - Plazo de vencimiento en días corridos, 10 por defecto (E-1).
    - **Primer mes a cobrar:** mes y año, por ejemplo "Octubre 2026". Con ese dato se crea el primer borrador vigente (A-2). Ayuda: "Se cobra mes vencido: los gastos de octubre se emiten a comienzos de noviembre" (S-2).
-   - **Intereses:** la sección solo aparece con el flag `billing.interest` activo. En ese caso:
-     - Se ingresa la tasa del reglamento, mensual o anual, con la referencia al reglamento. Si es mensual, se muestra el equivalente anual: "1,00 % mensual = 12,00 % anual" (E-3).
-     - Si supera el tope vigente, se muestra el texto de CA-7: "La tasa configurada supera el tope legal vigente (15,00 % anual). Se aplicará el tope".
-3. **Unidades:** código, tipo (departamento, casa, estacionamiento, bodega, local), alícuota y `sort_order`.
-   - **Alícuota:** campo de texto con hasta 4 decimales. Se convierte a `aliquot_e6` sin punto flotante (ver `arquitectura-de-informacion.md`).
+   - **Intereses:** ver "Configuración > Cobro > Intereses" en `arquitectura-de-informacion.md`. En el alta solo se puede cargar la tasa del reglamento; activarlos es una acción aparte (menor 18).
+4. **Unidades:** código, tipo (departamento, casa, estacionamiento, bodega, local), alícuota y `sort_order`.
+   - **Alícuota:** campo de texto con hasta 4 decimales. Acepta coma o punto como separador decimal (`18,5` o `18.5`) y la pantalla lo muestra con coma. Se convierte a `aliquot_e6` sin punto flotante (ver `arquitectura-de-informacion.md`).
    - **`sort_order`:** se propone en orden natural del código ("Depto 9" antes que "Depto 10") y se edita como número entero único (C-4). La pantalla avisa si hay números repetidos.
    - **Suma de alícuotas:** un contador fijo la muestra, calculada con enteros: "Suma: 100,0000 %" en verde o "Suma: 99,9900 %" en rojo.
    - **Alícuota 0 %:** se permite, con la etiqueta "Sin participación" (C-5).
-4. **Residentes** (UX-8). Por cada unidad:
-   - Propietario y, si hay, arrendatario.
-   - Datos de cada uno: RUT (obligatorio), nombre, fecha de ingreso y teléfono o correo para invitar.
+5. **Ocupantes** (UX-8). Por cada unidad, propietario y, si hay, arrendatario, con RUT (obligatorio), nombre, fecha de ingreso y teléfono o correo para invitar. Usa las mismas reglas que `admin-ocupaciones.md`.
    - La persona se reconoce por su RUT. Si ya existe en ComVive, se le agrega la membresía sin mostrar sus datos ni sus otras comunidades (arquitectura §2).
-   - Este paso se puede dejar para después.
-5. **Resumen:** unidades, suma de alícuotas, configuración de cobro, primer mes a cobrar y residentes cargados. Botón "Crear comunidad".
-6. Al crear, se ofrece "Invitar residentes ahora" o "Más tarde".
+   - Este paso se puede dejar para después. Una unidad sin propietario queda con la etiqueta "Propietario sin registrar" (F-15).
+6. **Resumen:** unidades, suma de alícuotas, configuración de cobro, primer mes a cobrar, medios de pago y ocupantes cargados. Botón "Guardar configuración".
+7. Al guardar, se ofrece "Invitar residentes ahora" o "Más tarde".
+
+**Lista de puesta en marcha** (en Resumen, hasta completarla):
+
+| Paso | Estado posible | Quién lo completa |
+| --- | --- | --- |
+| Datos y medios de pago | Pendiente o listo | Administrador |
+| Cobro y primer mes | Pendiente o listo | Administrador |
+| Unidades con alícuotas que suman 100 % | Pendiente, con advertencia o listo | Administrador |
+| Ocupantes registrados | "{n} unidades sin propietario" o listo | Administrador |
+| Residentes invitados | "{n} de {total} aceptaron" | Administrador y residentes |
+| Pago en línea (Webpay) | "Pendiente: ComVive lo activa cuando Transbank entregue el código de comercio de la comunidad" o "Activo" | ComVive (UX-33) |
 
 **Migración desde planilla (MVP mínimo: validar y confirmar; UX-16):**
 
 - **Plantilla descargable:** código, tipo, alícuota, `sort_order`, y RUT, nombre, relación, fecha de ingreso, teléfono y correo de cada residente.
 - **Validación:** se valida todo el archivo. Si alguna fila tiene error, no se guarda nada y se muestra la tabla de errores para corregir el archivo y subirlo de nuevo.
-- **Saldos de apertura:** no se cargan. El movimiento `apertura` está reservado (F-10) para una especificación de migración futura (UX-1).
+- **Archivo subido:** se borra al terminar de procesarlo, con o sin errores. La pantalla lo dice: "Borramos el archivo después de revisarlo" (supuesto, requisito para el arquitecto).
+- **Saldos de apertura:** no se cargan. El movimiento `opening` está reservado (F-10) para una especificación de migración futura (UX-1).
 
 ## Estados vacíos
 
-- **Sin comunidades:** "Aún no tienes comunidades. Crea la primera o impórtala desde una planilla." con el botón "Nueva comunidad".
+- **Sin comunidades:** "Aún no tienes comunidades en ComVive. Cuando ComVive cree tu primera comunidad, aparecerá aquí."
 - **Comunidad sin unidades:** "Agrega unidades para poder emitir el gasto común." con "Importar planilla" y "Agregar unidad".
-- **Unidad sin residentes:** etiqueta "Sin residente". No bloquea la emisión.
+- **Unidad sin ocupantes:** etiqueta "Propietario sin registrar". No bloquea la emisión (F-15).
 
 ## Errores
 
@@ -99,5 +120,6 @@ flowchart TD
 
 ## Supuestos (a validar)
 
-- La creación es un asistente de 4 pasos que se puede pausar.
+- La configuración es un asistente de 4 pasos que se puede pausar.
 - Las alícuotas se pueden editar después de la primera emisión: ver UX-15.
+- El administrador no crea comunidades (UX-32).

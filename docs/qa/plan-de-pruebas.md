@@ -34,13 +34,14 @@ Proporción orientativa: muchas unitarias y de propiedades, integración para ca
 
 Reglas de TDD: es obligatorio en gasto común (incluidos redondeo, saldos y periodos cerrados), conciliación, permisos y aislamiento. La prueba se escribe y se ve fallar antes de escribir el código; la revisión cruzada verifica en el historial que la prueba precede a la implementación.
 
-Nota: CLAUDE.md exige TDD solo en gasto común, conciliación y permisos. Sumar aislamiento a esa lista queda **pendiente de aprobación del líder del proyecto**; este plan lo aplica desde ya.
+Nota: el líder del proyecto aprobó el 2026-11-07 ampliar el TDD obligatorio en CLAUDE.md a intereses por mora, imputación de pagos (incluido Webpay) y aislamiento.
 
 ### 2.1 Supuestos de cálculo (a validar)
 
-- **Supuesto (a validar):** la participación es un entero (alícuota legal en escala 10^-6 o peso relativo). Si el criterio es por alícuota y no suman 100 %, la emisión se bloquea (spec de gasto común, CA-16); el motor de cálculo reparte siempre por `peso ÷ suma de pesos`.
+- **Supuesto (a validar):** la participación es un entero (alícuota legal en escala 10^-6 o peso relativo). Si el criterio es por alícuota y no suman 100 %, la emisión se bloquea (spec de gasto común, CA-19); el motor de cálculo reparte siempre por `peso ÷ suma de pesos`.
 - **Supuesto (a validar):** resto mayor con desempate por `sort_order` entero de la unidad, nunca por su nombre como texto.
 - **Supuesto (a validar):** el redondeo se hace por cuenta: gasto ordinario y fondo de reserva por separado.
+- **Supuesto (a validar):** el total del fondo de cada grupo ordinario se redondea hacia arriba al peso: `F = (O × pb + 9.999) div 10.000` (spec de gasto común, regla D-3 y S-6).
 - **Supuesto (a validar):** un total en UF se convierte a CLP una sola vez y luego se prorratea.
 - Casos borde con resultado fijo: comunidad sin unidades y todos los pesos en 0 → error de validación sin cargos creados; total $0 → cargo $0 para todas las unidades.
 
@@ -50,7 +51,8 @@ Nota: CLAUDE.md exige TDD solo en gasto común, conciliación y permisos. Sumar 
 
 - La fuente de verdad es `docs/qa/comunidades-simuladas.md`. Cada comunidad trae sus datos, el cálculo paso a paso y el resultado esperado.
 - Un monto esperado solo es válido si muestra su cálculo y fue aprobado por el líder del proyecto. La validación por un contador se exige **antes del Piloto**; hasta entonces los montos se basan en los supuestos documentados.
-- Cobertura actual: Comunidad A (alícuota sin redondeo y pago parcial), B (redondeo con empate por `sort_order`), C (redondeo con varios pesos a repartir), D (alícuotas en escala 10^-6, gasto ordinario y fondo de reserva redondeados por cuenta).
+- Cobertura actual: Comunidad A (alícuota sin redondeo y pago parcial), B (redondeo con empate por `sort_order`), C (redondeo con varios pesos a repartir), C por cuenta (`GOLD-CE`, detecta el redondeo del total combinado; aprobada el 2026-11-07), D (alícuotas en escala 10^-6, fondo con techo y redondeo por cuenta).
+- Casos de prueba derivados de cada especificación: `docs/qa/casos/`. Gasto común: [`docs/qa/casos/gasto-comun.md`](casos/gasto-comun.md).
 - Pendiente de datos: prueba de oro en UF (total UF convertido una vez a CLP y luego prorrateado).
 - Pendiente: comunidades para conciliación (incluida una línea de cartola que cubre varias unidades), multas e intereses y ajustes en periodo siguiente.
 
@@ -177,13 +179,13 @@ Las semillas de fast-check que encuentren un fallo se registran en el reporte y 
 - `<MODULO>` es una abreviatura fija por especificación (p. ej. `GC` gasto común, `PAG` pagos, `CON` conciliación), registrada en la propia especificación.
 - Cada caso indica la especificación y el CA de origen. Todo CA debe tener al menos un caso; un CA sin caso bloquea el paso a "Lista para desarrollo".
 - El identificador aparece en el nombre de la prueba automática para poder rastrearlo desde el reporte de CI.
-- Los casos de cada módulo viven en `docs/qa/casos/<modulo>.md`, con estado `Para revisión del líder del proyecto` hasta su aprobación.
+- Los casos de cada módulo viven en `docs/qa/casos/<modulo>.md`, con estado `Para revisión del líder del proyecto` hasta su aprobación. Hoy: [gasto común](casos/gasto-comun.md).
 
 ## 9. Preguntas abiertas
 
 - [ ] ¿Se aprueba el método del resto mayor con desempate por `sort_order` y redondeo por cuenta? Validación por contador antes del Piloto. (Líder del proyecto y contador)
 - [ ] ¿Quién es el contador que validará las pruebas de oro? (Líder del proyecto)
-- [ ] ¿Se amplía en CLAUDE.md la lista de TDD obligatorio para incluir aislamiento, saldos y periodos cerrados? (Líder del proyecto)
+- [x] ¿Se amplía en CLAUDE.md la lista de TDD obligatorio? Sí (líder del proyecto, 2026-11-07): intereses, imputación de pagos, Webpay y aislamiento, además de gasto común (con saldos y periodos cerrados), conciliación y permisos.
 - [ ] Prueba de oro en UF: ¿qué fecha de UF se usa y cómo se redondea la conversión? (Líder del proyecto, especificación de gasto común)
 - [ ] ¿El umbral de 90 % de cobertura en módulos de dinero y permisos es adecuado o se prefiere medir cobertura de mutación? (Líder del proyecto)
 - [ ] La CI de la Etapa 0 usa `gitleaks` para detectar secretos. ¿Se confirma con un ADR? (Arquitecto)

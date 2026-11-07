@@ -61,6 +61,7 @@ flowchart TD
 ## Pendiente para cuando se especifique
 
 - La forma de iniciar sesión y cambiar de turno en una tablet compartida.
-- La retención de los registros.
+- La retención de los registros, incluido el nombre de quien retira (Ley 21.719).
+- A quién notifica "Para la unidad": supuesto, solo a quienes viven en la unidad (el arrendatario vigente si lo hay; si no, el propietario), para no avisar a un propietario que no vive ahí.
 - El uso de fotos de etiquetas.
 - El funcionamiento sin conexión.

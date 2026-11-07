@@ -36,7 +36,8 @@ Flujo del tablero: Backlog → Especificación → Lista para desarrollo → En 
 - **Hecho:** pruebas en verde, revisión cruzada y de seguridad aprobadas, documentación actualizada, validación del líder del proyecto en el ambiente de pruebas.
 - Pocas tarjetas en curso a la vez.
 - Entregas en rebanadas verticales: base de datos → API → web/app → pruebas.
-- Pruebas primero (TDD) en gasto común, conciliación y permisos.
+- Pruebas primero (TDD) en todo lo que mueve dinero o datos de otra comunidad: gasto común (incluidos redondeo, saldos y periodos cerrados), intereses por mora, imputación de pagos (incluido Webpay), conciliación, permisos y aislamiento.
+- Cada revisión crítica queda en `docs/revisiones/AAAA-MM-DD-<entregable>.md`, con sus hallazgos y cómo se resolvió cada uno.
 - Trunk-based development con ramas cortas y feature flags.
 - Toda decisión técnica relevante queda en `docs/adr/`.
 
@@ -96,6 +97,7 @@ docs/specs/             especificaciones por módulo
 docs/adr/               decisiones de arquitectura
 docs/design/            flujos, wireframes, design system
 docs/qa/                plan de pruebas, comunidades simuladas, pruebas de oro
+docs/revisiones/        informes del revisor crítico y su resolución
 docs/operaciones/       ambientes y procedimientos (desde la Etapa 2)
 docs/contexto/          investigación de mercado y plan de puesta en marcha
 apps/api | web | mobile se crean en la Etapa 2
