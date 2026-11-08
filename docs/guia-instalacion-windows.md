@@ -44,6 +44,18 @@ cd ComVive
 code .
 ```
 
+### Dependencias del monorepo
+
+El código usa **pnpm** (la versión exacta está en `packageManager` de `package.json`) y **Turbo**. Node debe ser la versión 24 indicada en `.nvmrc`: si `node --version` muestra otra, instala la versión de `.nvmrc`. Corepack viene con Node y descarga la versión correcta de pnpm. Abre PowerShell **como administrador** solo para el primer comando:
+
+```powershell
+corepack enable
+pnpm install
+pnpm run check
+```
+
+`pnpm run check` corre lint, revisión de tipos, pruebas y compilación de todos los paquetes, lo mismo que la integración continua. `pnpm run format` aplica el formato de Prettier.
+
 ## 4. Instalar Claude Code
 
 Sigue la guía oficial de instalación para Windows: <<https://docs.claude.com/en/docs/claude-code/setup>>

@@ -18,8 +18,9 @@ Stages: 0 Foundations → 1 Design → 2 MVP → 3 Pilot → 4 Launch.
 ## Getting started
 
 1. Install the tools: [docs/guia-instalacion-windows.md](docs/guia-instalacion-windows.md) (Spanish)
-2. Read [CLAUDE.md](CLAUDE.md): vision, methodology, stack and project rules (Spanish).
-3. Review the background material in [docs/contexto/](docs/contexto/).
+2. Install dependencies and check the code: `corepack enable`, `pnpm install` and `pnpm run check`.
+3. Read [CLAUDE.md](CLAUDE.md): vision, methodology, stack and project rules (Spanish).
+4. Review the background material in [docs/contexto/](docs/contexto/).
 
 ## Stack
 
@@ -29,6 +30,8 @@ TypeScript across the monorepo · NestJS · PostgreSQL + Prisma · Next.js · Re
 
 | Folder | Contents |
 | --- | --- |
+| `apps/api/` | API (NestJS) |
+| `packages/shared/` | Shared types and rules: CLP amounts and rounding-safe allocation (only the API uses the calculation engine) |
 | `.claude/agents/` | AI agent team definitions |
 | `.github/workflows/` | Continuous integration |
 | `docs/arquitectura.md` | Components, data model and technical flows |
@@ -41,7 +44,7 @@ TypeScript across the monorepo · NestJS · PostgreSQL + Prisma · Next.js · Re
 
 ## Continuous integration
 
-Every pull request runs a Markdown lint and a secret scan. Nothing reaches `main` if either check fails.
+Every pull request runs a Markdown lint, a secret scan and a code check (formatting, lint, types, tests and build). Every change to `main` also runs the money golden tests without cache. Nothing reaches `main` if any check fails.
 
 ## Language
 
