@@ -3,13 +3,22 @@
 Estado: **Para revisión del líder del proyecto**
 Responsable: ingeniero-qa
 Aprobación: líder del proyecto
-Especificación de origen: `docs/specs/gasto-comun.md` rev. 4, cerrada (estado Borrador; revisiones críticas 1 y 2 de la spec y revisiones 2 y 3 del diseño aplicadas). Abreviatura del módulo: `GC`. Otras fuentes: `docs/arquitectura.md` (rutas, unicidad, vistas previas y plataforma) y `docs/revisiones/2026-11-07-diseno-rev3.md` (hallazgos M-3, M-4, menores 2 y 11, y decisiones del líder).
+Especificación de origen: `docs/specs/gasto-comun.md` rev. 7 (estado Borrador; revisiones críticas 1 y 2 de la spec, revisiones 2, 3 y 4 del diseño y decisiones del líder D1 a D15 aplicadas). Abreviatura del módulo: `GC`. Otras fuentes: `docs/arquitectura.md` (§2 rutas de negocio sin membresía y ruta de retorno; §3 plataforma y pruebas de plataforma 1 a 13; §4 rutas, unicidad, vistas previas e idempotencia), `docs/adr/0003-contratos-de-api-y-autorizacion.md` (idempotencia, D12), `docs/adr/0006-usuarios-de-plataforma.md` (huella por resolución, `LAST_ADMIN`), `docs/adr/0007-integracion-webpay.md` (estados, reembolso, credenciales por comunidad), `docs/design/wireframes/` y `docs/revisiones/2026-11-07-diseno-rev4.md` (B-1, B-2 y menores 5 y 6).
 
-Casos derivados de los criterios de aceptación CA-1 a CA-64, de los casos borde de la especificación y de casos borde adicionales. Cada monto esperado muestra su cálculo. Los montos se verificaron con un script de enteros (`bigint`: resto mayor, techo del fondo, interés con base actual/actual y días hábiles).
+Casos derivados de los criterios de aceptación CA-1 a CA-72, de los casos borde de la especificación y de casos borde adicionales. Cada monto esperado muestra su cálculo. Los montos se verificaron con un script de enteros (`bigint`: resto mayor, techo del fondo, interés con base actual/actual y días hábiles).
+
+**Cambios de esta versión (revisión 4 del diseño, spec rev. 7):**
+
+- **B-1:** casos nuevos de CA-65 a CA-72 y de las decisiones D12 (rechazos e idempotencia) y D13 (reembolso rechazado con 292 o 310). TC-GC-CA30-01 corregido: el arrendatario no ve ningún estado de pago en curso, solo el 409 si intenta pagar (UX-68). TC-GC-CA41-04 y TC-GC-CA55-01 a 03 fijan el estado que devuelve el doble de Transbank, el monto del reembolso (M-3), `reversalKind` y la advertencia o ayuda de la consola (D4, D7, D10 y D11). Casos borde nuevos TC-GC-CB-32 a 36: rechazos reevaluados con la misma clave, 400 `BAD_REQUEST`, reembolso rechazado con 284, 409 `IDEMPOTENCY_KEY_IN_PROGRESS` y confirmación Webpay que cruza la medianoche.
+- **B-2:** aislamiento de la ruta de retorno de Transbank (ISO-GC-gateway-1 a 3), de las rutas de Operaciones ComVive (ISO-GC-operaciones-1 a 3) y de las credenciales y resoluciones con consulta a Transbank (ISO-GC-plataforma-10 a 12). Fila de la ruta de retorno en la matriz de permisos, con la columna "Sin sesión".
+- **Menor 5:** dato "comunidad sin comercio vigente" (sin fila vigente en `COMMUNITY_WEBPAY_MERCHANT`) en los datos comunes y en `docs/qa/comunidades-simuladas.md`.
+- **Menor 6:** convención de referencia de los pagos manuales en los datos comunes.
+- Medio de pago con mayúscula inicial en la línea del pago (S-61): TC-GC-CA32-03 dice "Transferencia".
+- **Pendiente del analista (ajuste en paralelo):** 409 `IDEMPOTENCY_KEY_IN_PROGRESS` en la tabla de errores y los campos de huella de Soporte (`transbankStatusSource`, `refundToRequest`, `refundOutcome`, `withoutChargeAvailable`). Los casos que los usan los toman de ADR 0003 (ADR-0003-S2), ADR 0006 (decisión 6) y ADR 0007, marcados como **Supuesto (a validar)** hasta que la spec los incluya.
 
 **Pasada final contra la spec rev. 4 cerrada:** casos de CA-61 a CA-64; correcciones por las decisiones sobre H-20 a H-29 (CA-35, CA-36, CA-39, CB-10, CB-17, CA-33, CA-34, CA-41, CA-44, CA-60 y la tabla de permisos); corrección con $0 = anular y `CORRECTION_WITHOUT_CHANGE` en gastos (TC-GC-CA33-03 y 04); TC-GC-CB-31 y PROP-GC-33 y 34. Todos los hallazgos de QA quedan resueltos.
 
-**Cambios de la versión anterior (revisión 3 del diseño):**
+**Cambios de la versión anterior a esta (revisión 3 del diseño):**
 
 - **M-3:** TC-GC-CB-17 espera 422 `SCOPE_REQUIRED` (CA-32); el arrendatario recibe 404 al descargar el aviso legal y solo descarga el comprobante de cobro (G-7, CA-47); ISO-GC-webpay-ref-1 usa la unicidad (`origin`, `external_ref`, ámbito) solo para `webpay` e `import`; TC-GC-CA20-01 usa el texto vigente de CA-20.
 - **M-4:** la tabla de permisos y la de aislamiento siguen la regla del líder: 404 si el actor no puede ver el recurso; 403 solo si lo ve pero su rol no permite la acción.
@@ -27,6 +36,9 @@ Casos derivados de los criterios de aceptación CA-1 a CA-64, de los casos borde
 - Notación: `div` es división entera, `mod` es el resto, `piso` trunca. Los montos van en CLP enteros. Los cocientes intermedios se muestran con 4 decimales **truncados** y "…" (convención H-14 de la spec); el resultado es siempre el piso del cociente exacto.
 - **Ámbitos:** `owner` es el ámbito del propietario; "`occupancy` O-1" es el ámbito de la ocupación O-1 (`scope = occupancy`, `occupancy_id` = O-1). No se usan los nombres anteriores a la rev. 3.
 - **Códigos de error:** todo 404 trae `NOT_FOUND` y "No encontramos lo que buscas o no tienes acceso"; todo 403 trae `FORBIDDEN` y "Tu rol no permite esta acción". Los demás códigos y textos se copian tal cual de la tabla "Códigos y mensajes de error" y de la regla F-17 de la spec.
+- **"Nada escrito" (decisión del líder D12, regla A-3.4):** en un rechazo se verifica por conteo que no hay filas nuevas ni cambiadas en las tablas de negocio (`PAYMENT`, `LEDGER_ENTRY`, `ALLOCATION`, `WEBPAY_ATTEMPT`, `WEBPAY_ATTEMPT_SCOPE`, `WEBPAY_REFUND`, `MEMBERSHIP`, `UNIT_OCCUPANCY`, `ADMIN_TASK`, `COMMUNITY`) ni en `IDEMPOTENCY_KEY`. Excepciones fijadas por la spec: en una ruta `/platform/...` el rechazo deja **exactamente un** registro en `AUDIT_LOG` con el código de la respuesta; cada consulta a Transbank deja su fila en `WEBPAY_GATEWAY_CALL`; y el 503 al iniciar un pago en línea deja el intento en `abandoned`.
+- **Doble de Transbank:** las pruebas de integración usan un doble de la API REST de Webpay Plus v1.2 (crear, confirmar, consultar estado y reembolsar) que registra cada llamada con su código de comercio, su token y su origen. Cada caso fija qué responde el doble: estado (`INITIALIZED`, `AUTHORIZED`, `CAPTURED`, `PARTIALLY_NULLIFIED`, `REVERSED`, `NULLIFIED`, `FAILED` o un estado desconocido), monto autorizado (`amount`), saldo anulable (`balance`), `authorization_code`, "sin respuesta" (tiempo agotado) y, en el reembolso, `type` (`REVERSED` o `NULLIFIED`) o el código de error (`response_code` 16, 284, 292, 310, 311). "Sin llamadas a Transbank" se verifica con el registro del doble y con cero filas nuevas en `WEBPAY_GATEWAY_CALL`.
+- **Plazos de Transbank usados en los casos:** consulta de estado posible durante 7 días corridos desde la creación de la transacción; reembolso como reversa dentro de 3 horas desde la autorización y como anulación después, hasta 90 días desde la venta (spec F-16; ADR 0007). Un intento iniciado el 2026-11-25 deja de ser consultable al terminar el 2026-12-02 (**Supuesto (a validar):** se cuentan 7 días corridos desde la fecha de creación, en hora de Chile; la spec no fija si es por instante o por día) y su día 90 desde la venta es el 2027-02-23 (5 días de noviembre + 31 de diciembre + 31 de enero + 23 de febrero = 90).
 
 ## Datos comunes
 
@@ -35,7 +47,10 @@ Casos derivados de los criterios de aceptación CA-1 a CA-64, de los casos borde
 - Con el flag activo, salvo indicación: activo desde el 2026-11-01, tasa del reglamento 1200 pb anuales vigente desde el 2026-11-01, tasa CMF 3000 pb vigente desde antes (tope 1500 pb).
 - En 2026 y 2027 (años de 365 días) el interés es `piso(Σ capital_d × tasa_d / 3.650.000)`.
 - En CA-1 a CA-21, salvo que el caso diga otra cosa, el Depto 102 no tiene una ocupación de arrendatario registrada, así que todos sus cargos van al ámbito `owner` (spec, criterios de aceptación, H-19). Desde CA-22, cada caso indica la ocupación del Depto 102 (O-1 a O-4).
-- Personas, RUT y ocupaciones de la Comunidad A: `docs/qa/comunidades-simuladas.md`, sección "Comunidad A · personas y ocupaciones". Actores de prueba: `admin-A`, `admin2-A` (segundo administrador), `comite-A` (Rosa Díaz, propietaria del Depto 201), `propietario-101`, `propietario-102`, `arrendatario-102` (ocupación indicada en cada caso), `conserje-A`, `ex-residente-A`, `admin-B`, `soporte-1` y `soporte-2` (`platform_support`) y `operaciones-1` (`platform_operations`).
+- Personas, RUT y ocupaciones de la Comunidad A: `docs/qa/comunidades-simuladas.md`, sección "Comunidad A · personas y ocupaciones". Actores de prueba: `admin-A`, `admin2-A` (segundo administrador), `comite-A` (Rosa Díaz, propietaria del Depto 201), `propietario-101`, `propietario-102`, `arrendatario-102` (ocupación indicada en cada caso), `conserje-A`, `ex-residente-A`, `admin-B`, `soporte-1` y `soporte-2` (`platform_support`, S1 y S2 en la spec), `operaciones-1` (OP1) y `operaciones-2` (`platform_operations`). En CA-69, AD1 es `admin-A` (Carolina Lagos) y AD2 es Valentina Ortiz (sección "Administradores de CA-69").
+- **Referencia de los pagos manuales (menor 6 de la revisión 4; spec, criterios de aceptación; regla F-1, D6):** salvo que el caso diga otra cosa, todo pago manual de estos casos lleva una referencia válida (no vacía ni de solo espacios), aunque el caso no la escriba. **Dato de prueba:** si el caso no la indica, se usa "Comprobante QA-<id del caso>" (por ejemplo, "Comprobante QA-CA5-01"). Así ningún caso anterior a CA-67 responde `PAYMENT_REFERENCE_REQUIRED` por omisión. Los casos que prueban la referencia (TC-GC-CA67-*) la indican de forma explícita. La referencia distinta por caso no dispara la advertencia de F-3 por referencia repetida; los casos que prueban F-3 (TC-GC-CA11-01, TC-GC-CA31-01) fijan la suya.
+- **Comercio Webpay (menor 5 de la revisión 4; regla F-12):** salvo que el caso diga otra cosa, las Comunidades A y B tienen comercio vigente: una fila vigente en `COMMUNITY_WEBPAY_MERCHANT` (A: `MC-A-1`; B: `MC-B-1`; ambiente `integration`). **"Comunidad sin comercio vigente"** es la Comunidad A **sin ninguna fila** en `COMMUNITY_WEBPAY_MERCHANT` (estado inicial de CA-66) o, como variante, con su única fila fuera de vigencia (`active_to` pasada). Detalle en `docs/qa/comunidades-simuladas.md`, "Comercio Webpay y personas de plataforma".
+- **Números de orden:** cada CA de Webpay es una corrida independiente desde el estado de CA-5 (Depto 101 con $110.000 en `owner`), con los `buy_order` que fija la spec: `OC-2026-0006` (CA-65), `OC-2026-0007` y `OC-2026-0008` (CA-66), `OC-2026-0009` (CA-68), `OC-2026-0010` (CA-70), `OC-2026-0011` (CA-71), `OC-2026-0012` y `OC-2026-0013` (CA-72). `OC-2026-0014` es un dato de prueba propio (TC-GC-CB-34). El correlativo del doble se fija al número del caso; la regla de correlativo por comunidad y año (ADR-0007-S4) se prueba aparte.
 
 ## Matriz de trazabilidad
 
@@ -81,8 +96,8 @@ Casos derivados de los criterios de aceptación CA-1 a CA-64, de los casos borde
 | CA-38 | TC-GC-CA38-01, 02 | integración | GOLD-A-01 a 04 |
 | CA-39 | TC-GC-CA39-01 a 05 | integración, unitaria | GOLD-A39-01 a 04; PROP-GC-28 |
 | CA-40 | TC-GC-CA40-01 a 03 | integración | PROP-GC-22, 28 |
-| CA-41 | TC-GC-CA41-01 a 05 | integración, aislamiento | PROP-GC-27 |
-| CA-42 | ISO-GC-plataforma-1 a 9 | aislamiento | PROP-GC-31 |
+| CA-41 | TC-GC-CA41-01 a 05 | integración, aislamiento | PROP-GC-27, 36 |
+| CA-42 | ISO-GC-plataforma-1 a 12 | aislamiento | PROP-GC-31 |
 | CA-43 | TC-GC-CA43-01 a 06 | integración, permisos | |
 | CA-44 | TC-GC-CA44-01, 02 | integración, datos personales | |
 | CA-45 | TC-GC-CA45-01, 02 | integración | |
@@ -95,7 +110,7 @@ Casos derivados de los criterios de aceptación CA-1 a CA-64, de los casos borde
 | CA-52 | TC-GC-CA52-01, 02 | integración | |
 | CA-53 | TC-GC-CA53-01 a 04 | integración, aislamiento | |
 | CA-54 | TC-GC-CA54-01 a 03 | integración, aislamiento | PROP-GC-31 |
-| CA-55 | TC-GC-CA55-01 a 03 | integración, aislamiento | |
+| CA-55 | TC-GC-CA55-01 a 03 | integración, aislamiento | PROP-GC-36, 37 |
 | CA-56 | TC-GC-CA56-01 a 03 | integración | PROP-GC-23, 28 |
 | CA-57 | TC-GC-CA57-01 a 04 | integración, permisos | |
 | CA-58 | TC-GC-CA58-01, 02 | integración | PROP-GC-30 |
@@ -105,6 +120,19 @@ Casos derivados de los criterios de aceptación CA-1 a CA-64, de los casos borde
 | CA-62 | TC-GC-CA62-01 a 05 | integración | GOLD-A62-01 a 05; PROP-GC-34 |
 | CA-63 | TC-GC-CA63-01 a 03 | integración, datos personales | |
 | CA-64 | TC-GC-CA64-01, 02 | integración | |
+| CA-65 | TC-GC-CA65-01 a 07; ISO-GC-plataforma-11 | integración, aislamiento | PROP-GC-35, 37, 38 |
+| CA-66 | TC-GC-CA66-01 a 04; TC-GC-CB-35 | integración, aislamiento | PROP-GC-35 |
+| CA-67 | TC-GC-CA67-01 a 05; TC-GC-CB-32 | integración | PROP-GC-35 |
+| CA-68 | TC-GC-CA68-01 a 06; ISO-GC-plataforma-10, 12 | integración, aislamiento | PROP-GC-36, 37, 38 |
+| CA-69 | TC-GC-CA69-01 a 05; ISO-GC-operaciones-1 a 3 | integración, aislamiento, permisos | PROP-GC-39 |
+| CA-70 | TC-GC-CA70-01 a 06; TC-GC-CB-34 | integración, aislamiento | PROP-GC-36, 37, 38 |
+| CA-71 | TC-GC-CA71-01 a 03 | integración | PROP-GC-36 |
+| CA-72 | TC-GC-CA72-01 a 03 | integración, e2e | PROP-GC-38 |
+| D12 (A-3.4, rechazos e idempotencia) | TC-GC-CB-32; TC-GC-CA67-04; TC-GC-CA68-05; TC-GC-CA69-01, 02 | integración | PROP-GC-35 |
+| Respuestas de error, 400 (S-70) | TC-GC-CB-33 | integración | |
+| F-1, `paid_on` de Webpay (caso borde de la medianoche) | TC-GC-CB-36 | integración | |
+| Regla 4, ruta de retorno sin membresía (arquitectura §2; ADR 0007, prueba 5) | ISO-GC-gateway-1 a 3 | aislamiento | PROP-GC-40 |
+| Regla 4, rutas de Operaciones ComVive (arquitectura §3, prueba 12) | ISO-GC-operaciones-1 a 3 | aislamiento | PROP-GC-39 |
 
 ## Casos derivados de criterios de aceptación
 
@@ -651,12 +679,14 @@ Desde aquí los casos usan **Dado / Cuando / Entonces**, que equivalen a precond
 
 #### TC-GC-CA30-01 · Bloqueo del ámbito del arrendatario
 
-- **CA:** CA-30, regla F-12 · **Tipo:** integración · **Prioridad:** 1
+- **CA:** CA-30, reglas F-12 y F-17 (UX-46, UX-68) · **Tipo:** integración y e2e (Maestro) · **Prioridad:** 1
 - **Dado:** E29.
 - **Cuando:** el 2027-01-05 el propietario inicia "Deuda del arrendatario" (ámbito `occupancy` O-1, `expectedTotalClp` 263.190) y el intento queda en `initiated`.
 - **Entonces:**
-  - Para el arrendatario, `GET .../webpay-attempts/current` devuelve el ámbito O-1 con `startedByMe` falso y sin `attemptId`; la app muestra "Ya hay un pago en proceso para esta deuda", sin decir quién paga.
-  - Si el arrendatario inicia un pago de su ámbito: 409 `PAYMENT_IN_PROGRESS` con "Ya hay un pago en proceso para esta deuda"; no se crea intento.
+  - El propietario, que inició el intento, ve en su deuda "Tienes un pago en proceso" y debajo "Número de orden {buy_order}. Te avisaremos el resultado".
+  - **El arrendatario no ve ningún estado de pago en curso** (CA-30 rev. 6; UX-68): en su Inicio y en su deuda no aparece ninguna franja, chip, banner ni texto, ni "Tienes un pago en proceso" ni "Ya hay un pago en proceso para esta deuda"; su pantalla es igual a la de un ámbito sin intento (APP-03 y APP-05). La prueba e2e lo verifica buscando los dos textos y el chip de estado. Falla si la app muestra cualquier estado de pago en curso al arrendatario sin que intente pagar.
+  - API: `GET .../webpay-attempts/current` del arrendatario no trae `attemptId` ni monto ni quién paga. **Supuesto (a validar):** puede traer el ámbito O-1 con `startedByMe` falso (arquitectura §4; wireframe APP-05); la app no lo muestra. Ver hallazgo H-31.
+  - Solo si el arrendatario intenta iniciar un pago de su ámbito: 409 `PAYMENT_IN_PROGRESS` con "Ya hay un pago en proceso para esta deuda", sin decir quién paga, y no se crea intento (APP-PAG-04).
   - Si el propietario pide "Ambas" (`owner` y O-1): 409 `PAYMENT_IN_PROGRESS`; la app no le ofrece esa opción.
   - El propietario sí puede iniciar en paralelo "Mi deuda" (`owner`, `expectedTotalClp` 266.814): 2xx, otro intento.
 
@@ -718,7 +748,7 @@ Desde aquí los casos usan **Dado / Cuando / Entonces**, que equivalen a precond
 #### TC-GC-CA32-03 · Lo que ve el arrendatario de un pago "Ambos"
 
 - **CA:** CA-32, reglas F-12 y F-17 · **Tipo:** aislamiento · **Prioridad:** 1
-- **Entonces:** el arrendatario ve "Registrado por la administración · $162.500 · 04-12-2026 · transferencia". El pago de $100.000 y el grupo G-1 le responden 404; ninguna respuesta suya contiene 100.000 ni 262.500. El propietario ve los dos pagos, cada uno "Registrado por la administración" (S-48), y su lectura del ámbito O-1 queda en auditoría.
+- **Entonces:** el arrendatario ve "Registrado por la administración · $162.500 · 04-12-2026 · Transferencia" (medio con mayúscula inicial en la línea del pago, S-61). El pago de $100.000 y el grupo G-1 le responden 404; ninguna respuesta suya contiene 100.000 ni 262.500. El propietario ve los dos pagos, cada uno "Registrado por la administración" (S-48), y su lectura del ámbito O-1 queda en auditoría.
 
 #### TC-GC-CA32-04 · Anulación del grupo completo, también después de 30 días
 
@@ -965,12 +995,19 @@ Desde aquí los casos usan **Dado / Cuando / Entonces**, que equivalen a precond
 
 #### TC-GC-CA41-04 · Fuera de la vista, reverso y dos ámbitos
 
-- **CA:** CA-41 · **Tipo:** integración y aislamiento · **Prioridad:** 1
-- **Cuando:** (a) Soporte lee o resuelve otra vez `OC-2026-0002`; (b) en otra corrida lo marca para reverso y después confirma el reverso con la referencia de Transbank; (c) un intento de dos ámbitos en `in_review` (dato de prueba: `OC-2027-0001` de CA-29 con $500.000 autorizados) se intenta registrar.
+- **CA:** CA-41, regla F-16 (decisiones del líder D2, D4, D7 y D8; M-3 de la revisión 4) · **Tipo:** integración y aislamiento · **Prioridad:** 1
+- **Cuando:** (a) Soporte lee o resuelve otra vez `OC-2026-0002`; (b) en otra corrida, el 2026-11-26, `soporte-1` lo marca para reverso y después confirma el reverso; (c) un intento de dos ámbitos en `in_review` (dato de prueba: `OC-2027-0001` de CA-29, con $530.004 iniciados y $500.000 autorizados) se intenta registrar y después se marca para reverso.
+- **Doble de Transbank:**
+  - (b): la consulta de estado de la vista previa y la de la ejecución responden `AUTHORIZED`, `amount` 11.000, sin `balance` (sin anulaciones previas). El reembolso, ejecutado más de 3 horas después de la autorización del 2026-11-25, responde una anulación: `type` `NULLIFIED`, `authorization_code` 730415 (dato de prueba), `nullified_amount` 11.000, `balance` 0, `response_code` 0.
+  - (c): las dos consultas responden `AUTHORIZED`, `amount` 500.000, sin `balance`.
 - **Entonces:**
   - (a): 404 `NOT_FOUND` en el detalle, la vista previa y la resolución.
-  - (b): sin pago; `reversal_pending` con "Tu pago no se registró. Se solicitará la devolución del monto a Transbank" para el propietario; después `reversed` con "Tu pago fue anulado en Transbank. El reembolso a tu medio de pago depende de tu banco"; el saldo sigue en $110.000.
-  - (c): 422 `MULTI_SCOPE_REVIEW_REVERSAL_ONLY` con "Un pago que cubre dos deudas solo se puede marcar para reverso"; nada escrito. `mark_for_reversal` sobre ese intento sí se acepta.
+  - (b), vista previa de `mark_for_reversal`: campos de EX-1 con estado de Transbank `AUTHORIZED` (`transbankStatusSource = query`), "Se pedirá reembolso: sí, por $11.000" (total autorizado, porque no hay `balance`; nunca el monto iniciado de $110.000) y "pago a crear: ninguno".
+  - (b), ejecución con motivo: el intento pasa a `reversal_pending`, sin `PAYMENT` ni movimiento. En la misma transacción se crea **una** `WEBPAY_REFUND` con `amount_clp` 11.000, `outcome` `pending` y `source_gateway_call_id` = la fila de `WEBPAY_GATEWAY_CALL` de la consulta de la ejecución. El detalle del intento del propietario expone `reversalKind = refund_requested` y la app muestra "Tu pago no se registró. Se solicitará la devolución del monto a Transbank". La consola muestra "Intento OC-2026-0002 marcado para reverso. ComVive ya pidió la anulación a Transbank. Cuando Transbank responda, revisa la referencia propuesta y confirma el reverso".
+  - (b), reembolso: el doble recibe **una sola** llamada de reembolso, por $11.000, con el comercio `MC-A-1` y el token de `OC-2026-0002`. `WEBPAY_REFUND.outcome` pasa a `nullified`, con `authorization_code` 730415. El estado del intento no cambia (sigue en `reversal_pending`).
+  - (b), `confirm_reversal`: la vista previa propone la referencia 730415 y **no** muestra la advertencia "Transbank no confirmó la devolución de este intento…" (el reembolso es `nullified`, D7). Sin referencia, 422 `REVERSAL_REFERENCE_REQUIRED`. Con 730415 y motivo, el intento pasa a `reversed`; la consola muestra "Reverso confirmado para el intento OC-2026-0002. Referencia de Transbank: 730415" y el propietario ve "Tu pago fue anulado en Transbank. El reembolso a tu medio de pago depende de tu banco".
+  - (b), dinero: ningún `PAYMENT`, `LEDGER_ENTRY` ni `ALLOCATION` en todo el caso; el saldo sigue en 100.000 + 10.000 = **$110.000**.
+  - (c): `register_authorized` responde 422 `MULTI_SCOPE_REVIEW_REVERSAL_ONLY` con "Un pago que cubre dos deudas solo se puede marcar para reverso"; nada escrito. `mark_for_reversal` sí se acepta: su vista previa dice "Se pedirá reembolso: sí, por $500.000" (total autorizado, no los $530.004 iniciados) y la ejecución crea una `WEBPAY_REFUND` de $500.000, con `reversalKind = refund_requested`. Los dos ámbitos siguen igual: `owner` **$266.814** y `occupancy` O-1 **$263.190** (suma 530.004).
 
 #### TC-GC-CA41-05 · Plazo de 5 días hábiles
 
@@ -980,7 +1017,7 @@ Desde aquí los casos usan **Dado / Cuando / Entonces**, que equivalen a precond
 
 ### CA-42 · Aislamiento del rol Soporte ComVive
 
-Los casos de CA-42 están en la sección de aislamiento, "Aislamiento de plataforma (EX-1)": ISO-GC-plataforma-1 a 9.
+Los casos de CA-42 están en la sección de aislamiento, "De plataforma": ISO-GC-plataforma-1 a 12.
 
 ### CA-43 · Otorgamiento de roles
 
@@ -1213,22 +1250,44 @@ Los casos de CA-42 están en la sección de aislamiento, "Aislamiento de platafo
 
 #### TC-GC-CA55-01 · Resolución que no corresponde al estado
 
-- **CA:** CA-55, regla F-16 · **Tipo:** integración · **Prioridad:** 1
+- **CA:** CA-55, regla F-16 (D4; M-3 de la revisión 4) · **Tipo:** integración · **Prioridad:** 1
 - **Dado:** `OC-2026-0002` de CA-41 en `in_review` ($110.000 iniciados, $11.000 autorizados); `soporte-1` tiene la vista previa v1 de `register_authorized`.
-- **Cuando:** `soporte-2` lo marca para reverso con motivo; `soporte-1` confirma `register_authorized` con v1 y luego pide la vista previa de `register_authorized`.
-- **Entonces:** el intento pasa a `reversal_pending` y sigue en la vista de Soporte. La confirmación y la vista previa responden 409 `PREVIEW_OUTDATED` con "Esta resolución no corresponde al estado actual del intento. Revisa la nueva vista previa"; no se registra ningún pago.
+- **Doble de Transbank:** las consultas de `mark_for_reversal` de `soporte-2` responden `AUTHORIZED`, `amount` 11.000, sin `balance`.
+- **Cuando:** el 2026-11-26 `soporte-2` lo marca para reverso con motivo; `soporte-1` confirma `register_authorized` con v1 y luego pide la vista previa de `register_authorized` y la de `mark_for_reversal`.
+- **Entonces:**
+  - `mark_for_reversal` de `soporte-2`: vista previa con "Se pedirá reembolso: sí, por $11.000"; el intento pasa a `reversal_pending` con una `WEBPAY_REFUND` de $11.000 (`outcome` `pending`), `reversalKind = refund_requested`, y sigue en la vista de Soporte.
+  - La confirmación de `register_authorized` con v1 y las dos vistas previas de `soporte-1` responden 409 `PREVIEW_OUTDATED` con "Esta resolución no corresponde al estado actual del intento. Revisa la nueva vista previa". La de `mark_for_reversal` **no consulta a Transbank** (cero llamadas nuevas en el doble y en `WEBPAY_GATEWAY_CALL`; orden de "Marcar para reverso").
+  - No se registra ningún pago; sigue habiendo una sola `WEBPAY_REFUND`; el saldo sigue en $110.000. Cada 409 deja su registro en `AUDIT_LOG` con el código y ninguna fila en `IDEMPOTENCY_KEY` (D12).
 
-#### TC-GC-CA55-02 · Confirmar el reverso
+#### TC-GC-CA55-02 · Confirmar el reverso según el resultado del reembolso (D7)
 
-- **CA:** CA-55 · **Tipo:** integración · **Prioridad:** 1
-- **Cuando:** `soporte-1` pide la vista previa de `confirm_reversal` y la confirma (a) sin la referencia de Transbank, (b) con la referencia y sin motivo, (c) con referencia y motivo.
-- **Entonces:** la vista previa trae los campos de EX-1 y `paymentToCreate` nulo ("ninguno"). (a) 422 `REVERSAL_REFERENCE_REQUIRED` con "Ingresa la referencia de la anulación en Transbank"; (b) 422 `REASON_REQUIRED` con "Indica el motivo de la resolución"; (c) el intento pasa a `reversed`, el propietario del Depto 101 ve "Tu pago fue anulado en Transbank. El reembolso a tu medio de pago depende de tu banco" y el saldo sigue en $110.000.
+- **CA:** CA-55, regla F-16, F-17 (decisiones del líder D2, D7 y D10; ADR 0006, decisión 6) · **Tipo:** integración · **Prioridad:** 1
+- **Dado:** el estado final de TC-GC-CA55-01 (`reversal_pending`, `WEBPAY_REFUND` de $11.000).
+- **Cuando y entonces**, una corrida por resultado del reembolso que entrega el doble de Transbank. En todas, la vista previa de `confirm_reversal` trae los campos de EX-1, `paymentToCreate` nulo ("pago a crear: ninguno") y `refundOutcome` en la huella:
+
+  | Corrida | Reembolso (doble) | `refundOutcome` | Referencia propuesta | Advertencia "Transbank no confirmó la devolución de este intento. Confirma el reverso solo con una referencia que obtuviste directamente de Transbank" |
+  | --- | --- | --- | --- | --- |
+  | (1) | Anulación: `type` `NULLIFIED`, `authorization_code` 730415 | `nullified` | 730415 | No |
+  | (2) | Reversa: `type` `REVERSED` (dato de prueba: el reembolso se ejecutó dentro de 3 horas desde la autorización) | `reversed` | `REVERSED OC-2026-0002 <fecha y hora del reembolso>` | No |
+  | (3) | Error con `response_code` 16 (dato de prueba) | `failed` | Ninguna | Sí |
+  | (4) | Error con `response_code` 311 (monto mayor que el saldo anulable) | `failed` | Ninguna | Sí |
+  | (5) | La tarea aún no ejecuta el reembolso | `pending` | Ninguna | Sí (**Supuesto (a validar):** lectura literal de D7, "resultado no es `reversed` ni `nullified`"; ver hallazgo H-35) |
+
+- **En la corrida (1),** `soporte-1` confirma (a) sin la referencia; (b) con la referencia y sin motivo; (c) con referencia y motivo:
+  - (a) 422 `REVERSAL_REFERENCE_REQUIRED` con "Ingresa la referencia de la anulación en Transbank"; (b) 422 `REASON_REQUIRED` con "Indica el motivo de la resolución". Nada escrito y el intento sigue en `reversal_pending`.
+  - (c) el intento pasa a `reversed`; la consola muestra "Reverso confirmado para el intento OC-2026-0002. Referencia de Transbank: 730415"; el propietario del Depto 101 ve "Tu pago fue anulado en Transbank. El reembolso a tu medio de pago depende de tu banco" y el saldo sigue en **$110.000** (sin `PAYMENT` ni movimientos).
+- **En las corridas (3) y (4),** la advertencia no bloquea: con una referencia que Soporte obtuvo de Transbank (dato de prueba "ANUL-PORTAL-0002") y motivo, el intento pasa a `reversed`. `WEBPAY_REFUND` conserva `outcome = failed` y su `response_code`.
+- **En la corrida (5),** si el reembolso termina como `nullified` entre la vista previa y la ejecución, la ejecución responde 409 `PREVIEW_OUTDATED` con "El intento cambió desde la vista previa. Revisa la nueva vista previa antes de resolver" (cambió `refundOutcome`) y no escribe nada; la vista previa nueva es la de la corrida (1).
+- **Contraste con un cobro ya devuelto (D7, D10):** sin `WEBPAY_REFUND` (`refundOutcome` nulo, TC-GC-CA68-02) la advertencia nunca aparece; si la consulta no trajo la referencia, la consola muestra la ayuda "Transbank no entregó la referencia de esta anulación. Obtenla en el portal de Transbank con el número de orden {buy_order} y escríbela aquí".
 
 #### TC-GC-CA55-03 · Fuera de la vista y concurrencia
 
 - **CA:** CA-55 · **Tipo:** aislamiento · **Prioridad:** 1
-- **Cuando:** (a) `soporte-1` y `soporte-2` piden el detalle, la vista previa o cualquier resolución del intento en `reversed`; (b) en otra corrida, con el intento en `in_review`, los dos confirman `register_authorized` a la vez.
-- **Entonces:** (a) 404 `NOT_FOUND` en todo. (b) Una respuesta 2xx y la otra 404; existe un solo `PAYMENT` de $11.000 y el saldo del Depto 101 es 110.000 − 11.000 = $99.000.
+- **Cuando:** (a) `soporte-1` y `soporte-2` piden el detalle, la vista previa o cualquier resolución del intento en `reversed`; (b) en otra corrida, con el intento en `in_review`, los dos confirman `register_authorized` a la vez; (c) en otra corrida, con el intento en `in_review` y el doble respondiendo `AUTHORIZED` por $11.000, los dos confirman `mark_for_reversal` a la vez, cada uno con su vista previa.
+- **Entonces:**
+  - (a) 404 `NOT_FOUND` en todo.
+  - (b) Una respuesta 2xx y la otra 404; existe un solo `PAYMENT` de $11.000 y el saldo del Depto 101 es 110.000 − 11.000 = **$99.000**.
+  - (c) Una respuesta 2xx y la otra 409 `PREVIEW_OUTDATED` con "Esta resolución no corresponde al estado actual del intento. Revisa la nueva vista previa" (el intento sigue en la vista, en `reversal_pending`); existe **una sola** `WEBPAY_REFUND` (índice único por `attempt_id`) y el doble recibe un solo reembolso de $11.000. El saldo sigue en $110.000.
 
 ### CA-56 · Término de arriendo confirmado contra su vista previa (flag apagado)
 
@@ -1479,7 +1538,427 @@ Saldo del fondo (D-5) = recargos imputados + intereses imputados + multas imputa
 - **Cuando:** `admin-A` le otorga otra vez el rol de comité con referencia.
 - **Entonces:** 422 `COMMITTEE_REQUIRES_OWNER`, no 409 `ALREADY_COMMITTEE_MEMBER`: el 409 va al final para no esconder que ya no es propietaria.
 
-## Aislamiento (CA-23, CA-42 y regla 4 de `CLAUDE.md`)
+### Casos CA-65 a CA-72 (spec rev. 5 a rev. 7)
+
+Todos parten del estado de CA-5 salvo que digan otra cosa: Depto 101, sin arrendatario, con ordinario 200.000 − 100.000 = $100.000 y fondo $10.000 de `2026-10` en el ámbito `owner`, vencidos el 2026-11-11 (deuda 100.000 + 10.000 = **$110.000**), flag apagado y borrador vigente `2026-11`. Ninguna resolución de reverso ni sin cobro escribe movimientos: en todos esos casos el saldo final se verifica en $110.000 y con cero filas nuevas en `PAYMENT`, `LEDGER_ENTRY` y `ALLOCATION`.
+
+### CA-65 · Soporte ComVive resuelve sin cobro un intento en revisión (decisión del líder D3)
+
+#### TC-GC-CA65-01 · Entrada a revisión sin estado concluyente
+
+- **CA:** CA-65, regla F-16; ADR 0007, decisiones 6 y 7 · **Tipo:** integración · **Prioridad:** 1
+- **Dado:** estado de CA-5; comercio `MC-A-1`.
+- **Cuando:** el miércoles 2026-11-25 a las 10:00 `propietario-101` inicia un pago Webpay de $110.000 (`OC-2026-0006`), no vuelve del formulario y el doble de Transbank responde "sin respuesta" a las consultas de las 10:15, 10:20 y 10:30.
+- **Entonces:**
+  - Hasta la consulta de las 10:30 el intento sigue en `initiated` con `lock_active` verdadero y el propietario ve "Tienes un pago en proceso" y "Número de orden OC-2026-0006. Te avisaremos el resultado".
+  - Tras la consulta de las 10:30: `in_review`, `lock_active` falso, `review_due_on` **2026-12-02** (jueves 26 (1), viernes 27 (2), lunes 30 (3), martes 1 (4) y miércoles 2 (5); sin feriados en `PUBLIC_HOLIDAY`). Tres filas en `WEBPAY_GATEWAY_CALL` con origen `status_job`.
+  - Ningún pago; el saldo sigue en $110.000. El propietario ve "En revisión por ComVive" y "Te avisaremos cuando se resuelva. Número de orden OC-2026-0006". Si vuelve a pagar, la app advierte "Tienes un pago en revisión por $110.000; si pagas de nuevo podría quedar saldo a favor".
+
+#### TC-GC-CA65-02 · 503, motivo con la misma clave y cierre sin cobro
+
+- **CA:** CA-65, reglas A-3.4 (D12), F-13, F-16 y F-17 · **Tipo:** integración · **Prioridad:** 1
+- **Dado:** el intento de TC-GC-CA65-01 en `in_review`.
+- **Cuando:** el 2026-11-26 `soporte-1`: (a) pide la vista previa de `resolve_without_charge` y el doble no responde; (b) la pide de nuevo y el doble informa `INITIALIZED`; (c) confirma con v1 y la clave K-65, sin motivo, con el doble en `INITIALIZED`; (d) confirma con v1, **la misma clave K-65** y el motivo "Transbank informa la transacción como no pagada", con el doble en `INITIALIZED`.
+- **Entonces:**
+  - (a) 503 `PAYMENT_GATEWAY_UNAVAILABLE` con "No pudimos consultar el estado en Transbank. Intenta en unos minutos"; nada escrito.
+  - (b) campos de EX-1 con el estado `INITIALIZED` (`transbankStatusSource = query`), "pago a crear: ninguno" y la versión v1, sin la advertencia de D5.
+  - (c) 422 `REASON_REQUIRED` con "Indica el motivo de la resolución"; nada escrito y ninguna fila en `IDEMPOTENCY_KEY` para K-65.
+  - (d) se evalúa de nuevo (D12) y se acepta, sin `IDEMPOTENCY_KEY_REUSED`: el intento pasa a `rejected` con `resolution = resolve_without_charge` y el detalle del propietario expone `rejectionKind = resolved_without_charge`. Cero filas nuevas en `PAYMENT`, `LEDGER_ENTRY`, `ALLOCATION` y `WEBPAY_REFUND`; el ámbito `owner` sigue en 100.000 + 10.000 = **$110.000**.
+  - La consola muestra "Intento OC-2026-0006 cerrado sin cobro. Estado en Transbank: INITIALIZED". El propietario ve "Tu pago no se completó. No se hizo ningún cargo" y deja de ver la advertencia de pago en revisión.
+  - Conteos: 4 filas en `WEBPAY_GATEWAY_CALL` con origen `support_resolution` (una por cada consulta de (a) a (d); en (c) se consulta porque el estado en Transbank va antes que el motivo); 4 registros en `AUDIT_LOG` con `actor_type = platform`, uno por petición: (a) y (c) con su código de rechazo, (b) como lectura y (d) como `webpay_attempt.resolve_without_charge`, con `soporte-1`, el motivo y el estado `INITIALIZED`; una sola fila en `IDEMPOTENCY_KEY` (la de (d)).
+  - `admin-A` ve el intento en "Intentos Webpay" como `rejected`, resuelto por Soporte ComVive; si llama a la ruta `/platform/...` de resolución, 404 `NOT_FOUND`.
+  - Después, `soporte-1` recibe 404 `NOT_FOUND` en el detalle, la vista previa y cualquier resolución de `OC-2026-0006`.
+  - El mismo día el propietario inicia un pago nuevo de $110.000: se acepta sin advertencia y el intento nuevo queda en `initiated` (el ámbito `owner` no estaba bloqueado).
+
+#### TC-GC-CA65-03 · Resultado según el estado que informa Transbank
+
+- **CA:** CA-65, regla F-16 (D3, D4; S-58) · **Tipo:** integración · **Prioridad:** 1
+- **Dado:** un intento en `in_review` dentro de los 7 días consultables (`OC-2026-0006`, o `OC-2026-0002` de CA-41 donde se indica).
+- **Cuando:** `soporte-1` pide la vista previa y la ejecución de `resolve_without_charge` con motivo, con el doble respondiendo en ambas:
+
+  | Estado del doble | Respuesta (vista previa y ejecución) | Estado final del intento |
+  | --- | --- | --- |
+  | `INITIALIZED` | 2xx | `rejected` |
+  | `FAILED` | 2xx | `rejected` |
+  | `AUTHORIZED`, `amount` 11.000 (`OC-2026-0002`) | 422 `CHARGE_AUTHORIZED_IN_TRANSBANK` con "Transbank informa que este pago tiene un cobro vigente. Regístralo por el monto autorizado o márcalo para reverso" | `in_review`, saldo $110.000 |
+  | `CAPTURED` | El mismo 422 | `in_review` |
+  | `PARTIALLY_NULLIFIED`, `balance` 6.000 | El mismo 422 | `in_review` |
+  | `REVERSED` | 422 `TRANSBANK_STATUS_NOT_WITHOUT_CHARGE` con "Transbank informa el estado REVERSED, que no corresponde a un pago sin cobro. Revisa el intento antes de resolver" | `in_review` |
+  | `NULLIFIED` | El mismo 422, con "NULLIFIED" | `in_review` |
+  | Estado desconocido `PENDING_X` (dato de prueba) | El mismo 422, con "PENDING_X" (**Supuesto (a validar):** {estado} es el valor tal como lo entrega Transbank) | `in_review` |
+  | Sin respuesta | 503 `PAYMENT_GATEWAY_UNAVAILABLE` | `in_review` |
+
+- **Entonces, además:**
+  - Si el doble pasa de `INITIALIZED` (vista previa) a `AUTHORIZED` (ejecución), la ejecución responde el 422 `CHARGE_AUTHORIZED_IN_TRANSBANK` y no escribe nada.
+  - Tras el 422 con `REVERSED`, el mismo intento se cierra con `mark_for_reversal` (doble en `REVERSED`: `reversal_pending` sin `WEBPAY_REFUND`, `reversalKind = already_returned`) y `confirm_reversal` con la referencia propuesta `REVERSED OC-2026-0006 <fecha y hora de la consulta>`; termina en `reversed` y el propietario ve "Tu pago fue anulado en Transbank. El reembolso a tu medio de pago depende de tu banco" (D4).
+
+#### TC-GC-CA65-04 · Estado del intento, orden de los errores y huella
+
+- **CA:** CA-65, "Orden entre reglas de negocio" (resolver sin cobro); ADR 0006, decisión 6 · **Tipo:** integración · **Prioridad:** 1
+- **Cuando y entonces:**
+  - (a) Intento en `reversal_pending` con una `WEBPAY_REFUND` creada con estado concluyente (no cumple D13): vista previa y ejecución de `resolve_without_charge` responden 409 `PREVIEW_OUTDATED` con "Esta resolución no corresponde al estado actual del intento. Revisa la nueva vista previa", **sin consultar a Transbank** (cero llamadas en el doble).
+  - (b) `in_review`, doble en `AUTHORIZED`, ejecución sin motivo: 422 `CHARGE_AUTHORIZED_IN_TRANSBANK`, no `REASON_REQUIRED`.
+  - (c) `in_review`, doble sin respuesta, ejecución sin motivo: 503, no `REASON_REQUIRED`.
+  - (d) Vista previa con `INITIALIZED` (v1) y ejecución con motivo cuando el doble ya informa `FAILED`: 409 `PREVIEW_OUTDATED` con "El intento cambió desde la vista previa. Revisa la nueva vista previa antes de resolver", nada escrito. **Supuesto (a validar):** la huella de `resolve_without_charge` incluye `transbankStatus`, `transbankStatusSource` y `withoutChargeAvailable` (ADR 0006, decisión 6); la spec A-7 aún no los lista (hallazgo H-30).
+  - (e) Un cambio de la deuda del ámbito entre la vista previa y la ejecución (pago manual de $10.000 del Depto 101) no produce 409: la resolución se aplica y el saldo queda en 110.000 − 10.000 = $100.000 por el pago manual, no por la resolución.
+
+#### TC-GC-CA65-05 · Intento de dos ámbitos con `FAILED`
+
+- **CA:** CA-65, regla F-16 · **Tipo:** integración y aislamiento · **Prioridad:** 1
+- **Dado:** E29; `propietario-102` inició el 2027-01-05 un intento "Ambas" por $530.004 (`owner` $266.814 y `occupancy` O-1 $263.190; dato de prueba `OC-2027-0002`) que quedó en `in_review` sin estado concluyente.
+- **Cuando:** el 2027-01-06 `soporte-1` lo resuelve sin cobro con motivo y el doble informa `FAILED`.
+- **Entonces:** `rejected`, sin pagos ni movimientos; `owner` sigue en **$266.814** y `occupancy` O-1 en **$263.190** (suma 530.004). `propietario-102` ve "Tu pago no se completó. No se hizo ningún cargo"; `arrendatario-102` recibe 404 en el detalle del intento (no lo inició) y ningún texto nuevo. `admin-A` recibe 404 en la ruta `/platform/...` de resolución.
+
+#### TC-GC-CA65-06 · Pasados los 7 días consultables (decisión del líder D5)
+
+- **CA:** CA-65, regla F-16 (D5; ADR-0007-S12) · **Tipo:** integración · **Prioridad:** 1
+- **Dado:** `OC-2026-0006` en `in_review` desde el 2026-11-25; el 2026-12-03 ya no es consultable (datos comunes).
+- **Cuando y entonces**, una corrida por la última respuesta guardada:
+  - (a) **Ninguna concluyente:** la vista previa no llama al doble; `transbankStatus` nulo, `transbankStatusSource = none` y la advertencia "No hay un estado de Transbank que respalde esta resolución. Confírmala solo si verificaste con Transbank que no hubo cobro". Con motivo, el intento pasa a `rejected` y la confirmación usa el texto de `resolve_without_charge` (**Supuesto (a validar):** el valor de {estado} sin estado concluyente no está fijado; hallazgo H-36).
+  - (b) **Última guardada `INITIALIZED`** (consulta diaria del 2026-11-30): sin llamada al doble, `transbankStatusSource = last_stored`, sin advertencia; con motivo, `rejected` y "Intento OC-2026-0006 cerrado sin cobro. Estado en Transbank: INITIALIZED".
+  - (c) **Última guardada `AUTHORIZED`:** 422 `CHARGE_AUTHORIZED_IN_TRANSBANK`, sin llamada al doble y nada escrito.
+
+#### TC-GC-CA65-07 · Aviso al pagador sin membresía
+
+- **CA:** CA-65, regla F-13 (S-42, S-59) · **Tipo:** integración y datos personales · **Prioridad:** 2
+- **Dado:** el propietario que inició `OC-2026-0006` ya no tiene membresía en la Comunidad A (dato de escenario: vendió el Depto 101 antes de la resolución).
+- **Cuando:** `soporte-1` confirma `resolve_without_charge` como en TC-GC-CA65-02 (d).
+- **Entonces:** sin push. Correo a su dirección verificada con el asunto "Tu pago en línea en Comunidad A" y el texto "Tu pago en línea con número de orden OC-2026-0006 en Comunidad A no se completó y no se hizo ningún cargo a tu medio de pago. Si tienes dudas, contacta a la administración de tu comunidad". El cuerpo no contiene "$", "110.000" ni "Depto 101". Sin correo verificado, el mismo texto por SMS. Un registro `notification.sent_without_membership`.
+
+### CA-66 · Orden de las validaciones al iniciar un pago en línea y falla al conectar con Webpay
+
+#### TC-GC-CA66-01 · Comunidad sin comercio vigente (menor 5)
+
+- **CA:** CA-66, regla F-12 · **Tipo:** integración y e2e (Maestro) · **Prioridad:** 1
+- **Dado:** estado de CA-5 y la Comunidad A (a) sin ninguna fila en `COMMUNITY_WEBPAY_MERCHANT`; (b) en otra corrida, con su única fila (`MC-A-0`) fuera de vigencia (`active_to` 2026-11-24).
+- **Cuando:** el 2026-11-25 `propietario-101` pide por la API iniciar un pago sin ámbitos y, en otra petición, con el ámbito `owner` y `expectedTotalClp` 110.000.
+- **Entonces:**
+  - Las dos peticiones responden 422 `ONLINE_PAYMENT_NOT_AVAILABLE` con "Esta comunidad aún no recibe pagos en línea. Pide a la administración los datos para pagar por transferencia", aunque la primera tampoco tenga ámbitos (S-56).
+  - Cero filas en `WEBPAY_ATTEMPT` y en `WEBPAY_GATEWAY_CALL`; cero llamadas al doble. **Supuesto (a validar):** el correlativo de `buy_order` no avanza (el siguiente intento aceptado de la Comunidad A es `OC-2026-0007`, como en CA-66).
+  - La app no ofrece "Pagar en línea" y muestra el mismo texto en lugar del botón, igual al propietario y al arrendatario.
+  - El contrato OpenAPI no tiene ninguna operación `/communities/...` que escriba en `COMMUNITY_WEBPAY_MERCHANT`: el administrador no activa el comercio (F-12, menor 5).
+
+#### TC-GC-CA66-02 · Secuencia completa del orden S-56
+
+- **CA:** CA-66, regla F-12 (S-56, S-57) · **Tipo:** integración · **Prioridad:** 1
+- **Dado:** el estado (a) de TC-GC-CA66-01.
+- **Cuando y entonces:**
+
+  | Paso | Fecha | Acción | Respuesta | Estado después |
+  | --- | --- | --- | --- | --- |
+  | 1 | 2026-11-25 | Operaciones activa el comercio con el procedimiento auditado (la prueba inserta la fila vigente `MC-A-1` con el script del procedimiento) | — | Comunidad A con comercio vigente |
+  | 2 | 2026-11-25 | Pedido sin ámbitos | 422 `SCOPE_REQUIRED`, "Elige a qué deuda aplicar el pago" | Sin intento |
+  | 3 | 2026-11-25 | `owner` dos veces | 422 `DUPLICATE_SCOPE`, "Cada deuda puede aparecer una sola vez en el pago" | Sin intento |
+  | 4 | 2026-11-25 | `owner`, total visto $110.000; el doble no responde a "crear" | 503 `PAYMENT_GATEWAY_UNAVAILABLE`, "No pudimos conectar con Webpay. Intenta en unos minutos" | `OC-2026-0007` en `abandoned`, `lock_active` falso, una fila `create` en `WEBPAY_GATEWAY_CALL`, sin fila en `IDEMPOTENCY_KEY` |
+  | 5 | 2026-11-25 | Otra clave, mismo pedido | 2xx | `OC-2026-0008` en `initiated` por $110.000, `lock_active` verdadero |
+  | 6 | 2026-11-25 | Otro dispositivo, otra clave, `owner` con total visto $100.000 | 409 `PAYMENT_IN_PROGRESS`, "Ya hay un pago en proceso para esta deuda" (no `AMOUNT_CHANGED`) | Sin intento nuevo |
+  | 7 | 2026-11-25 | Cancela en el formulario de Webpay (retorno con `TBK_TOKEN`, sin `token_ws`) | 302 a la app | `OC-2026-0008` en `abandoned`, ámbito libre; la app muestra "Pago cancelado. No se hizo ningún cargo" |
+  | 8 | 2026-11-26 | `admin-A` registra $10.000 en `owner`, `paid_on` 2026-11-26 | 2xx | Capital vencido, ordinario primero: 100.000 − 10.000 = $90.000; fondo $10.000; deuda **$100.000** |
+  | 9 | 2026-11-26 | `owner` con total visto $110.000 | 409 `AMOUNT_CHANGED`, "El monto a pagar cambió. Revisa el nuevo monto", con el monto nuevo $100.000 | Sin intento |
+  | 10 | 2026-11-26 | `admin-A` registra $100.000 en `owner` | 2xx | Ordinario 90.000 − 90.000 = 0; fondo 10.000 − 10.000 = 0; deuda **$0** |
+  | 11 | 2026-11-26 | `owner` con total visto $100.000 | 422 `SCOPE_WITHOUT_DEBT`, "Esta deuda no tiene saldo pendiente" (no `AMOUNT_CHANGED`, aunque 0 ≠ 100.000) | Sin intento |
+
+  - En los rechazos de los pasos 2, 3, 6, 9 y 11 no se crea intento ni se escribe nada; el único dato de negocio de un rechazo es `OC-2026-0007` en `abandoned` (paso 4).
+
+#### TC-GC-CA66-03 · El 503 y la clave de idempotencia
+
+- **CA:** CA-66, regla A-3.4 (D12, S-57); ADR 0003, decisión 6 · **Tipo:** integración · **Prioridad:** 1
+- **Dado:** el paso 4 de TC-GC-CA66-02, enviado con la clave K-66.
+- **Cuando:** (a) se reenvía K-66 con el mismo cuerpo y el doble responde a "crear"; (b) se reenvía K-66 otra vez, con el mismo cuerpo; (c) se reenvía K-66 con `expectedTotalClp` 100.000.
+- **Entonces:** (a) se evalúa como un inicio nuevo: intento nuevo en `initiated` con otro `buy_order` (`OC-2026-0008` en esta corrida); `OC-2026-0007` sigue en `abandoned`. (b) la respuesta original de (a) (mismo id, `buy_order` y token, aunque el token ya haya vencido), sin intento nuevo. (c) 422 `IDEMPOTENCY_KEY_REUSED` con "Esta operación ya se envió con otros datos. Vuelve a abrir el formulario". Filas de K-66 en `IDEMPOTENCY_KEY`: 0 después del 503, 1 después de (a).
+
+#### TC-GC-CA66-04 · Visibilidad y permiso antes que la disponibilidad
+
+- **CA:** CA-66, "Respuestas de error" (orden de validación) · **Tipo:** aislamiento y permisos · **Prioridad:** 1
+- **Dado:** E22 y la Comunidad A sin comercio vigente.
+- **Cuando y entonces:** `arrendatario-102` pide un pago del ámbito `owner` del Depto 102: 404 (no 422); `propietario-101` pide un pago en el Depto 102: 404; `conserje-A`: 404; `admin-A` y `comite-A`: 403 (ven la unidad, pero no tienen `payment.pay_online`); sin sesión: 401. En ningún caso `ONLINE_PAYMENT_NOT_AVAILABLE`.
+
+### CA-67 · Referencia obligatoria del pago manual y su lugar en el orden de validación (D6, S-62)
+
+#### TC-GC-CA67-01 · Orden de validación del registro manual
+
+- **CA:** CA-67, regla F-1 (S-62), "Orden entre reglas de negocio" · **Tipo:** integración · **Prioridad:** 1
+- **Dado:** `2026-10` emitido como en CA-1; Depto 202, sin arrendatario, con ordinario $300.000 y fondo $15.000 impagos (vencen el 2026-11-11); hoy 2026-11-05.
+- **Cuando y entonces** (transferencia en `owner`; cada fila es una petición con una clave nueva):
+
+  | Paso | Asignaciones | Monto | `paid_on` | Referencia | Respuesta |
+  | --- | --- | --- | --- | --- | --- |
+  | (a) | `owner` | 100.000 | 2026-11-05 | "   " (solo espacios) | 422 `PAYMENT_REFERENCE_REQUIRED`, "Ingresa la referencia del pago" |
+  | (b) | `owner` | 100.000 | 2026-11-05 | Sin el campo | El mismo 422 |
+  | (c) | `owner` | 100.000 | 2026-11-05 | "" (vacía) o `null` | El mismo 422 (campo con código propio: no 400, S-70) |
+  | (d) | `owner` | 100.000 | 2026-11-05 | El número 1182 (tipo inválido) | El mismo 422 (S-70) |
+  | (e) | `owner` | 100.000 | 2026-11-05 | Tabulación y salto de línea | El mismo 422 (**Supuesto (a validar):** "espacios" incluye todo espacio en blanco) |
+  | (f) | `owner` | 0 | 2026-11-05 | Sin el campo | 422 `INVALID_AMOUNT`, "El monto debe ser un número entero de pesos mayor que $0" |
+  | (g) | `owner` | 10.000.000.000 | 2026-11-05 | Sin el campo | 422 `AMOUNT_TOO_LARGE`, "El monto supera el máximo permitido de $9.999.999.999" |
+  | (h) | `owner` | 100.000 | 2026-11-06 | Sin el campo | 422 `PAID_ON_IN_FUTURE`, "La fecha de pago no puede ser futura" |
+  | (i) | Sin asignaciones | 100.000 | 2026-11-05 | Sin el campo | 422 `SCOPE_REQUIRED`, "Elige a qué deuda aplicar el pago" |
+  | (j) | `owner` dos veces | 100.000 | 2026-11-05 | Sin el campo | 422 `DUPLICATE_SCOPE`, "Cada deuda puede aparecer una sola vez en el pago" |
+
+  - Nada escrito en ninguna fila; el saldo sigue en 300.000 + 15.000 = $315.000.
+
+#### TC-GC-CA67-02 · Registro con la referencia recortada
+
+- **CA:** CA-67, reglas F-1, F-3 y F-5 · **Tipo:** integración · **Prioridad:** 1
+- **Cuando:** se registra $100.000 en `owner`, `paid_on` 2026-11-05, con la referencia "  Comprobante 1182 "; después, otro pago de $100.000 por transferencia con la referencia "comprobante 1182" y `paid_on` 2026-11-05.
+- **Entonces:**
+  - Un `PAYMENT` con `origin = manual`, referencia "Comprobante 1182" (sin los espacios del inicio y del final) y su propio `payment_group_id`.
+  - El 2026-11-05 nada está vencido (vence el 2026-11-11): paso "lo no vencido" de F-5, ordinario primero: 300.000 − 100.000 = $200.000, más el fondo de $15.000: saldo **$215.000**.
+  - El segundo formulario advierte por F-3 (misma referencia sin distinguir mayúsculas ni espacios, mismo medio y monto) y además por fecha, monto y medio iguales; no bloquea. Texto de la referencia: "Ya existe un pago de $100.000 por transferencia con la referencia "Comprobante 1182" (Depto 202, 05-11-2026). Revisa que no sea un duplicado".
+
+#### TC-GC-CA67-03 · El estado de la ocupación va antes que la referencia
+
+- **CA:** CA-67, reglas F-1 y F-9 · **Tipo:** integración · **Prioridad:** 1
+- **Cuando y entonces** (registros sin referencia):
+  - Estado final de CA-35 (O-1 terminada), dirigido a O-1: 409 `OCCUPANCY_ALREADY_ENDED` con "El arriendo de esta persona ya terminó. Aplica el pago a la deuda del propietario".
+  - Estado de CA-53 (O-4 programada), dirigido a O-4: 409 `OCCUPANCY_NOT_STARTED` con "El arriendo aún no comienza. Aplica el pago a la deuda del propietario".
+  - Estado de CA-61 (O-4 cancelada), dirigido a O-4: 409 `OCCUPANCY_CANCELLED` con "Este arriendo fue cancelado y nunca comenzó. Aplica el pago a la deuda del propietario".
+  - Con el `occupancyId` de una ocupación de otra unidad: 404 antes que todo lo anterior.
+  - En ningún caso `PAYMENT_REFERENCE_REQUIRED`; nada escrito.
+
+#### TC-GC-CA67-04 · Misma clave después del rechazo (decisión del líder D12)
+
+- **CA:** CA-67, regla A-3.4 · **Tipo:** integración · **Prioridad:** 1
+- **Cuando:** con la clave K-67: (a) el envío (a) de TC-GC-CA67-01; (b) el mismo pago con la referencia "  Comprobante 1182 "; (c) el envío (b) otra vez, con el mismo cuerpo; (d) K-67 con monto $90.000.
+- **Entonces:** (a) 422 y ninguna fila de K-67 en `IDEMPOTENCY_KEY`. (b) se registra el pago, sin `IDEMPOTENCY_KEY_REUSED`; saldo **$215.000**. (c) el mismo `PAYMENT` y el mismo `payment_group_id`; sigue habiendo un solo pago y el saldo sigue en $215.000. (d) 422 `IDEMPOTENCY_KEY_REUSED`; nada escrito.
+
+#### TC-GC-CA67-05 · Referencia de un registro "Ambos"
+
+- **CA:** CA-67, reglas F-1 y F-12 · **Tipo:** integración · **Prioridad:** 2 · **Oro:** GOLD-A32-01, 02
+- **Dado:** E22.
+- **Cuando:** el 2026-12-04 el administrador registra "Ambos" (`owner` $100.000 y `occupancy` O-1 $162.500) (a) sin referencia; (b) con la referencia " Transferencia 5531 ".
+- **Entonces:** (a) 422 `PAYMENT_REFERENCE_REQUIRED`; ningún `PAYMENT` (ni parcial). (b) dos `PAYMENT` del mismo grupo, los dos con la referencia "Transferencia 5531"; saldos de GOLD-A32: `owner` **$162.500** y O-1 **$100.000**.
+
+### CA-68 · Marcar para reverso con consulta previa a Transbank y cobro ya devuelto (D4, D6, D7, D8, D10, D11)
+
+#### TC-GC-CA68-01 · De `AUTHORIZED` a `NULLIFIED` entre la vista previa y la ejecución
+
+- **CA:** CA-68, regla F-16, A-7 · **Tipo:** integración · **Prioridad:** 1
+- **Dado:** estado de CA-5; el 2026-11-25 `propietario-101` inicia `OC-2026-0009` por $110.000, el doble autoriza $11.000 y el intento pasa a `in_review`.
+- **Doble de Transbank:** vista previa v1, `AUTHORIZED` con `amount` 11.000 y sin `balance`; primera ejecución, vista previa v2 y segunda ejecución, `NULLIFIED` con el `authorization_code` 908172 de la anulación (dato de prueba).
+- **Cuando:** el 2026-11-26 `soporte-1` pide la vista previa, confirma con v1 y un motivo, pide una vista previa nueva y la confirma con v2 y el motivo "La comunidad anuló la venta en Transbank".
+- **Entonces:**
+  - v1: estado `AUTHORIZED`, "Se pedirá reembolso: sí, por $11.000" (total autorizado, sin anulaciones previas), "pago a crear: ninguno".
+  - Ejecución con v1: 409 `PREVIEW_OUTDATED` con "El intento cambió desde la vista previa. Revisa la nueva vista previa antes de resolver" (cambió `refundToRequest` de $11.000 a nulo); nada escrito, sin `WEBPAY_REFUND` ni llamada de reembolso.
+  - v2: estado `NULLIFIED`, "Se pedirá reembolso: no".
+  - Ejecución con v2: `reversal_pending` con el estado `NULLIFIED` guardado; **cero** filas en `WEBPAY_REFUND` y **cero** llamadas de reembolso en el doble; sin `PAYMENT` ni movimiento; saldo **$110.000**.
+  - El detalle del intento del propietario expone `reversalKind = already_returned` y la app muestra "Tu pago no se registró. Transbank ya devolvió el monto" (no "Se solicitará la devolución del monto a Transbank").
+  - La consola muestra "Intento OC-2026-0009 marcado para reverso. Transbank ya había devuelto el cobro. Revisa la referencia y confirma el reverso" (D11).
+
+#### TC-GC-CA68-02 · Confirmar el reverso de un cobro ya devuelto
+
+- **CA:** CA-68, regla F-16, F-17 (D7, D10; S-65) · **Tipo:** integración · **Prioridad:** 1
+- **Dado:** el estado final de TC-GC-CA68-01.
+- **Cuando y entonces:**
+  - (a) **Con referencia en la consulta:** la vista previa de `confirm_reversal` propone 908172, sin la advertencia "Transbank no confirmó la devolución de este intento…" y sin la ayuda. Con 908172 y motivo, `reversed`; la consola muestra "Reverso confirmado para el intento OC-2026-0009. Referencia de Transbank: 908172" y el propietario ve "Tu pago fue anulado en Transbank. El reembolso a tu medio de pago depende de tu banco". Saldo $110.000.
+  - (b) **Sin referencia en la consulta** (otra corrida; `NULLIFIED` sin `authorization_code`): ninguna referencia propuesta, ninguna advertencia y, junto al campo, la ayuda "Transbank no entregó la referencia de esta anulación. Obtenla en el portal de Transbank con el número de orden OC-2026-0009 y escríbela aquí". Sin referencia: 422 `REVERSAL_REFERENCE_REQUIRED` con "Ingresa la referencia de la anulación en Transbank" y el intento sigue en `reversal_pending`. Con la referencia del portal (dato "PORTAL-908172") y motivo: `reversed`.
+  - (c) **`REVERSED`** en lugar de `NULLIFIED` (otra corrida): el mismo resultado que (a), con la referencia propuesta `REVERSED OC-2026-0009 <fecha y hora de la consulta>`. La prueba verifica el prefijo "REVERSED OC-2026-0009 " y la fecha y hora de la consulta guardada (**Supuesto (a validar):** formato no fijado; hallazgo H-36).
+
+#### TC-GC-CA68-03 · Cobro vigente: reembolso por el total autorizado
+
+- **CA:** CA-68, regla F-16 (D2; M-3) · **Tipo:** integración · **Prioridad:** 1
+- **Cuando:** como TC-GC-CA68-01, pero el doble responde `AUTHORIZED` con `amount` 11.000 en la vista previa y en la ejecución; en otra corrida, `CAPTURED` con `amount` 11.000.
+- **Entonces:** "Se pedirá reembolso: sí, por $11.000" en la vista previa; la ejecución crea una `WEBPAY_REFUND` de $11.000 con `source_gateway_call_id` = la consulta de la ejecución; `reversalKind = refund_requested`; el propietario ve "Tu pago no se registró. Se solicitará la devolución del monto a Transbank"; la consola muestra el texto de D2 ("Intento OC-2026-0009 marcado para reverso. ComVive ya pidió la anulación a Transbank. Cuando Transbank responda, revisa la referencia propuesta y confirma el reverso"). El resto sigue TC-GC-CA41-04 (b) y TC-GC-CA55-02.
+
+#### TC-GC-CA68-04 · Nada que devolver, 503 y estado del intento
+
+- **CA:** CA-68, regla F-16 (S-66, S-57), "Orden entre reglas de negocio" (marcar para reverso) · **Tipo:** integración · **Prioridad:** 1
+- **Cuando y entonces:**
+  - (a) Sobre `OC-2026-0006` de CA-65 en `in_review`, con el doble en `INITIALIZED`: vista previa y ejecución (con y sin motivo) responden 422 `NO_CHARGE_TO_REVERSE` con "Transbank informa el estado INITIALIZED: este pago no tiene un cobro que devolver. Si corresponde, resuélvelo sin cobro"; el intento sigue en `in_review`; la consola sugiere `resolve_without_charge`.
+  - (b) Con `FAILED`: el mismo 422, con "FAILED".
+  - (c) Sin respuesta dentro de los 7 días: 503 `PAYMENT_GATEWAY_UNAVAILABLE` con "No pudimos consultar el estado en Transbank. Intenta en unos minutos".
+  - (d) Intento en `reversal_pending`: vista previa y ejecución responden 409 `PREVIEW_OUTDATED` con "Esta resolución no corresponde al estado actual del intento. Revisa la nueva vista previa", sin llamadas al doble.
+  - (e) Estado desconocido `PENDING_X` dentro de los 7 días: **bloqueado por H-33.** **Supuesto (a validar):** se trata como "sin estado concluyente" y, dentro de los 7 días, responde el 503 de (c).
+  - Nada escrito en (a) a (e); ninguna `WEBPAY_REFUND`.
+
+#### TC-GC-CA68-05 · Auditoría, consultas e idempotencia (D12)
+
+- **CA:** CA-68, regla A-3.4; ADR 0006, decisión 8 · **Tipo:** integración · **Prioridad:** 1
+- **Dado:** la secuencia de TC-GC-CA68-01 con la clave K-68 en las dos ejecuciones.
+- **Entonces:**
+  - `WEBPAY_GATEWAY_CALL`: 4 filas con origen `support_resolution` y comercio `MC-A-1` (vista previa v1, ejecución con v1, vista previa v2, ejecución con v2).
+  - `AUDIT_LOG`: un registro por cada petición (las dos vistas previas, el 409 con su código y la resolución con `soporte-1` y el motivo).
+  - La ejecución con v2 usa **la misma K-68** que la rechazada con 409 y se acepta (D12), sin `IDEMPOTENCY_KEY_REUSED`; un reenvío de K-68 con el cuerpo de v2 devuelve la respuesta original y no consulta otra vez a Transbank. Una sola fila de K-68 en `IDEMPOTENCY_KEY`.
+
+#### TC-GC-CA68-06 · Aviso sin membresía según `reversalKind`
+
+- **CA:** CA-68, regla F-13 (D8; S-67) · **Tipo:** integración y datos personales · **Prioridad:** 2
+- **Dado:** el propietario que inició `OC-2026-0009` ya no tiene membresía (vendió el Depto 101).
+- **Entonces:** con el cobro ya devuelto (TC-GC-CA68-01), recibe por correo verificado, con el asunto "Tu pago en línea en Comunidad A", "Tu pago en línea con número de orden OC-2026-0009 en Comunidad A no se registró y Transbank ya devolvió el monto. Si tienes dudas, contacta a la administración de tu comunidad". Con el reembolso pedido (TC-GC-CA68-03), "Tu pago en línea con número de orden OC-2026-0009 en Comunidad A no se registró. Se solicitará la devolución del monto a Transbank. Si tienes dudas, contacta a la administración de tu comunidad". Ninguno contiene "$", "11.000", "110.000" ni "Depto 101"; cada envío queda en auditoría.
+
+### CA-69 · Operaciones ComVive no puede revocar al último administrador (D9, D10, D12; S-68, S-71, S-72)
+
+#### TC-GC-CA69-01 · 409 `LAST_ADMIN` y qué escribe el rechazo
+
+- **CA:** CA-69, "Validaciones de la consola de Operaciones ComVive"; arquitectura §3, prueba 12 · **Tipo:** integración · **Prioridad:** 1
+- **Dado:** la Comunidad A con un solo administrador vigente, AD1 (`admin-A`), con dos sesiones abiertas y una suscripción push.
+- **Cuando:** el 2026-11-10 OP1 envía `POST /platform/communities/A/admin-memberships/{membresía de AD1}/revoke` con el motivo "Cambio de administración" y la clave K1.
+- **Entonces:** 409 `LAST_ADMIN` con "No se puede revocar al único administrador de la comunidad. Otorga primero el rol a quien lo reemplazará". La membresía de AD1 sigue sin `revoked_at`; sus sesiones siguen sin `revoked_at`; su suscripción push sigue vinculada; ninguna fila de K1 en `IDEMPOTENCY_KEY`; **exactamente un** registro en `AUDIT_LOG` con `actor_type = platform`, rol `platform_operations`, OP1, la acción, la Comunidad A, el código `LAST_ADMIN` y la fecha y hora. AD1 sigue recibiendo 2xx en la Comunidad A.
+
+#### TC-GC-CA69-02 · Orden de los errores y reintento con la misma clave
+
+- **CA:** CA-69, regla A-3.4 (D12), D10 · **Tipo:** integración · **Prioridad:** 1
+- **Cuando y entonces**, en orden:
+
+  | Paso | Acción de OP1 | Respuesta | Estado después |
+  | --- | --- | --- | --- |
+  | (a) | Revocar a AD1 sin motivo, clave K2 | 422 `REASON_REQUIRED`, "Indica el motivo de la revocación" (no `LAST_ADMIN`) | AD1 vigente |
+  | (b) | Otorgar `admin` de A a AD2 (Valentina Ortiz, 21.345.678-4, con correo) con el motivo "Nueva administración" | 2xx | AD2 vigente, `granted_via = platform`, sin primer ingreso |
+  | (c) | Revocar a AD1 con **K1** y el mismo cuerpo de TC-GC-CA69-01 | 2xx: se reevalúa y se aplica (D12) | AD1 con `revoked_at`, `revoked_by` OP1 y el motivo; sus sesiones revocadas y su push desvinculado; desde la petición siguiente AD1 recibe 404 en la Comunidad A; AD2 es la única administradora vigente |
+  | (d) | K1 otra vez, mismo cuerpo | El resultado original de (c), no `ROLE_ALREADY_REVOKED` | Sin cambios |
+  | (e) | K1 con otro motivo | 422 `IDEMPOTENCY_KEY_REUSED` | Sin cambios |
+  | (f) | Revocar a AD2, clave K3 | 409 `LAST_ADMIN` (AD2 cuenta aunque no haya ingresado, D10) | AD2 vigente |
+  | (g) | Revocar a AD1 otra vez, clave K4, con motivo | 409 `ROLE_ALREADY_REVOKED`, "Este rol ya fue revocado" (no `LAST_ADMIN`) | Sin cambios |
+  | (h) | Revocar a AD1, clave K5, sin motivo | 422 `REASON_REQUIRED` (el motivo va antes que el estado) | Sin cambios |
+
+  - Cada rechazo deja un registro en `AUDIT_LOG` con su código y ninguna fila en `IDEMPOTENCY_KEY`. La revocación aplicada queda en auditoría con quién, a quién, cuándo y el motivo.
+
+#### TC-GC-CA69-03 · Revocaciones simultáneas con barrera, repetidas
+
+- **CA:** CA-69 (S-68); arquitectura §3, prueba 12 · **Tipo:** integración (concurrencia) · **Prioridad:** 1
+- **Dado:** la Comunidad A con AD1 y AD2 vigentes.
+- **Cuando:** OP1 revoca a AD1 y `operaciones-2` revoca a AD2 en dos transacciones paralelas, sincronizadas con una barrera justo antes del bloqueo de la fila de la comunidad; se repite 200 veces (**Supuesto (a validar):** número de repeticiones propio), alternando cuál llega primero.
+- **Entonces:** en cada repetición, exactamente una respuesta 2xx y una 409 `LAST_ADMIN`, y la Comunidad A queda con exactamente un administrador vigente; nunca con cero. Variantes: (a) revocar a AD1 mientras se otorga a una tercera persona, en paralelo: ambas se aceptan y quedan dos vigentes; (b) con tres administradores, dos revocaciones simultáneas se aceptan y queda uno.
+
+#### TC-GC-CA69-04 · Tareas abiertas al revocar a un administrador (S-71)
+
+- **CA:** CA-69, "Validaciones de la consola de Operaciones ComVive" (S-71); CA-57 · **Tipo:** integración · **Prioridad:** 2
+- **Dado:** la Comunidad A con AD1 como única administradora y la tarea abierta "Revisar rol de comité de Rosa Díaz" (CA-57), cuya alerta (push y correo) recibió AD1.
+- **Cuando:** el 2026-11-10 OP1 otorga `admin` a AD2 y revoca a AD1; el 2026-11-12 AD2 hace su primer ingreso, lista `GET /communities/A/admin-tasks?status=open` y resuelve la tarea con `keep_committee` y un motivo; después se registra la venta de la única unidad de otro miembro del comité (dato de escenario).
+- **Entonces:**
+  - La `ADMIN_TASK` sigue abierta con el mismo id después de la revocación; AD1 recibe 404 en `admin-tasks`.
+  - AD2 ve la tarea en su primer ingreso y la cierra; la web muestra "Mantuviste el rol de comité de Rosa Díaz. La tarea quedó cerrada".
+  - Ningún push ni correo nuevo de esa tarea a AD2 por la revocación ni por su primer ingreso (conteo de notificaciones).
+  - La alerta de la venta posterior va solo a AD2, no a AD1.
+
+#### TC-GC-CA69-05 · Alerta a Operaciones si el nuevo administrador no ingresa (S-72)
+
+- **CA:** CA-69 (S-72; P-56; depende del ADR 0008, D14) · **Tipo:** unitaria (regla con reloj inyectado) e integración · **Prioridad:** 2
+- **Dado:** AD2 otorgada el 2026-11-10 (hora de Chile).
+- **Plazo:** 7 días corridos siguientes al otorgamiento: 11 (1), 12 (2), 13 (3), 14 (4), 15 (5), 16 (6) y 17 (7). Vence al terminar el 2026-11-17, hora de Chile.
+- **Cuando y entonces:**
+  - (a) AD2 no ingresa: el 2026-11-18 Operaciones ComVive recibe **una** alerta con exactamente tres datos: el nombre de la Comunidad A, el id de la membresía de AD2 y la fecha del otorgamiento (2026-11-10). Prueba de contrato: sin RUT, contacto, deuda ni otro dato de negocio. Un registro en auditoría. AD2 sigue vigente y nada se revoca ni se bloquea.
+  - (b) La tarea programada corre otra vez el 2026-11-19: ninguna alerta nueva para esa membresía.
+  - (c) En otra corrida, AD2 ingresa el 2026-11-17 a las 23:59: ninguna alerta.
+  - (d) Lo mismo vale para el primer administrador otorgado en el alta de una comunidad.
+
+### CA-70 · Reembolso rechazado con 292 o 310 pasados los 7 días consultables (D5, D13; S-67, S-69)
+
+#### TC-GC-CA70-01 · Marcar para reverso sin estado concluyente: reembolso por el monto iniciado
+
+- **CA:** CA-70, regla F-16 (S-69) · **Tipo:** integración · **Prioridad:** 1
+- **Dado:** estado de CA-5; el 2026-11-25 `propietario-101` inicia `OC-2026-0010` por $110.000; el doble nunca entrega un estado concluyente (consultas de 15, 20 y 30 minutos y consultas diarias); el intento pasa a `in_review` con `review_due_on` 2026-12-02 y el 2026-12-03 se marca "Plazo vencido", con una alerta que lleva solo el id del intento y `OC-2026-0010`.
+- **Cuando:** el 2026-12-03 `soporte-1` pide la vista previa de `mark_for_reversal` y la confirma con v1 y el motivo "Sin estado en Transbank; se pide el reembolso".
+- **Entonces:**
+  - La vista previa no llama al doble; `transbankStatus` nulo (`transbankStatusSource = none`), "Se pedirá reembolso: sí, por $110.000" (monto iniciado, S-69) y "pago a crear: ninguno".
+  - La ejecución deja el intento en `reversal_pending` con una `WEBPAY_REFUND` de $110.000, `source_gateway_call_id` nulo y `outcome` `pending`; `reversalKind = refund_requested`; sin `PAYMENT` ni movimiento; saldo **$110.000**. El propietario ve "Tu pago no se registró. Se solicitará la devolución del monto a Transbank".
+
+#### TC-GC-CA70-02 · Reembolso rechazado con 292 y cierre sin cobro desde `reversal_pending` (D13)
+
+- **CA:** CA-70, reglas F-16 y F-17 (D13; S-67) · **Tipo:** integración · **Prioridad:** 1
+- **Dado:** el estado final de TC-GC-CA70-01.
+- **Cuando:** la tarea del reembolso lo ejecuta y el doble responde con el código 292; `soporte-1` lee el detalle, pide la vista previa de `confirm_reversal` (sin confirmar), pide la de `resolve_without_charge` y la confirma con v2 y el motivo "Transbank informa que nunca hubo cobro".
+- **Entonces:**
+  - `WEBPAY_REFUND.outcome = failed` con `response_code` 292; el intento sigue en `reversal_pending` y el propietario conserva "Tu pago no se registró. Se solicitará la devolución del monto a Transbank".
+  - El detalle de Soporte trae `withoutChargeAvailable = true` (**Supuesto (a validar):** nombre de ADR 0006, decisión 5).
+  - La vista previa de `confirm_reversal` no propone referencia y muestra la advertencia "Transbank no confirmó la devolución de este intento. Confirma el reverso solo con una referencia que obtuviste directamente de Transbank" (D7).
+  - La vista previa de `resolve_without_charge` **no llama al doble**; trae el estado "reembolso rechazado (código 292)" (`transbankStatusSource = refund_292`), "pago a crear: ninguno" y la versión v2, **sin** la advertencia "No hay un estado de Transbank que respalde esta resolución…".
+  - La ejecución deja el intento en `rejected` con `resolution = resolve_without_charge` y `rejectionKind = resolved_without_charge`. Cero filas nuevas en `PAYMENT`, `LEDGER_ENTRY`, `ALLOCATION` y `WEBPAY_REFUND`; la `WEBPAY_REFUND` existente sigue igual (`failed`, 292); ninguna llamada al doble. Ámbito `owner` en 100.000 + 10.000 = **$110.000**.
+  - La consola muestra "Intento OC-2026-0010 cerrado sin cobro. Estado en Transbank: reembolso rechazado (código 292)". El propietario pasa a ver "Tu pago no se completó. No se hizo ningún cargo".
+  - Después, `soporte-1` recibe 404 en cualquier lectura o resolución de `OC-2026-0010`. Sin membresía, el pagador recibe el aviso de `resolve_without_charge` de F-13 con `OC-2026-0010`.
+
+#### TC-GC-CA70-03 · Carrera entre la vista previa y la ejecución
+
+- **CA:** CA-70, regla F-16 ("Si al ejecutar ya no se cumple D13") · **Tipo:** integración · **Prioridad:** 1
+- **Cuando y entonces:**
+  - (a) Entre la vista previa v2 de `resolve_without_charge` y su ejecución, `soporte-2` confirma el reverso con una referencia y motivo: el intento queda en `reversed` y la ejecución de `soporte-1` responde 404 `NOT_FOUND`; nada más cambia.
+  - (b) Si el intento sigue en `reversal_pending` pero deja de cumplir D13 (fixture que cambia el `response_code` guardado del reembolso a 310 entre la vista previa y la ejecución): 409 `PREVIEW_OUTDATED` con "Esta resolución no corresponde al estado actual del intento. Revisa la nueva vista previa"; nada escrito.
+
+#### TC-GC-CA70-04 · Reembolso rechazado con 310: no es un cobro ya devuelto
+
+- **CA:** CA-70, reglas F-16 y F-17 (D13, D7) · **Tipo:** integración · **Prioridad:** 1
+- **Dado:** el estado final de TC-GC-CA70-01.
+- **Cuando:** el doble responde al reembolso con el código 310; `soporte-1` pide `resolve_without_charge` (vista previa y ejecución) y después confirma el reverso con la referencia "ANUL-PREVIA-0010" (dato de prueba, obtenida de Transbank) y un motivo.
+- **Entonces:**
+  - `WEBPAY_REFUND.outcome = failed` con `response_code` 310; el intento sigue en `reversal_pending` con `reversalKind = refund_requested` y el propietario sigue viendo "Tu pago no se registró. Se solicitará la devolución del monto a Transbank".
+  - `withoutChargeAvailable = false`; `resolve_without_charge` responde 409 `PREVIEW_OUTDATED` con "Esta resolución no corresponde al estado actual del intento. Revisa la nueva vista previa", sin llamadas al doble y sin escribir nada.
+  - La vista previa de `confirm_reversal` no propone referencia y muestra la advertencia de D7. Con la referencia y el motivo, el intento pasa a `reversed`; el propietario ve "Tu pago fue anulado en Transbank. El reembolso a tu medio de pago depende de tu banco"; saldo $110.000.
+  - Falla si el 310 se trata como cobro ya devuelto: `reversalKind = already_returned`, el texto "Transbank ya devolvió el monto" o la consola sin la advertencia.
+
+#### TC-GC-CA70-05 · 292 sin las demás condiciones de D13
+
+- **CA:** CA-70, regla F-16 (D13, condición 2); ADR 0007, prueba 12 · **Tipo:** integración · **Prioridad:** 1
+- **Dado:** `OC-2026-0009` marcado para reverso como en TC-GC-CA68-03, con estado concluyente (`AUTHORIZED`): `WEBPAY_REFUND` de $11.000 con `source_gateway_call_id` no nulo.
+- **Cuando:** el doble responde al reembolso con 292 y `soporte-1` pide `resolve_without_charge`.
+- **Entonces:** `outcome = failed` con 292, `withoutChargeAvailable = false` y 409 `PREVIEW_OUTDATED` ("Esta resolución no corresponde…"); nada escrito. `confirm_reversal` sigue disponible, con la advertencia de D7.
+
+#### TC-GC-CA70-06 · Huella de `confirm_reversal`: llega el resultado del reembolso
+
+- **CA:** CA-70, regla A-7; ADR 0006, decisión 6 · **Tipo:** integración · **Prioridad:** 2
+- **Cuando:** `soporte-1` pide la vista previa de `confirm_reversal` con la `WEBPAY_REFUND` de TC-GC-CA70-01 aún en `pending` y, antes de confirmar, el doble responde 310.
+- **Entonces:** la ejecución responde 409 `PREVIEW_OUTDATED` con "El intento cambió desde la vista previa. Revisa la nueva vista previa antes de resolver" (cambió `refundOutcome`); nada escrito. **Supuesto (a validar):** `refundOutcome` está en la huella de `confirm_reversal` (ADR 0006; hallazgo H-30).
+
+### CA-71 · Monto del reembolso de un cobro con anulaciones previas (M-3)
+
+#### TC-GC-CA71-01 · Reembolso por el saldo anulable y 409 si cambia
+
+- **CA:** CA-71, regla F-16 (M-3) · **Tipo:** integración · **Prioridad:** 1
+- **Dado:** estado de CA-5; el 2026-11-25 `OC-2026-0011` por $110.000, autorizado por $11.000, en `in_review`; la comunidad anula $5.000 desde el portal de Transbank.
+- **Doble de Transbank:** vista previa v1, `PARTIALLY_NULLIFIED`, `amount` 11.000, `balance` 11.000 − 5.000 = 6.000; ejecución con v1, vista previa v2 y ejecución con v2, `balance` 6.000 − 1.000 = 5.000 (la comunidad anuló otros $1.000).
+- **Cuando:** el 2026-11-26 `soporte-1` pide v1, confirma con v1 y un motivo, pide v2 y la confirma con el motivo "Monto autorizado distinto del iniciado".
+- **Entonces:**
+  - v1: estado `PARTIALLY_NULLIFIED` y "Se pedirá reembolso: sí, por $6.000" (saldo anulable; no $11.000 ni $110.000).
+  - Ejecución con v1: 409 `PREVIEW_OUTDATED` con "El intento cambió desde la vista previa. Revisa la nueva vista previa antes de resolver" (cambió `refundToRequest` de $6.000 a $5.000); nada escrito.
+  - v2: "Se pedirá reembolso: sí, por $5.000". Ejecución con v2: `reversal_pending` con una `WEBPAY_REFUND` de **$5.000** (`source_gateway_call_id` = consulta de la ejecución con v2), `reversalKind = refund_requested`; saldo **$110.000**.
+  - Cuadre: anulaciones previas 5.000 + 1.000 = 6.000; reembolso 11.000 − 6.000 = 5.000; total devuelto 5.000 + 1.000 + 5.000 = **$11.000** = monto autorizado.
+  - Falla si se pide $11.000 (Transbank lo rechazaría con 311).
+
+#### TC-GC-CA71-02 · Resultado del reembolso y confirmación
+
+- **CA:** CA-71 · **Tipo:** integración · **Prioridad:** 1
+- **Cuando:** el doble responde al reembolso de $5.000 con una anulación (`type` `NULLIFIED`, `authorization_code` 615204, `nullified_amount` 5.000, `balance` 0) y `soporte-1` confirma el reverso con la referencia propuesta y un motivo.
+- **Entonces:** la consola propone 615204, sin advertencia; el intento pasa a `reversed` y el saldo sigue en **$110.000**. Regresión: si el doble recibiera un pedido de $11.000, respondería 311, el reembolso quedaría `failed` y la consola mostraría la advertencia de D7.
+
+#### TC-GC-CA71-03 · Saldo anulable anómalo
+
+- **CA:** CA-71, regla F-16; ADR 0007, decisión 8 ("Monto") · **Tipo:** integración · **Prioridad:** 2
+- **Cuando:** el doble responde `PARTIALLY_NULLIFIED` con `amount` 11.000 y (a) sin `balance`; (b) `balance` 0; (c) `balance` 12.000 (mayor que lo autorizado).
+- **Entonces:** **bloqueado por H-33.** La respuesta se trata como estado no concluyente (ADR 0007). **Supuesto (a validar):** dentro de los 7 días, 503 `PAYMENT_GATEWAY_UNAVAILABLE`, sin `WEBPAY_REFUND` y sin escribir nada. En `resolve_without_charge`, `PARTIALLY_NULLIFIED` responde siempre 422 `CHARGE_AUTHORIZED_IN_TRANSBANK`, con o sin `balance`.
+
+### CA-72 · Textos del pagador para un intento rechazado o cancelado (M-6, D15)
+
+#### TC-GC-CA72-01 · Rechazo del banco
+
+- **CA:** CA-72, regla F-17; ADR 0007, decisiones 4 y 6 · **Tipo:** integración y e2e (Maestro) · **Prioridad:** 2
+- **Cuando:** el 2026-11-25 `propietario-101` inicia `OC-2026-0012` por $110.000 y (a) vuelve con `token_ws` y el doble responde a "confirmar" con `response_code` distinto de 0 y estado `FAILED`; (b) en otra corrida no vuelve y la consulta de los 15 minutos informa `FAILED`.
+- **Entonces:** el intento pasa a `rejected` con `resolution` nula y `rejectionKind = transbank_rejected`; ningún pago; saldo **$110.000**; `lock_active` falso y un intento nuevo se acepta de inmediato, sin advertencia. La app muestra "Tu banco rechazó el pago. No se hizo ningún cargo".
+
+#### TC-GC-CA72-02 · Pago cancelado
+
+- **CA:** CA-72, regla F-17 · **Tipo:** integración y e2e (Maestro) · **Prioridad:** 2
+- **Cuando:** (a) el propietario inicia `OC-2026-0013` por $110.000 y cancela en el formulario (retorno con `TBK_TOKEN` igual al token del intento y sin `token_ws`); (b) `OC-2026-0007` de CA-66 (503 al iniciar); (c) un intento sin pago cuya consulta de los 15 minutos informa `INITIALIZED`.
+- **Entonces:** en (a) no hay llamada a Transbank (Transbank no exige confirmar). En los tres, el intento está en `abandoned` con `rejectionKind` y `reversalKind` nulos, la app muestra "Pago cancelado. No se hizo ningún cargo" y el saldo sigue en $110.000.
+
+#### TC-GC-CA72-03 · Contrato del detalle del intento del pagador y texto por estado
+
+- **CA:** CA-72, CA-65, CA-68, CA-70; regla F-17; arquitectura §4 · **Tipo:** integración (contrato) y e2e · **Prioridad:** 2
+- **Entonces:** `GET .../units/{unitId}/webpay-attempts/{attemptId}`, pedido por quien inició el intento, devuelve:
+
+  | Estado | `reversalKind` | `rejectionKind` | Texto de la app |
+  | --- | --- | --- | --- |
+  | `initiated` | nulo | nulo | "Tienes un pago en proceso" y "Número de orden {buy_order}. Te avisaremos el resultado" |
+  | `in_review` | nulo | nulo | "En revisión por ComVive" y "Te avisaremos cuando se resuelva. Número de orden {buy_order}" |
+  | `rejected` por Transbank | nulo | `transbank_rejected` | "Tu banco rechazó el pago. No se hizo ningún cargo" |
+  | `rejected` por Soporte (desde `in_review`, o desde `reversal_pending` con el 292) | nulo | `resolved_without_charge` | "Tu pago no se completó. No se hizo ningún cargo" |
+  | `abandoned` | nulo | nulo | "Pago cancelado. No se hizo ningún cargo" |
+  | `reversal_pending` con `WEBPAY_REFUND` | `refund_requested` | nulo | "Tu pago no se registró. Se solicitará la devolución del monto a Transbank" |
+  | `reversal_pending` sin `WEBPAY_REFUND` | `already_returned` | nulo | "Tu pago no se registró. Transbank ya devolvió el monto" |
+  | `reversed` | nulo | nulo | "Tu pago fue anulado en Transbank. El reembolso a tu medio de pago depende de tu banco" |
+  | `confirmed` o `resolved_paid` | nulo | nulo | El pago, "Pagado por ti" |
+
+  - Ningún texto termina en punto ni tiene variantes (F-17). `OC-2026-0006` de CA-65 devuelve `resolved_without_charge`; `OC-2026-0012`, `transbank_rejected`.
+  - A cualquier otra persona el detalle le responde 404 (ISO-GC-ambito-3 y 5).
+
+## Aislamiento (CA-23, CA-42, CA-65 a CA-71 y regla 4 de `CLAUDE.md`)
 
 Patrón de `docs/qa/plan-de-pruebas.md` §4, con las dos vías (guard y capa de datos). Después de cada caso se verifica en la base de datos que la Comunidad B, la unidad ajena o el ámbito ajeno no cambiaron (conteo y suma de movimientos, pagos, imputaciones, intentos y auditoría). Los nombres de acción son lógicos; las rutas son las de `docs/arquitectura.md` §3 y §4.
 
@@ -1530,7 +2009,7 @@ Lo que ve un residente se decide por el ámbito de cada movimiento, nunca por fe
 
 ### De plataforma (EX-1, CA-41, CA-42, CA-54 y CA-55)
 
-Además de las pruebas de cada endpoint (arquitectura §3, pruebas de plataforma 1 a 10).
+Además de las pruebas de cada endpoint (arquitectura §3, pruebas de plataforma 1 a 13; ADR 0007, pruebas 5, 6, 11 y 12).
 
 | ID | CA | Actor | Acción | Resultado esperado |
 | --- | --- | --- | --- | --- |
@@ -1543,10 +2022,31 @@ Además de las pruebas de cada endpoint (arquitectura §3, pruebas de plataforma
 | ISO-GC-plataforma-7 | M-4 | `soporte-1` y `operaciones-1` | Una sesión de plataforma en cualquier ruta `/communities/...`; cada rol de plataforma en los endpoints del otro | 404 |
 | ISO-GC-plataforma-8 | EX-1 | `soporte-1` | Petición después de revocar o vencer su `PLATFORM_ROLE_GRANT` | 404 en la petición siguiente. **Supuesto (a validar):** el mismo 404 que una membresía revocada |
 | ISO-GC-plataforma-9 | EX-1 | Rol de base de datos `comvive_platform` | `SELECT` directo sobre tablas base (`PAYMENT`, `LEDGER_ENTRY`, `PERSON`) | Error de permisos de PostgreSQL; solo puede leer la vista `platform_webpay_review` |
+| ISO-GC-plataforma-10 | CA-65, CA-68; ADR 0007, prueba 6 | Sistema y `soporte-1` | Con dos comercios en el doble (`MC-A-1` y `MC-B-1`), alternar operaciones de A y de B: inicio en B y luego en A; retorno de B y luego de A; una corrida de la consulta de 15 minutos con intentos de A y de B; `mark_for_reversal` (consulta y reembolso) y `resolve_without_charge` de un intento de A justo después de una operación de B. Con la rotación de A (`MC-A-1` vence el 2026-11-30, `MC-A-2` vigente desde el 2026-12-01), reembolsar el 2026-12-03 un intento de A iniciado el 2026-11-25 | Toda llamada del doble sobre un intento de A lleva `MC-A-1` y el secreto de A; nunca `MC-B-1`, y al revés. Tras la rotación, el intento iniciado con `MC-A-1` consulta y reembolsa con `MC-A-1` (`WEBPAY_ATTEMPT.merchant_id`), y los intentos nuevos usan `MC-A-2`. Ningún registro, evento de Sentry, fila de `WEBPAY_GATEWAY_CALL` ni respuesta contiene el secreto ni el token (búsqueda literal de los dos valores) |
+| ISO-GC-plataforma-11 | CA-65; arquitectura §3, prueba 11 | `soporte-1` | `resolve_without_charge` de `OC-2026-0006` (A, `in_review`) con otro intento de A y uno de B también en `in_review`: (a) doble en `INITIALIZED`; (b) doble en `AUTHORIZED`; (c) camino de D13 sobre `OC-2026-0010`; (d) la petición agrega en el cuerpo un `communityId` de B | La consulta usa `MC-A-1` y el token de ese intento, y ninguna otra. (a) Solo cambia la fila del intento (estado, `resolution`, quién, cuándo) y se insertan `AUDIT_LOG` y `WEBPAY_GATEWAY_CALL` con `community_id` de A; el otro intento de A y todo B quedan iguales; cero `PAYMENT`, `LEDGER_ENTRY`, `ALLOCATION` y `WEBPAY_REFUND` en cualquier comunidad. (b) 422 y solo `AUDIT_LOG` y `WEBPAY_GATEWAY_CALL` de A. (c) Cero llamadas al doble y la misma cota de escritura. (d) La comunidad sale del registro del intento, nunca de la petición: **Supuesto (a validar):** 400 `BAD_REQUEST` porque el contrato no admite el campo; en ningún caso se escribe en B |
+| ISO-GC-plataforma-12 | CA-68, CA-70, CA-71; arquitectura §3, pruebas 4 y 13 | `soporte-1` y la tarea del reembolso | `mark_for_reversal` de un intento de A en cada variante (`AUTHORIZED`, `PARTIALLY_NULLIFIED`, `NULLIFIED`, sin estado concluyente) y una corrida de la tarea de reembolsos con solicitudes de A y de B en la cola | Consulta y reembolso con el comercio y el token de cada intento. Filas insertadas o cambiadas solo de la comunidad del intento (`WEBPAY_ATTEMPT`, `WEBPAY_REFUND` si corresponde, `WEBPAY_GATEWAY_CALL`, `AUDIT_LOG`, `IDEMPOTENCY_KEY`); cero `PAYMENT`, `LEDGER_ENTRY` y `ALLOCATION`; B intacta. El monto pedido nunca supera lo autorizado de ese intento cuando hubo respuesta concluyente (PROP-GC-36) |
+
+### Ruta de retorno de Transbank, sin membresía (arquitectura §2; ADR 0007, decisión 4 y prueba 5)
+
+Es la única ruta de negocio sin sesión ni membresía (`GET` y `POST /gateway/webpay/communities/{communityId}/webpay-attempts/{attemptId}/return`). Su guard propio fija la comunidad de la ruta con actor `system`, busca el intento por comunidad y compara el token en tiempo constante. En cada caso se verifica el registro del doble (llamadas a Transbank) y el conteo de filas de **todas** las tablas antes y después.
+
+| ID | Origen | Actor | Acción | Resultado esperado |
+| --- | --- | --- | --- | --- |
+| ISO-GC-gateway-1 | ADR 0007, prueba 5 | Navegador sin sesión | `GET` y `POST .../communities/A/webpay-attempts/{id de un intento de B en initiated}/return` con el `token_ws` correcto de ese intento de B; y al revés, `.../communities/B/...` con un intento de A | 302 al resultado neutro, idéntico (código y `Location`) al de un `attemptId` inexistente. Cero llamadas al doble (ni `MC-A-1` ni `MC-B-1`). Cero filas nuevas o cambiadas en todas las tablas: el intento de B sigue en `initiated` con `lock_active` verdadero, sin `PAYMENT`, `LEDGER_ENTRY` ni `WEBPAY_GATEWAY_CALL`, y sin `AUDIT_LOG` (**Supuesto (a validar):** "no escribe nada" incluye la auditoría; hallazgo H-32). La respuesta no trae montos, estado ni datos de la unidad. Después, el retorno correcto por la ruta de B confirma el intento de B normalmente |
+| ISO-GC-gateway-2 | ADR 0007, decisión 4 | Navegador sin sesión | Retorno de un intento A1 de A en `initiated` con (a) el token de otro intento A2 de A; (b) el token de un intento de B; (c) el token de A1 con un carácter cambiado; (d) un pago abortado con un `TBK_TOKEN` ajeno; (e) una expiración sin token (`TBK_ORDEN_COMPRA` y `TBK_ID_SESION`) | (a) a (d): el mismo 302 neutro, cero llamadas al doble y cero filas; A1 sigue en `initiated` (en (d) no pasa a `abandoned`) y A2 no cambia. (e) **Bloqueado por H-32.** **Supuesto (a validar):** sin token el guard no puede verificar el intento, así que no escribe nada y la consulta de los 15 minutos lo deja en `abandoned`. Prueba unitaria del guard: la comparación usa una función de tiempo constante y no corta en el primer carácter distinto |
+| ISO-GC-gateway-3 | Arquitectura §2; ADR 0007, decisión 4 | Navegador sin sesión y con sesión ajena | (a) Retorno correcto de un intento de A (token correcto, el doble confirma `AUTHORIZED` por el monto iniciado), **sin** cookie ni `Authorization`; (b) el mismo retorno con la sesión de `admin-B` adjunta; (c) la app pide el detalle del intento por `/communities/A/units/{unidad}/webpay-attempts/{id}` sin sesión, con la sesión de `admin-B` y con la de quien lo inició; (d) `GET .../communities/A/webpay-attempts/{id}` sin `/return` en el módulo `webpay-gateway` | (a) `confirmed`, un `PAYMENT` por ámbito en A con auditoría `actor_type = system`, y 302 al enlace de la app solo con el id del intento. (b) Idéntico a (a): la sesión se ignora y no cambia la comunidad. (c) 401, 404 y 2xx. (d) 404 (**Supuesto (a validar):** el módulo no expone otras rutas) |
+
+### De Operaciones ComVive (CA-69; arquitectura §3, prueba 12)
+
+| ID | CA | Actor | Acción | Resultado esperado |
+| --- | --- | --- | --- | --- |
+| ISO-GC-operaciones-1 | CA-69, CA-43 | `operaciones-1` | `POST /platform/communities/A/admin-memberships/{membresía admin de admin-B en B}/revoke` con motivo; y al revés, la ruta de B con la membresía de `admin-A` en A; además, la ruta de A con la membresía de comité de Rosa Díaz | 404 `NOT_FOUND`, con el mismo cuerpo que un `membershipId` inexistente (**Supuesto (a validar):** la capa de datos filtra por la comunidad de la ruta y por rol `admin`; la spec no fija la respuesta, hallazgo H-41). No se evalúa `LAST_ADMIN` (la respuesta no revela cuántos administradores tiene B). Membresías, sesiones y suscripciones de B sin cambios; un registro en `AUDIT_LOG` con la comunidad de la ruta y el código `NOT_FOUND`; ninguna fila en `IDEMPOTENCY_KEY` |
+| ISO-GC-operaciones-2 | CA-43 | `operaciones-1` | (a) Otorgar `admin` por la ruta de A con un `communityId` de B en el cuerpo; (b) otorgar `admin` de A a Felipe Rojas (`admin-B`); (c) otorgar `admin` de A con el RUT de una persona que solo existe en B y, en otra petición, con un RUT inexistente | (a) 404 y nada escrito en A ni en B (patrón ISO-3 del plan). (b) Una membresía `admin` nueva solo en A (`community_id` A, `granted_via = platform`); las membresías de B no cambian; la respuesta y la consola no muestran nombre ni datos de B. (c) Las dos respuestas son iguales en forma: no revelan que la persona existe ni en qué comunidad (ISO-7) |
+| ISO-GC-operaciones-3 | CA-69 (S-68) | `operaciones-1` y `operaciones-2` | Carolina Lagos administra A (única) y B (con `admin-B`). (a) Revocarla en A; (b) revocarla en B; (c) con A con dos administradores, una revocación en A se detiene con una barrera **después** de tomar el bloqueo de la fila de A y, mientras tanto, se revoca o se otorga un administrador en B | (a) 409 `LAST_ADMIN`: los administradores de B no cuentan. (b) 2xx: queda `admin-B` en B y su membresía de A sigue vigente. (c) La operación en B termina sin esperar el bloqueo de A (dentro de 2 s, con la transacción de A aún abierta; **Supuesto (a validar):** umbral propio) y la de A termina después con su resultado normal. Efecto lateral a verificar: la revocación en B revoca todas las sesiones de la persona, también las que usa en A (arquitectura §3, supuesto "todas las sesiones"; hallazgo H-42); su membresía y sus datos en A no cambian |
 
 ## Permisos por rol (CA-24 y matriz de "Usuarios y permisos")
 
-Una prueba por celda, con ID `PERM-GC-<rol>-<acción>`. Celdas: **2xx** permitido; **403** el actor ve el recurso pero su rol no permite la acción; **404** el actor no ve el recurso; **401** sin sesión. En cada 403 y 404 se verifica que no hubo escritura y que el cuerpo es el neutro.
+Una prueba por celda, con ID `PERM-GC-<rol>-<acción>`. Celdas: **2xx** permitido; **403** el actor ve el recurso pero su rol no permite la acción; **404** el actor no ve el recurso; **401** sin sesión; **302** redirección de la ruta de retorno de Transbank, que no usa sesión (nota (d)). En cada 403 y 404 se verifica que no hubo escritura y que el cuerpo es el neutro.
 
 | Acción (recurso) | Admin | Comité | Propietario | Arrendatario | Conserje | Ex residente | Soporte | Operaciones | Sin sesión |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -1561,7 +2061,7 @@ Una prueba por celda, con ID `PERM-GC-<rol>-<acción>`. Celdas: **2xx** permitid
 | Alta, término, venta o cancelación de arriendo programado (`occupancy.write`) | 2xx | 403 (ve el historial) | 404 (b) | 404 (b) | 404 | 404 | 404 | 404 | 401 |
 | Otorgar o revocar comité (`committee_role.grant`) | 2xx | 403 | 404 | 404 | 404 | 404 | 404 | 404 | 401 |
 | Otorgar o revocar administrador por la ruta de comunidad | 403 | 403 | 404 | 404 | 404 | 404 | 404 | 404 | 401 |
-| Otorgar o revocar administrador por `/platform/...` (`platform.admin_role.grant`) | 404 | 404 | 404 | 404 | 404 | 404 | 404 | 2xx | 401 |
+| Otorgar o revocar administrador por `/platform/...` (`platform.admin_role.grant`) | 404 | 404 | 404 | 404 | 404 | 404 | 404 | 2xx (revocar al último administrador: 409 `LAST_ADMIN`, CA-69) | 401 |
 | Leer o resolver tareas del administrador (`admin-tasks`, M-7) | 2xx | 404 | 404 | 404 | 404 | 404 | 404 | 404 | 401 |
 | Leer cargos y saldos de cualquier unidad | 2xx + auditoría | 2xx + auditoría | 404 (ajena) | 404 (ajena) | 404 | 404 | 404 | 404 | 401 |
 | Leer su ámbito `owner` (propietario) o su ámbito (arrendatario) | n/a | n/a | 2xx sin auditoría | 2xx sin auditoría | 404 | 404 | 404 | 404 | 401 |
@@ -1575,10 +2075,12 @@ Una prueba por celda, con ID `PERM-GC-<rol>-<acción>`. Celdas: **2xx** permitid
 | Descargar aviso legal | 2xx | 2xx | 2xx (suyo) | 404 | 404 | 404 | 404 | 404 | 401 |
 | Descargar comprobante de cobro del arrendatario (G-7) | 2xx | 2xx | 404 | 2xx (suyo) | 404 | 404 (ex arrendatario incluido) | 404 | 404 | 401 |
 | Pagar por Webpay (`payment.pay_online`) | 403 | 403 | 2xx `owner`, ámbito del arrendatario vigente o ambos; 404 ajena | 2xx su ámbito; 404 `owner` | 404 | 404 | 404 | 404 | 401 |
+| Retorno de Transbank (`GET` y `POST /gateway/webpay/communities/{communityId}/webpay-attempts/{attemptId}/return`) | 302 (d) | 302 (d) | 302 (d) | 302 (d) | 302 (d) | 302 (d) | 302 (d) | 302 (d) | **302 (d)** |
 
 - **(a)** El residente no ve la configuración de cobro, el borrador, el recurso periodo ni el recurso gasto o egreso del fondo; solo su aviso o comprobante, sus movimientos y el resumen de gastos. Por eso recibe 404 y no 403 (spec, "Qué recursos ve cada rol", S-53; H-20 resuelto).
 - **(b)** El historial de ocupaciones es `owner_roster.read`, que el residente no tiene.
-- **(c)** Solo intentos en `in_review` o `reversal_pending`; en otro estado, 404 (ISO-GC-plataforma-3).
+- **(c)** Solo intentos en `in_review` o `reversal_pending`; en otro estado, 404 (ISO-GC-plataforma-3). `resolve_without_charge` sobre `reversal_pending` solo con `withoutChargeAvailable` verdadero (D13); si no, 409 (TC-GC-CA70-04).
+- **(d) Ruta de retorno (fila "Sin sesión", B-2 de la revisión 4):** es la única celda de la columna "Sin sesión" que no responde 401. La ruta no usa sesión ni membresía: cualquier navegador, con o sin sesión y con la sesión de cualquier rol, recibe un 302. Con el intento de esa comunidad y su token, el resultado sale de Transbank y la redirección lleva solo el id del intento; con un intento de otra comunidad, un id inexistente o un token que no coincide, el mismo 302 neutro, sin llamar a Transbank ni escribir nada. La sesión adjunta nunca cambia el resultado (ISO-GC-gateway-1 a 3). Casos: `PERM-GC-sin-sesion-retorno` (302 y `confirmed` con el token correcto) y `PERM-GC-<rol>-retorno` (mismo resultado que sin sesión).
 - **Comprobante del arrendatario (G-7, S-53):** lo descargan el arrendatario titular, el administrador y el comité; el propietario recibe 404 (ve los mismos datos en "Deuda del arrendatario") y el ex arrendatario también (S-14). Casos: TC-GC-CA47-03 y PERM-GC-propietario-comprobante (404), PERM-GC-admin-comprobante y PERM-GC-comite-comprobante (2xx).
 - **Cambios respecto de la versión anterior (M-4):** el conserje recibe 404 en todo el módulo (antes 403); el propietario y el arrendatario reciben 404 en las acciones administrativas sobre recursos que no ven (antes 403); el arrendatario recibe 404 al descargar el aviso legal (antes 2xx); el administrador y el comité reciben 403 al pagar por Webpay, porque ven la unidad (antes era un supuesto).
 
@@ -1592,13 +2094,21 @@ Una prueba por celda, con ID `PERM-GC-<rol>-<acción>`. Celdas: **2xx** permitid
 | PERM-GC-orden-4 | `arrendatario-102` inicia Webpay sobre `owner` mientras O-1 está bloqueado | 404, no 409 `PAYMENT_IN_PROGRESS` | La visibilidad se valida antes que el estado |
 | PERM-GC-orden-5 | `comite-A` emite el borrador de B | 404, no 403 | Sin membresía en B no ve el recurso |
 | PERM-GC-orden-6 | `admin-A` emite otra vez `2026-10` con otra clave | 409 `PERIOD_ALREADY_ISSUED` | Tiene el permiso; lo que falla es el estado |
+| PERM-GC-orden-7 | `arrendatario-102` inicia Webpay sobre `owner` en una comunidad sin comercio vigente | 404, no 422 `ONLINE_PAYMENT_NOT_AVAILABLE` | La visibilidad del ámbito va antes que la disponibilidad (TC-GC-CA66-04) |
+| PERM-GC-orden-8 | `comite-A` registra un pago con JSON mal formado | 403, no 400 `BAD_REQUEST` | El 400 va después del permiso (S-70; TC-GC-CB-33) |
+| PERM-GC-orden-9 | `operaciones-1` revoca sin motivo al único administrador | 422 `REASON_REQUIRED`, no 409 `LAST_ADMIN` | Orden de la consola de Operaciones (S-63, CA-69) |
+| PERM-GC-orden-10 | `admin-A` llama a `POST /platform/communities/A/admin-memberships/{id}/revoke` | 404, no 403 ni 409 | Una sesión de comunidad no ve rutas de plataforma |
 
 ### Auditoría
 
 - Cada escritura deja exactamente un registro de auditoría.
 - Cada lectura de deudas de terceros o RUT completo por el administrador o el comité deja un registro por petición.
 - La lectura del propietario sobre el ámbito del arrendatario deja un registro por petición (S-44; TC-GC-CA60-01). La consulta del residente sobre su propio ámbito no deja registro.
-- Toda petición de Soporte ComVive, lecturas incluidas, deja un registro con `actor_type = platform`; si la auditoría falla, la petición falla (arquitectura §3).
+- Toda petición de Soporte ComVive y de Operaciones ComVive, lecturas y rechazos incluidos (400, 404, 409, 422 y 503), deja **exactamente un** registro con `actor_type = platform` y, en un rechazo, el código de la respuesta; si la auditoría falla, la petición falla (arquitectura §3; ADR 0006, decisión 8; D12). El registro del rechazo va en una transacción propia y no deja fila en `IDEMPOTENCY_KEY`.
+- Un rechazo en una ruta `/communities/...` no escribe datos de negocio ni auditoría de escritura (D12). **Supuesto (a validar):** la spec solo exige auditar los rechazos de plataforma.
+- Cada llamada a Transbank deja su fila en `WEBPAY_GATEWAY_CALL` con su origen, también si la resolución se rechaza; ninguna contiene el token, la clave del comercio ni `card_detail` (ADR 0007, decisión 9).
+- La ruta de retorno con un intento ajeno o un token que no coincide no escribe nada (ISO-GC-gateway-1 y 2; hallazgo H-32). El retorno válido audita con `actor_type = system`.
+- La alerta a Operaciones por un administrador sin primer ingreso (S-72) y la revocación de un administrador quedan en auditoría (TC-GC-CA69-02 y 05).
 - Otorgamientos y revocaciones de roles, alertas, tareas y decisiones de "Comité que deja de ser propietario", y avisos a pagadores sin membresía (`notification.sent_without_membership`) dejan su registro.
 
 ## Casos borde
@@ -1834,15 +2344,76 @@ Una prueba por celda, con ID `PERM-GC-<rol>-<acción>`. Celdas: **2xx** permitid
 - **Pasos:** emitir `2026-10` de A; agregar una bodega con `aliquot_e6` 0; registrar la corrección de CA-13.
 - **Resultado esperado:** las notas de crédito son las de TC-GC-CA13-01; la bodega no aparece en la corrección porque no está en la foto de `2026-10`.
 
+### Webpay, idempotencia y errores (spec rev. 7)
+
+#### TC-GC-CB-32 · Rechazos reevaluados con la misma clave y sin datos de negocio (decisión del líder D12)
+
+- **Origen:** regla A-3.4 (D12), "Validaciones de la consola de Operaciones ComVive"; ADR 0003, decisión 6 · **Tipo:** integración · **Prioridad:** 1
+- **Pasos y resultado esperado:** en cada fila, el primer envío con la clave K se rechaza y el reenvío con **la misma K** se vuelve a evaluar:
+
+  | Operación | Primer envío con K | Reenvío con K | Resultado del reenvío |
+  | --- | --- | --- | --- |
+  | Emisión de `2026-10` (TC-GC-CA39-01) | 409 `PREVIEW_OUTDATED` con v1 | Con el `previewHash` de v2 | Se emite con GOLD-A39: 1.010.000 + 50.500 = **$1.060.500**, sin `IDEMPOTENCY_KEY_REUSED` |
+  | Anulación del grupo G-1 (TC-GC-CA32-04 (a)) | 422 `REASON_REQUIRED` | Con motivo | Se anula: `owner` 162.500 + 100.000 = **$262.500** y O-1 100.000 + 162.500 = **$262.500** |
+  | Pago manual (CA-67) | 422 `PAYMENT_REFERENCE_REQUIRED` | Con la referencia | Se registra; saldo **$215.000** (TC-GC-CA67-04) |
+  | Cancelación de O-4 (TC-GC-CA61-01 (b)) | 422 `REASON_REQUIRED` | Con motivo | O-4 cancelada; `owner` sigue en $262.500 |
+  | Tarea de comité (TC-GC-CA57-03) | 422 `REASON_REQUIRED` | Con `revoke_committee` y motivo | Tarea cerrada y comité revocado |
+  | Resolución de Soporte (TC-GC-CA65-02) | 422 `REASON_REQUIRED` | Con motivo | `rejected` |
+  | Revocación de administrador (TC-GC-CA69-02) | 409 `LAST_ADMIN` | Mismo cuerpo, después de otorgar a AD2 | Revocación aplicada |
+  | Inicio de Webpay (TC-GC-CA66-03) | 503 `PAYMENT_GATEWAY_UNAVAILABLE` | Mismo cuerpo | Intento nuevo con otro `buy_order` |
+  | Cualquiera de las anteriores sin cambiar el estado ni el cuerpo | El rechazo | Mismo cuerpo | El mismo rechazo, recalculado (no leído de la clave) |
+
+  - Después de cada primer envío: cero filas de K en `IDEMPOTENCY_KEY` y cero filas nuevas o cambiadas en las tablas de negocio de "Nada escrito" (Convenciones), salvo el intento `abandoned` del 503. En las rutas `/platform/...`, exactamente un registro en `AUDIT_LOG` con el código del rechazo.
+  - Después del reenvío aceptado: una fila de K; un tercer envío con K y el mismo cuerpo devuelve la respuesta guardada; con otro cuerpo, 422 `IDEMPOTENCY_KEY_REUSED` (TC-GC-CA31-03 sigue vigente: ahí K2 tenía un éxito guardado).
+
+#### TC-GC-CB-33 · 400 `BAD_REQUEST` y campos con código propio (S-70)
+
+- **Origen:** "Respuestas de error" (400; S-70; ADR-0003-S1) · **Tipo:** integración · **Prioridad:** 2
+- **Pasos y resultado esperado:**
+  - (a) `admin-A` registra un pago manual con un cuerpo JSON mal formado: 400 `BAD_REQUEST` con "No pudimos procesar la solicitud. Actualiza la aplicación e intenta de nuevo"; nada escrito; ninguna fila de la clave en `IDEMPOTENCY_KEY`. El reenvío con la misma clave y el cuerpo correcto se registra.
+  - (b) Campos sin código propio con formato inválido: `paid_on` "2026-13-45" y medio de pago "bitcoin": 400 `BAD_REQUEST` (**Supuesto (a validar):** `paid_on` y el medio no están en la lista de campos con código propio de S-70).
+  - (c) Campos con código propio, aunque falten, vengan vacíos o tengan otro tipo: monto "100.000" (texto) o 100,5, 422 `INVALID_AMOUNT`; referencia numérica, 422 `PAYMENT_REFERENCE_REQUIRED`; motivo ausente en una anulación, 422 `REASON_REQUIRED`; `allocations` nulo, 422 `SCOPE_REQUIRED`; RUT "12345678" sin dígito verificador al registrar una ocupación, 422 `INVALID_RUT`; `expectedTotalClp` "abc" al iniciar Webpay, 422 `INVALID_AMOUNT` (**Supuesto (a validar):** es un campo de monto, ADR-0003-S1).
+  - (d) Orden: sin sesión, 401; `propietario-101` con JSON mal formado sobre el Depto 102, 404; `comite-A` con JSON mal formado al registrar un pago, 403 (PERM-GC-orden-8); `admin-A` con JSON mal formado al emitir `2026-10` ya emitido con otra clave, 400 y no 409 `PERIOD_ALREADY_ISSUED` (**Supuesto (a validar):** la spec pone el 400 "antes de las reglas de negocio" y no dice si va antes o después del estado; hallazgo H-34).
+  - (e) `soporte-1` con JSON mal formado en `resolution`: 400 y un registro en `AUDIT_LOG` con el código `BAD_REQUEST`.
+
+#### TC-GC-CB-34 · Reembolso rechazado con 284 por superar los 90 días
+
+- **Origen:** caso borde de la spec ("Intento marcado para reverso más de 90 días después de la venta"; menor 3 de la revisión 4; F-16; P-55) · **Tipo:** integración · **Prioridad:** 1
+- **Dado (dato de prueba):** estado de CA-5; el 2026-11-25 `propietario-101` inicia `OC-2026-0014` por $110.000, el doble autoriza $11.000 y el intento pasa a `in_review` (`review_due_on` 2026-12-02); la alerta de plazo vencido del 2026-12-03 queda desatendida. Última respuesta guardada: `AUTHORIZED`, `amount` 11.000 (consulta diaria del 2026-12-02).
+- **Pasos:** el 2027-02-24 (día 91 desde la venta: 5 + 31 + 31 + 24 = 91) `soporte-1` marca el intento para reverso con motivo; el doble responde al reembolso con el código 284; después `soporte-1` confirma el reverso con la referencia que acordó fuera de ComVive (dato "DEV-MANUAL-0014") y un motivo.
+- **Resultado esperado:**
+  - La vista previa no llama al doble: `transbankStatus` `AUTHORIZED`, `transbankStatusSource = last_stored`, "Se pedirá reembolso: sí, por $11.000" (total autorizado de la respuesta guardada).
+  - La ejecución crea una `WEBPAY_REFUND` de $11.000 con `source_gateway_call_id` = la consulta guardada (no nulo). El reembolso queda `failed` con `response_code` 284; el intento sigue en `reversal_pending` con `reversalKind = refund_requested`; el propietario ve "Tu pago no se registró. Se solicitará la devolución del monto a Transbank".
+  - `withoutChargeAvailable = false` y `resolve_without_charge` responde 409 `PREVIEW_OUTDATED` ("Esta resolución no corresponde…").
+  - La vista previa de `confirm_reversal` no propone referencia y muestra la advertencia "Transbank no confirmó la devolución de este intento. Confirma el reverso solo con una referencia que obtuviste directamente de Transbank". Con la referencia y el motivo, `reversed`; el propietario ve "Tu pago fue anulado en Transbank. El reembolso a tu medio de pago depende de tu banco".
+  - Ningún `PAYMENT` ni movimiento; saldo **$110.000**. ComVive no bloquea por fecha antes de pedir el reembolso: el 284 lo decide Transbank (**Supuesto (a validar):** la spec no pide una validación previa de los 90 días).
+
+#### TC-GC-CB-35 · Reenvío del inicio de Webpay mientras el primero espera a Transbank
+
+- **Origen:** ADR 0003, decisión 6, y ADR-0003-S2; ADR 0007, decisión 3 · **Tipo:** integración · **Prioridad:** 2
+- **Pasos:** `propietario-101` inicia un pago de $110.000 con la clave K-35 y el doble demora 5 segundos en responder a "crear"; durante la espera llega otro envío con K-35 y el mismo cuerpo; después del primero, otro envío con K-35.
+- **Resultado esperado:** el envío durante la espera responde 409 `IDEMPOTENCY_KEY_IN_PROGRESS` con "Tu pago anterior aún se está procesando. Espera unos segundos e intenta de nuevo", sin intento nuevo ni segunda llamada a "crear". El envío posterior devuelve la respuesta original. Si el primero termina en 503, el envío posterior crea un intento nuevo (TC-GC-CA66-03). **Supuesto (a validar):** código y texto de ADR-0003-S2, pendientes de la tabla de errores de la spec (ajuste en curso del analista). En las demás escrituras, un envío paralelo con la misma clave espera y recibe la respuesta guardada, no este 409.
+
+#### TC-GC-CB-36 · Confirmación Webpay que cruza la medianoche (flag activo)
+
+- **Origen:** caso borde de la spec ("Confirmación Webpay que cruza la medianoche"); regla F-1 (rev. 5); ADR 0007, decisión 4 · **Tipo:** integración · **Prioridad:** 1
+- **Dado:** estado de CA-5 (Depto 101, $110.000 vencidos el 2026-11-11) con el flag y las tasas por defecto; borrador vigente `2026-11`.
+- **Pasos:** el 2026-11-30 a las 23:58 (hora de Chile) `propietario-101` inicia un pago de $110.000; el doble autoriza con `transaction_date` 2026-11-30 23:59:30 hora de Chile (2026-12-01 02:59:30 UTC); el retorno se procesa el 2026-12-01 a las 00:00:20; después se emite `2026-11` el 2026-12-01.
+- **Resultado esperado:**
+  - `paid_on` 2026-11-30 (fecha de autorización en hora de Chile), no 2026-12-01 (fecha del registro ni fecha UTC); `recorded_at` 2026-12-01 00:00:20.
+  - Imputación al capital vencido: ordinario $100.000 y fondo $10.000, con fecha efectiva máx(2026-11-30, 2026-11-11) = 2026-11-30.
+  - Interés de la emisión: mora del 2026-11-12 al 2026-11-29 (18 días; el 2026-11-30 ya no cuenta): piso(110.000 × 18 × 1.200 / 3.650.000) = piso(2.376.000.000 / 3.650.000) = piso(650,9589…) = **$650**. Falla si da $687 (19 días, `paid_on` 2026-12-01, como TC-GC-CA6-01).
+
 ## Propiedades (fast-check)
 
-Generadores comunes, con los rangos vigentes de la spec rev. 4:
+Generadores comunes, con los rangos vigentes de la spec rev. 7:
 
 - Montos y totales como `bigint` de 0 a $9.999.999.999 (tope de B-6). Los montos sobre el tope se generan aparte, solo para PROP-GC-32.
 - Pesos de 0 a 1.000.000 (`aliquot_e6`) o de 0 a 1.000 (partes iguales y pesos relativos), al menos uno mayor que 0; de 1 a 50 unidades con `sort_order` únicos y no consecutivos; permutaciones del orden de entrada. No se generan porcentajes que sumen 100.
 - Porcentaje del fondo de 500 a 5000 pb (D-2). Antes llegaba a 10.000 pb.
 - Fechas del 2026-01-01 al 2028-12-31 (incluye el año bisiesto 2028); tasas del reglamento de 0 a 3000 pb y CMF de 1000 a 6000 pb.
 - Secuencias de operaciones (modelo): emisiones, pagos manuales de uno o dos ámbitos, pagos Webpay, anulaciones de grupos, notas de crédito, correcciones, ingresos y términos de ocupación, con `paid_on` ≤ fecha de registro.
+- Webpay (spec rev. 7): respuestas del doble de Transbank (estado, `amount`, anulaciones previas que dejan `balance` entre $1 y `amount` − 1, sin respuesta, códigos de reembolso 0, 16, 284, 292, 310 y 311), con y sin respuesta concluyente pasados los 7 días; peticiones con y sin motivo, con claves repetidas y con cuerpos corregidos; intercalados concurrentes de resoluciones, otorgamientos y revocaciones de administradores en varias comunidades.
 
 | ID | Propiedad | Expresión | CA |
 | --- | --- | --- | --- |
@@ -1880,6 +2451,12 @@ Generadores comunes, con los rangos vigentes de la spec rev. 4:
 | PROP-GC-33 | `paid_on` heredado en el traspaso | para cualquier secuencia con términos de ocupación, cada crédito de traspaso de saldo a favor tiene el `paid_on` de su crédito de origen (el del pago, o el de F-11 si es una nota de crédito), dividido por crédito de origen; sus imputaciones y fechas efectivas son las mismas que tendría el crédito de origen imputado en `owner` | CA-35, CA-36, CA-54, CB-31 |
 | PROP-GC-34 | Correcciones sin efecto no escriben | una corrección de gasto o de egreso del fondo que no cambia el monto vigente (ni, en gastos, cuenta, base, conjunto o subcategoría) responde 422 `CORRECTION_WITHOUT_CHANGE` y no inserta filas; para cualquier secuencia de correcciones de un egreso, egreso original + Σ correcciones = último monto correcto, y saldo del fondo = recargos + intereses + multas imputados − egresos − correcciones | CA-33, CA-62 |
 | PROP-GC-32 | Rangos de entrada | monto > $9.999.999.999, monto ≤ 0, fondo < 500 pb o > 5000 pb se rechazan con su 422 y sin escritura | CB-06, CB-10 |
+| PROP-GC-35 | Los rechazos no escriben y la clave guarda solo éxitos (D12) | para cualquier secuencia de peticiones válidas e inválidas con claves repetidas: toda respuesta 4xx o 503 deja intactas las tablas de negocio (salvo el intento `abandoned` del 503 al iniciar) y no deja fila en `IDEMPOTENCY_KEY`; una clave tiene fila si y solo si su petición respondió 2xx; con fila, el mismo cuerpo devuelve la misma respuesta y otro cuerpo responde `IDEMPOTENCY_KEY_REUSED`; sin fila, la petición se evalúa como nueva | CA-66, CA-67, CA-69, CB-32 |
+| PROP-GC-36 | Reembolso acotado (M-3) | con autorizado `A` y anulaciones previas que suman `N` < `A`: monto pedido = `A − N` (= `balance`) si `N` > 0 y `A` si `N` = 0; sin respuesta concluyente pasados los 7 días, el monto iniciado; con respuesta concluyente, `N` + reembolso = `A`; a lo más una `WEBPAY_REFUND` por intento; ninguna resolución de reverso o sin cobro crea `PAYMENT`, `LEDGER_ENTRY` ni `ALLOCATION` | CA-41, CA-55, CA-68, CA-70, CA-71 |
+| PROP-GC-37 | Máquina de estados de `WEBPAY_ATTEMPT` | para cualquier secuencia de retornos, consultas y resoluciones (también concurrentes): solo ocurren las transiciones de ADR 0007, decisión 5; `reversal_pending` → `rejected` solo con `WEBPAY_REFUND` `failed`, `response_code` 292 y `source_gateway_call_id` nulo; los estados finales no cambian; `lock_active` es verdadero si y solo si el intento está en `initiated`; solo `confirmed` y `resolved_paid` crean pagos | CA-55, CA-65, CA-68, CA-70 |
+| PROP-GC-38 | Texto del pagador determinado | `reversalKind` no es nulo si y solo si el estado es `reversal_pending` (`refund_requested` si y solo si existe `WEBPAY_REFUND`); `rejectionKind` no es nulo si y solo si el estado es `rejected` (`resolved_without_charge` si y solo si `resolution = resolve_without_charge`); cada combinación (estado, `reversalKind`, `rejectionKind`) tiene un solo texto de F-17 y ninguno termina en punto | CA-65, CA-68, CA-70, CA-72 |
+| PROP-GC-39 | Siempre un administrador (basada en modelo, concurrente) | para cualquier intercalado de otorgamientos y revocaciones de `admin` en varias comunidades: toda comunidad que empezó con al menos un administrador vigente termina con al menos uno; un 409 `LAST_ADMIN` no cambia ninguna fila de negocio; las operaciones de una comunidad no cambian ni esperan el bloqueo de otra | CA-69 |
+| PROP-GC-40 | Retorno de Transbank sin efecto ajeno | para cualquier (`communityId`, `attemptId`, token) que no sea un intento de esa comunidad con ese token: cero llamadas a Transbank, cero filas escritas y la misma respuesta 302 neutra | ADR 0007, prueba 5 |
 
 Las semillas que encuentren un fallo se agregan como caso fijo de regresión (plan §7).
 
@@ -1915,7 +2492,7 @@ Resueltos en la spec rev. 3; los casos afectados ya no están bloqueados.
 
 ### Hallazgos H-20 a H-29
 
-Resueltos en la spec rev. 4 (resumen "Hallazgos de QA H-20 a H-27 y H-29") y, H-28, en `docs/arquitectura.md` §5. No quedan hallazgos abiertos de QA sobre esta spec.
+Resueltos en la spec rev. 4 (resumen "Hallazgos de QA H-20 a H-27 y H-29") y, H-28, en `docs/arquitectura.md` §5.
 
 | Id | Resolución | Casos actualizados |
 | --- | --- | --- |
@@ -1929,3 +2506,23 @@ Resueltos en la spec rev. 4 (resumen "Hallazgos de QA H-20 a H-27 y H-29") y, H-
 | H-27 | F-13 y F-17: los rótulos de traspaso usan la fecha de registro del término ("…el 05-12-2026" en CA-35) | TC-GC-CA35-03, TC-GC-CA36-01 |
 | H-28 | `docs/arquitectura.md` §5 audita cada lectura del propietario sobre el ámbito del arrendatario (`owner.tenant_scope.read`); la parte legal sigue en P-34 | TC-GC-CA60-01 |
 | H-29 | F-9: `SCOPE_REQUIRED` para toda petición sin asignaciones, con o sin arrendatario | TC-GC-CB-17 |
+
+### Hallazgos H-30 a H-42 (spec rev. 7, ADR 0003, 0006 y 0007, wireframes)
+
+Abiertos. QA no los resuelve: cada caso afectado usa el **Supuesto (a validar)** indicado hasta que el responsable decida.
+
+| Id | Contradicción o vacío | Pregunta concreta | Responsable | Casos afectados |
+| --- | --- | --- | --- | --- |
+| H-30 | La spec (A-7, "Huella de plataforma") dice que la huella es solo estado, monto, tipo de ámbito final y periodo, más el reembolso en `mark_for_reversal`. ADR 0006 (decisión 6) y la arquitectura (prueba 13) agregan `transbankStatus`, `transbankStatusSource` y `withoutChargeAvailable` en `resolve_without_charge`, y `refundOutcome` en `confirm_reversal`. El analista lo está alineando | ¿La huella de `resolve_without_charge` y la de `confirm_reversal` incluyen esos campos, como dice ADR 0006? | Analista | TC-GC-CA65-04 (d), TC-GC-CA55-02 (5), TC-GC-CA70-06 |
+| H-31 | `GET .../webpay-attempts/current` devuelve al arrendatario el ámbito bloqueado con `startedByMe` falso (arquitectura §4; ADR 0007, decisión 10), pero CA-30 rev. 6 (UX-68) decide que el arrendatario no ve ningún estado de pago en curso. La API entrega un dato que la pantalla debe esconder: por la API, el arrendatario sabe que otra persona está pagando su deuda | ¿`current` debe omitir los ámbitos con `startedByMe` falso para quien no inició el intento? | Arquitecto y analista | TC-GC-CA30-01 |
+| H-32 | Ruta de retorno: (a) la arquitectura dice que redirige "al mismo resultado neutro" y también que el 302 lleva "el id del intento"; no queda claro si el 302 de un intento ajeno es igual al de un intento válido; (b) "no escribe nada" deja sin registro un intento de usar un intento ajeno, que es un evento de seguridad; (c) la expiración del formulario vuelve sin token (`TBK_ORDEN_COMPRA` y `TBK_ID_SESION`), pero el guard exige comparar el token, y la tabla de ADR 0007 (decisión 4) dice que esa expiración deja el intento en `abandoned` | (a) ¿El 302 neutro es igual al de un retorno válido? (b) ¿Se registra el rechazo (fuera de `AUDIT_LOG`, por ejemplo en los registros con alerta)? (c) ¿Cómo valida el guard una expiración sin token: por `TBK_ID_SESION` = id del intento, o la deja a la consulta de los 15 minutos? | Arquitecto | ISO-GC-gateway-1, 2 (e) |
+| H-33 | En `mark_for_reversal`, un estado desconocido (S-66) o un `PARTIALLY_NULLIFIED` con `balance` anómalo (ADR 0007, decisión 8) "se trata como sin estado concluyente". Dentro de los 7 días, la spec solo define "Transbank no responde" (503 con "No pudimos consultar el estado en Transbank…"), que sería un texto falso: Transbank sí respondió | ¿Qué responde `mark_for_reversal` dentro de los 7 días con un estado desconocido o un `balance` anómalo: 503, un 422 propio o el paso a `in_review` sin reembolso? | Analista | TC-GC-CA68-04 (e), TC-GC-CA71-03 |
+| H-34 | El 400 se evalúa "después de sesión, membresía, visibilidad y permiso, y antes de las reglas de negocio" (S-70), pero el orden general tiene el estado (409) entre el permiso y las reglas 422, y ADR 0003 revisa la clave de idempotencia antes de las reglas de negocio | ¿El 400 va antes del 409 de estado y antes de `IDEMPOTENCY_KEY_REUSED`? | Analista y arquitecto | TC-GC-CB-33 (d) |
+| H-35 | D7 muestra la advertencia de `confirm_reversal` con toda `WEBPAY_REFUND` cuyo resultado "no es `reversed` ni `nullified`", lo que incluye `pending` (la tarea aún no ejecuta el reembolso) | ¿Se confirma que con el reembolso en `pending` la consola advierte y deja confirmar, o se debe esperar el resultado? | Analista, con el líder | TC-GC-CA55-02 (5) |
+| H-36 | Textos sin formato fijo: {estado} de "Intento {buy_order} cerrado sin cobro. Estado en Transbank: {estado}" cuando no hay estado concluyente (D5); y la fecha y hora de la referencia propuesta `REVERSED <buy_order> <fecha y hora…>` | ¿Qué valor lleva {estado} sin estado concluyente, y en qué formato va la fecha y hora de la referencia `REVERSED`? | Analista | TC-GC-CA65-06 (a), TC-GC-CA68-02 (c), TC-GC-CA55-02 (2) |
+| H-37 | "Los 7 días consultables" no dice si se cuentan por instante (168 horas desde la creación) o por días calendario en hora de Chile. Cambia el resultado de una consulta pedida el séptimo día en la noche | ¿Cómo se cuenta el plazo de 7 días? | Analista (a validar en la integración con Transbank) | Datos comunes; TC-GC-CA65-06, TC-GC-CA70-01, TC-GC-CB-34 |
+| H-38 | ADR 0006, "Supuestos" (S-68), dice que la spec describe el bloqueo de `LAST_ADMIN` sobre las membresías de administrador; la spec rev. 7 ya usa la fila de la comunidad (menor 2 de la revisión 4). Texto desactualizado en el ADR | Actualizar el texto de ADR 0006 | Arquitecto | TC-GC-CA69-03 |
+| H-39 | El wireframe CON-06 muestra "Se pedirá reembolso: no. Transbank ya devolvió el cobro", y la spec (EX-1, F-16) fija "Se pedirá reembolso: no" | ¿Cuál es el texto de la vista previa? QA usa el de la spec | Diseñador y analista | TC-GC-CA68-01 |
+| H-40 | 409 `IDEMPOTENCY_KEY_IN_PROGRESS` existe en ADR 0003 (ADR-0003-S2) y ADR 0007, pero no en la tabla de errores de la spec, que se declara completa. El analista lo está agregando | Confirmar código, texto y que aplica solo al inicio de Webpay | Analista | TC-GC-CB-35 |
+| H-41 | La spec no fija qué responde Operaciones ComVive cuando la ruta de una comunidad lleva el `membershipId` de otra, o una membresía que no es `admin`. Operaciones no tiene membresía, así que la regla de "visibilidad" no está definida para ese rol | ¿404 `NOT_FOUND` (como la capa de datos de las rutas de comunidad) o 422? | Arquitecto y analista | ISO-GC-operaciones-1 |
+| H-42 | Al revocar una membresía se revocan **todas** las sesiones de la persona (arquitectura §3, supuesto por simplicidad). Una revocación en la Comunidad B corta también la sesión con que esa persona trabaja en la Comunidad A. No es una fuga de datos, pero es un efecto de una comunidad sobre otra | ¿Se acepta el efecto o se revocan solo las sesiones ligadas a la comunidad? | Arquitecto, con el líder | ISO-GC-operaciones-3 (c) |

@@ -65,7 +65,7 @@ flowchart TD
 1. **Mensaje** genérico, para no exponer datos si el contacto está equivocado: "Te invitaron a ComVive para ver y pagar tu gasto común. Abre el enlace para continuar." Si la invitación es de un arrendatario, agrega el texto de S-44 del paso 8, que no contiene datos de la comunidad ni de la unidad.
 2. Si no tiene la app, el enlace lleva a la tienda y la app retoma la invitación al abrirse.
 3. **Bienvenida genérica:** "Para continuar, ingresa tu RUT." No muestra la comunidad ni la unidad.
-4. **RUT:** con formato automático (`12.345.678-9`) y validación del dígito verificador.
+4. **RUT:** con formato automático (`12.345.678-5`) y validación del dígito verificador.
 5. **Código:** "Si el RUT está registrado, te enviamos un código a {contacto enmascarado}", por ejemplo `+56 9 **** 1234`. Son 6 dígitos, con teclado numérico y autocompletado del sistema.
 6. **Validación:** solo si el RUT y el código coinciden con la invitación, la app muestra "Edificio Los Aromos · Depto 101 · Propietario". Si el RUT es válido pero no es el de la invitación, el mensaje es el mismo que con un código errado y no revela cuál de los dos falló.
 7. Si el RUT ya tiene cuenta en ComVive, se agrega la membresía sin pedir datos de nuevo.
@@ -105,7 +105,7 @@ flowchart TD
 | --- | --- | --- |
 | Invitación vencida | "Esta invitación venció. Pide una nueva a tu administración." | Sin acceso |
 | Invitación ya usada | "Esta invitación ya fue usada. Ingresa con tu RUT." | Lleva al ingreso |
-| RUT con dígito verificador inválido | "Revisa tu RUT" | El campo es inválido |
+| RUT con dígito verificador inválido | "Ingresa un RUT válido. Revisa el dígito verificador" (texto de `INVALID_RUT` de la spec; UX-60) | El campo es inválido |
 | RUT o código que no coinciden | "No pudimos validar tus datos." | No dice cuántos intentos quedan ni cuál dato falló |
 | Límite de fallos por (RUT, dispositivo) | "Demasiados intentos. Espera 15 minutos e intenta de nuevo." | Bloquea solo esa combinación; el titular puede ingresar desde su propio dispositivo (arquitectura §3) |
 | Límite de envíos de código | "Ya te enviamos varios códigos. Espera un momento antes de pedir otro." | Sin envío nuevo |

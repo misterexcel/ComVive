@@ -111,7 +111,7 @@ La tasa CMF de referencia no aparece en la web del administrador: es un dato glo
 **Definiciones de pantallas:**
 
 - **Inicio > Tareas pendientes (Solo admin; M-7, CA-57):** alerta fija arriba de Inicio, que no se puede descartar. Lista las tareas abiertas de la comunidad (`GET .../admin-tasks?status=open`). En el MVP hay un solo tipo, "Revisar rol de comité de {nombre}", que se crea al registrar la venta de la última unidad de un miembro del comité. Cada tarea muestra la fecha de la venta, quién la registró y "Decidir" (revocar o mantener el rol, con motivo). Queda visible hasta que un administrador decida; no vence. Si no hay tareas, el bloque no aparece. Al comité y a los residentes les responde 404. Flujo: `flujos/admin-usuarios-y-roles.md`.
-- **Tabla de unidades (Cuentas por unidad):** columnas Unidad, Propietario, Deuda del propietario, A favor del propietario, Deuda del arrendatario, A favor del arrendatario, Vencido desde, Cuotas impagas. Sin columna de saldo neto. Para el comité, la columna Propietario muestra el nombre y el RUT enmascarado, y el arrendatario solo como "Arrendatario" (S-33, CA-44).
+- **Tabla de unidades (Cuentas por unidad):** columnas Unidad, Propietario, Deuda del propietario, A favor del propietario, Deuda del arrendatario, A favor del arrendatario, Vencido desde, Cuotas impagas. Sin columna de saldo neto. "Vencido desde" y "Cuotas impagas" son por unidad (F-8, S-64); la celda de "Vencido desde" dice "Venció el {dd-mm-aaaa}". Para el comité, la columna Propietario muestra el nombre y el RUT enmascarado, y el arrendatario solo como "Arrendatario" (S-33, CA-44).
 - **Recaudación del último periodo emitido (Inicio; menor 18):** "Recaudado de {periodo}: ${monto} de ${total emitido} ({n} %)", donde el recaudado es lo imputado a los cargos de ese periodo, y aparte "Pagos recibidos este mes: ${monto}". Ambos los entrega la API. **Supuesto (a validar)**, definición a confirmar con el analista (UX-43).
 - **Cobro > Intereses (menor 18):**
   - **Tasa del reglamento:** se carga con su fecha de inicio de vigencia y su referencia; cada cambio crea una versión nueva y la lista muestra las anteriores (E-3).
@@ -188,17 +188,20 @@ Web separada, con su propio ingreso (segundo factor) y sesión. No comparte men�
 ```text
 Ingreso con RUT, código y segundo factor           [MVP]
 Soporte ComVive (platform_support)
-└── Pagos Webpay en revisión: lista, detalle, resolver, confirmar reverso   [MVP]
+└── Pagos Webpay en revisión: lista, detalle, registrar, marcar para reverso, confirmar reverso, resolver sin cobro   [MVP]
     (el resultado se ve solo en la confirmación inmediata; después se vuelve a la lista)
 Operaciones ComVive (platform_operations)
 ├── Crear comunidad con su primer administrador    [MVP]
 ├── Otorgar y revocar administradores              [MVP]
-└── Activar el pago en línea de una comunidad (código de comercio)   [Por definir] (UX-33)
+└── Estado del pago en línea de cada comunidad, solo lectura        [MVP]
 ```
+
+Activar el pago en línea (código de comercio) es un procedimiento auditado de Operaciones ComVive, sin pantalla en el MVP (ADR 0007; UX-33 cerrada, Menor 5 de la revisión crítica 4). La consola solo muestra si está "Activo" o "Pendiente" (CON-11).
 
 Flujos: `flujos/plataforma-soporte-webpay.md` y `flujos/admin-usuarios-y-roles.md`.
 
 ## Pendiente
 
-- `docs/design/design-system.md`: colores, tipografía, espaciado y componentes.
-- `docs/design/wireframes/`: Inicio de la app residente (propietario sin y con arrendatario, arrendatario), historial de pagos de la app, hoja "¿Qué quieres pagar?", Inicio de la web con Tareas pendientes, borrador vigente en la web, vista previa de emisión, tabla de cuentas por unidad y vista previa del traspaso. Los textos de M-8 ya están fijados en F-17 y la vista previa del traspaso tiene endpoint y huella (F-14, A-7), así que ninguno de estos wireframes queda bloqueado.
+- Design system: entregado en `docs/design/design-system.md` (Borrador).
+- Wireframes: entregados en `docs/design/wireframes/` (Borrador), con el índice de pantallas y la trazabilidad a flujos y CA en su `README.md`.
+- Sin wireframe todavía: Reportes y "Configuración > Cobro > Intereses" (esperan UX-43 y UX-44) y pagos por identificar (UX-11). Activar el pago en línea no lleva pantalla en el MVP (UX-33 cerrada).

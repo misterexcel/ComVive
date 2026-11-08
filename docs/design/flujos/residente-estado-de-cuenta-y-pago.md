@@ -11,11 +11,14 @@ Referencias en `docs/specs/gasto-comun.md`:
 - Ámbito, visibilidad y aviso legal: F-9, F-13, F-15, S-14, S-19, S-25 y S-48. "Datos del arrendatario que ve el propietario" (S-44).
 - Vista del cobro del arrendatario y resumen de gastos: G-7 y G-8.
 - Aviso al pagar: E-8, solo con el flag `billing.interest`.
-- Criterios de aceptación: CA-10, CA-22, CA-23, CA-29, CA-30, CA-35, CA-41, CA-47, CA-55 y CA-60.
+- Criterios de aceptación: CA-10, CA-22, CA-23, CA-29, CA-30, CA-35, CA-41, CA-47, CA-55, CA-60 y CA-68.
+- Cobro ya devuelto (decisiones del líder D4 y D8, 2026-11-07): F-16 y F-17 de la spec rev. 6.
 
 Otras referencias: `docs/arquitectura.md` §2 (respuestas neutras), §4 (Webpay: `webpay-attempts`, bloqueo por (unidad, ámbito), estados; visibilidad por ámbito y `payerKind`) y §5 (copia local y push).
 
 > **Revisión crítica 3 (`docs/revisiones/2026-11-07-diseno-rev3.md`): cambios aplicados.** M-8: textos de F-17 ("Ya hay un pago en proceso para esta deuda", "Registrado por la administración", "En revisión por ComVive", "Pagado por ti", "Pagado por el arrendatario" y los de `reversal_pending` y `reversed`). Menor 2: ámbito `owner`. Menor 5: textos de error de la spec. Menor 1: referencias al plazo vigente.
+>
+> **Revisión crítica 4 (`docs/revisiones/2026-11-07-diseno-rev4.md`): cambios aplicados.** M-6: `rejected` tiene dos textos, elegidos por `rejectionKind` (`transbank_rejected` y `resolved_without_charge`), y `abandoned` uno solo ("Pago cancelado. No se hizo ningún cargo", texto del diseño aprobado con UX-69, D15); se quitaron las variantes casi idénticas y el punto final. D13: el intento "Para reverso" que Transbank nunca cobró también puede terminar "sin cobro".
 
 Objetivo: desde abrir la app hasta iniciar el pago, **un toque** ("Pagar gasto común") cuando hay una sola deuda que pagar; **dos toques** cuando el propietario tiene que elegir qué deuda paga.
 
@@ -81,8 +84,8 @@ flowchart TD
   L1 -->|Ámbito ocupado| J
   L1 -->|Correcta| M["Webpay en navegador seguro"]
   M --> N{"Acción en Transbank"}
-  N -->|Abandona o cierra| O["Intento cancelado o expirado"]
-  N -->|Rechazada| P["Rechazado"]
+  N -->|Abandona o cierra| O["Pago cancelado. No se hizo ningún cargo"]
+  N -->|Rechazada| P["Tu banco rechazó el pago. No se hizo ningún cargo"]
   N -->|Autorizada| Q["API confirma con Transbank"]
   Q --> R{"¿Confirmación correcta y monto igual al iniciado?"}
   R -->|Sí| S["Pago registrado: un crédito por ámbito"]
@@ -95,8 +98,14 @@ flowchart TD
   V -->|No concluyente| AA
   AA --> AB["Soporte ComVive resuelve"]
   AB -->|Registra| S
+  AB -->|Sin cobro| AE["Tu pago no se completó. No se hizo ningún cargo"]
+  AC -->|Transbank nunca cobró, D13| AE
+  AE --> F
   AB -->|Para reverso| AC["Tu pago no se registró. Se solicitará la devolución del monto a Transbank"]
+  AB -->|Para reverso, cobro ya devuelto| AF["Tu pago no se registró. Transbank ya devolvió el monto"]
   AC --> AD["Tu pago fue anulado en Transbank. El reembolso a tu medio de pago depende de tu banco"]
+  AF --> AD
+  AF --> F
   S --> F
   P --> F
   O --> F
@@ -126,15 +135,18 @@ flowchart TD
 4. **Inicio del intento:** la app envía los ámbitos elegidos y el total que vio (`POST .../units/{unitId}/webpay-attempts`, con clave de idempotencia). La API calcula el monto de cada ámbito, fija el reparto y devuelve la dirección de Webpay, que se abre en un navegador seguro dentro de la app.
 5. **En Transbank** el residente paga, abandona o es rechazado. Transbank vuelve a la API, que confirma la transacción y verifica el monto. Luego redirige a la app con un enlace profundo.
 6. **Al volver,** la app siempre consulta el estado del intento a la API:
-   - **Aprobado:** "Pagado por ti · ${monto} · {unidad} · {dd-mm-aaaa}", con el número de orden y "Compartir comprobante". Si el propietario pagó "Ambas", el comprobante detalla "Tu deuda ${monto}" y "Deuda del arrendatario ${monto}" (F-12).
-   - **Rechazado:** "Tu banco rechazó el pago. No se hizo ningún cargo." con "Intentar de nuevo".
-   - **Cancelado o expirado:** "El pago no se completó. No se hizo ningún cargo." Si el intento aún bloquea el ámbito (cerró el navegador sin volver), "Podrás reintentar en {n} min".
+   - **Aprobado:** comprobante (`Receipt`, design system 5.18) con "Pagado por ti", el monto, la unidad, la fecha y el número de orden, en líneas separadas, y "Compartir comprobante". Si el propietario pagó "Ambas", el comprobante detalla "Tu deuda ${monto}" y "Deuda del arrendatario ${monto}" (F-12). El formato de una línea "{etiqueta} · ${monto} · {dd-mm-aaaa} · {medio}" (`PayerLabel`) es solo para el historial (UX-67).
+   - **Rechazado por Transbank** (`rejected` con `rejectionKind = transbank_rejected`): "Tu banco rechazó el pago. No se hizo ningún cargo" con "Intentar de nuevo".
+   - **Cancelado o expirado** (`abandoned`): "Pago cancelado. No se hizo ningún cargo". Es el único texto de `abandoned`, también cuando el intento quedó así por el 503 al iniciar. Si el intento aún bloquea el ámbito (cerró el navegador sin volver), "Podrás reintentar en {n} min".
    - **En proceso:** "Estamos confirmando tu pago con Transbank. No vuelvas a pagar. Te avisaremos cuando se confirme." con el número de orden.
    - **En revisión** (`in_review`, F-16, F-17): el estado dice "En revisión por ComVive" y debajo "Te avisaremos cuando se resuelva. Número de orden {buy_order}". La deuda no cambia mientras tanto.
 7. **Resolución de un pago en revisión** (la hace Soporte ComVive; ver `plataforma-soporte-webpay.md`). El residente recibe una notificación y la app muestra (F-16, F-17):
    - **Registrado** (`resolved_paid`): el pago aparece como "Pagado por ti" por el monto autorizado.
    - **Para reverso** (`reversal_pending`): "Tu pago no se registró. Se solicitará la devolución del monto a Transbank".
+   - **Para reverso con cobro ya devuelto** (`reversal_pending` cuando Transbank ya informaba `REVERSED` o `NULLIFIED` y ComVive no pidió reembolso; D4): "Tu pago no se registró. Transbank ya devolvió el monto" (decisión del líder D8, 2026-11-07, aprobada). La app elige el texto por el campo `reversalKind` del intento que entrega la API: `already_returned` muestra este texto y `refund_requested` el anterior (S-67, CA-68). Sin membresía, la variante de cobro ya devuelto del aviso de F-13.
    - **Reversado** (`reversed`): "Tu pago fue anulado en Transbank. El reembolso a tu medio de pago depende de tu banco".
+   - **Sin cobro** (`rejected` con `rejectionKind = resolved_without_charge`, por `resolve_without_charge` desde `in_review` o, con D13, desde `reversal_pending`; F-16, CA-65): "Tu pago no se completó. No se hizo ningún cargo". La deuda no cambia y desaparece la advertencia de pago en revisión.
+   - **Un texto por caso (M-6, rev. 4):** la app no deduce si un `rejected` vino de Transbank o de Soporte: lo elige por el campo `rejectionKind` del intento que entrega la API, como `reversalKind`. `transbank_rejected` muestra "Tu banco rechazó el pago. No se hizo ningún cargo" y `resolved_without_charge`, "Tu pago no se completó. No se hizo ningún cargo". No hay otras variantes.
    - Si quien pagó ya no tiene membresía en la comunidad (por ejemplo, su arriendo terminó durante la revisión), no ve la app: recibe el aviso por correo o SMS de F-13, sin montos (CA-54).
 8. **Sin retorno a la app** (por ejemplo, si cerró el navegador): la próxima vez que abra la app, Inicio consulta los intentos en curso visibles para la persona (`webpay-attempts/current`) y muestra su estado en el bloque que corresponda.
 9. **Confirmación duplicada:** si Transbank confirma dos veces, el residente ve un solo pago (F-2, CA-10).
@@ -158,7 +170,7 @@ flowchart TD
 **Historial de pagos (pestaña Pagos):**
 
 - Cada pago registrado lleva la etiqueta de quién pagó (tabla de "Quién pagó").
-- Cada intento propio que no terminó en un pago registrado muestra su estado: "En proceso", "En revisión por ComVive", "Tu pago no se registró. Se solicitará la devolución del monto a Transbank", "Tu pago fue anulado en Transbank. El reembolso a tu medio de pago depende de tu banco", "Rechazado" o "Cancelado".
+- Cada intento propio que no terminó en un pago registrado muestra su estado: "En proceso", "En revisión por ComVive", "Tu pago no se registró. Se solicitará la devolución del monto a Transbank", "Tu pago no se registró. Transbank ya devolvió el monto" (cobro ya devuelto, D8), "Tu pago fue anulado en Transbank. El reembolso a tu medio de pago depende de tu banco", "Tu pago no se completó. No se hizo ningún cargo" (resuelto sin cobro, `rejectionKind = resolved_without_charge`), "Tu banco rechazó el pago. No se hizo ningún cargo" (`rejectionKind = transbank_rejected`) o "Pago cancelado. No se hizo ningún cargo" (`abandoned`). Son los mismos textos del paso 6 y del paso 7, sin etiquetas cortas aparte.
 - El propietario ve los pagos de los dos ámbitos, marcados "Tu deuda" o "Deuda del arrendatario".
 - El arrendatario ve solo los pagos de su ámbito. Los que no inició él ("Pagado por el propietario" y "Registrado por la administración") no tienen enlace al comprobante completo (404 en la API).
 
@@ -200,8 +212,8 @@ Los textos con código son los de la tabla "Códigos y mensajes de error" y de F
 | Ámbito sin deuda (422 `SCOPE_WITHOUT_DEBT`) | "Esta deuda no tiene saldo pendiente" | Recarga Inicio |
 | Comunidad sin código de comercio (422 `ONLINE_PAYMENT_NOT_AVAILABLE`) | "Esta comunidad aún no recibe pagos en línea. Pide a la administración los datos para pagar por transferencia" | Quita el botón de pago y muestra "Cómo pagar" |
 | Misma clave de idempotencia con otros datos (422 `IDEMPOTENCY_KEY_REUSED`) | "Esta operación ya se envió con otros datos. Vuelve a abrir el formulario" | Cierra la hoja y recarga Inicio |
-| Falla al iniciar Webpay | "No pudimos conectar con Webpay. Intenta en unos minutos." | Vuelve a Inicio |
-| Pago rechazado | "Tu banco rechazó el pago. No se hizo ningún cargo." | "Intentar de nuevo" |
+| Transbank no responde al crear la transacción (503 `PAYMENT_GATEWAY_UNAVAILABLE`, S-57, CA-66) | "No pudimos conectar con Webpay. Intenta en unos minutos" | Vuelve a Inicio; el intento queda `abandoned` y el ámbito libre |
+| Pago rechazado por Transbank (`rejected`, `rejectionKind = transbank_rejected`) | "Tu banco rechazó el pago. No se hizo ningún cargo" | "Intentar de nuevo" |
 | Falla de la confirmación después de autorizar | Mensaje de "En proceso" (paso 6) | La API consulta a Transbank a los 15 minutos |
 | Monto autorizado distinto del iniciado, o estado no concluyente | "En revisión por ComVive" y debajo "Te avisaremos cuando se resuelva. Número de orden {buy_order}" (F-16, F-17) | Lo resuelve Soporte ComVive; la deuda no cambia mientras tanto |
 | Pago en revisión y el residente quiere pagar de nuevo | "Tienes un pago en revisión por ${monto}; si pagas de nuevo podría quedar saldo a favor" (F-16, F-17) | Supuesto (a validar) de la arquitectura: el intento en revisión no bloquea |
@@ -220,6 +232,7 @@ Los textos con código son los de la tabla "Códigos y mensajes de error" y de F
 
 - **Plazo de "En proceso":** 15 minutos, tras los cuales la API consulta a Transbank (arquitectura §4).
 - **Intento en revisión no bloquea:** se puede volver a pagar con la advertencia de saldo a favor (spec F-16; arquitectura §4).
-- **Plazo de revisión:** 5 días hábiles (decisión del líder del proyecto, 2026-11-07; regla F-16). La app no muestra el plazo al residente: el texto de F-17 no lo menciona.- **Una unidad por transacción** (UX-13).
+- **Plazo de revisión:** 5 días hábiles (decisión del líder del proyecto, 2026-11-07; regla F-16). La app no muestra el plazo al residente: el texto de F-17 no lo menciona.
+- **Una unidad por transacción** (UX-13).
 - **Nota en el bloque del arrendatario** ("Puedes pagarla si lo acordaste con tu arrendatario"): texto del diseño, sin regla detrás.
 - **Copia local:** muestra montos con su fecha de actualización, no permite pagar y se borra al cerrar sesión, al perder el acceso o tras 30 días sin sincronizar (arquitectura §5).

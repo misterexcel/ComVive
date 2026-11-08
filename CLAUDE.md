@@ -66,7 +66,7 @@ Flujo del tablero: Backlog → Especificación → Lista para desarrollo → En 
 6. **Periodos cerrados** son inmutables. Las correcciones se hacen con ajustes en el periodo siguiente.
 7. **Datos personales:** RUT, deudas y datos de visitas se tratan según la Ley 21.719. Solo lo mínimo necesario, acceso por rol y registro de auditoría.
 8. **Normativa:** el diseño respeta la Ley 21.442 de Copropiedad Inmobiliaria y su reglamento. Ante dudas legales, se deja una pregunta abierta para el líder del proyecto y, mientras tanto, un supuesto documentado y marcado como tal (ver "Fase de prueba y desarrollo"); nunca un supuesto implícito.
-9. **Secretos:** nunca en el código ni en commits. Solo variables de entorno.
+9. **Secretos:** nunca en el código ni en commits. Solo variables de entorno o Google Secret Manager (credenciales por comunidad, como Webpay; ver ADR 0007).
 10. **Sin aprobación no hay producción.**
 
 ## Convenciones

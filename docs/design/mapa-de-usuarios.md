@@ -106,7 +106,7 @@ Quién usa ComVive, desde dónde y para qué en el MVP. Las reglas de negocio vi
 
 ### Operaciones ComVive (equipo ComVive)
 
-- **Objetivo:** crear comunidades, otorgar y revocar administradores y, cuando exista el código de comercio, activar el pago en línea (UX-33).
+- **Objetivo:** crear comunidades, otorgar y revocar administradores y, cuando exista el código de comercio, activar el pago en línea, por procedimiento auditado y sin pantalla en el MVP (ADR 0007; UX-33 cerrada).
 - **Superficie:** consola de plataforma. No ve datos de negocio de las comunidades.
 
 ### Conserje
@@ -184,7 +184,7 @@ Las preguntas conservan su número. Las resueltas están en "Preguntas cerradas"
 - [ ] **UX-28** (arquitecto): ¿`issue-preview` puede advertir las unidades sin ningún canal de notificación, para prevenir "Avisos sin notificar"?
 - [ ] **UX-30** (arquitecto): **contacto de ingreso de una persona que ya tiene cuenta.** Supuesto: el código va a su contacto verificado existente, no al que escribe un administrador nuevo, para evitar la toma de cuentas.
 - [ ] **UX-31** (abogado y líder): **responsable del tratamiento y canal de derechos** (Ley 21.719). ¿La comunidad es responsable y ComVive encargado? ¿A quién llega "Ejercer mis derechos" y en qué plazo se responde?
-- [ ] **UX-33** (líder): **código de comercio Transbank.** ¿Quién tramita el código con Transbank (la comunidad, el administrador o ComVive) y quién lo activa en ComVive? Supuesto: lo activa Operaciones ComVive.
+- [x] **UX-33** (cerrada 2026-11-07, Menor 5 de la revisión crítica 4): **código de comercio Transbank.** Activar el pago en línea es un procedimiento auditado de Operaciones ComVive, sin pantalla en el MVP (ADR 0007). La consola de Operaciones solo muestra el estado (CON-11).
 - [ ] **UX-35** (analista): **coarrendatarios.** ¿Puede haber más de un arrendatario vigente por unidad? Supuesto: no (la arquitectura §4 permite una ocupación de arrendatario vigente o programada por unidad). La parte del término con fecha futura ya la resolvió la spec: se rechaza (F-14, S-47).
 - [ ] **UX-36** (analista): **notificaciones de ocupación.** Supuesto: el propietario recibe una notificación sin montos al registrarse un arriendo y al hacerse un traspaso.
 - [ ] **UX-38** (analista y abogado): **saldo a favor del vendedor** al registrar una venta. Supuesto: queda en la unidad, como en P-21.

@@ -8,7 +8,8 @@ Referencias en `docs/specs/gasto-comun.md`:
 
 - Usuarios y permisos; "Respuestas de error" (404 o 403); "Otorgamiento de roles" (S-34, S-43); "Comité que deja de ser propietario" (M-7); "Datos de copropietarios que ve el comité" (S-33).
 - Permiso para otorgar y revocar el comité y para resolver su tarea: `committee_role.grant`.
-- Criterios de aceptación: CA-24, CA-43, CA-44 y CA-57.
+- Criterios de aceptación: CA-24, CA-43, CA-44, CA-57 y CA-69.
+- Consola de Operaciones ComVive: "Validaciones de la consola de Operaciones ComVive" (S-63) y decisión del líder D9 (2026-11-07): no se revoca al último administrador.
 
 Otras referencias: `docs/arquitectura.md` §2 (404 neutros), §3 ("Quién otorga cada rol", "Comité que deja de ser propietario" con `admin-tasks`, "Usuarios de plataforma", "Ingreso, sesiones y límites", revocación) y §5 (auditoría).
 
@@ -81,7 +82,7 @@ flowchart TD
 
 **Pantalla Configuración > Usuarios y roles** (solo administrador)
 
-1. **Administradores** (solo lectura): nombre, RUT completo, desde cuándo y "Otorgado por ComVive". Texto: "Para agregar o quitar administradores, escribe a Cuentas ComVive."
+1. **Administradores** (solo lectura): nombre, RUT completo, desde cuándo y "Otorgado por ComVive". Texto: "Para agregar o quitar administradores, escribe a Operaciones ComVive." (nombre de la spec; UX-65).
 2. **Comité:** nombre, unidad, desde cuándo, referencia a la asamblea, estado de ingreso (pendiente o activo) y "Quitar del comité". Si la persona tiene una tarea "Revisar rol de comité" abierta, su fila muestra la etiqueta "Ya no es propietario: decisión pendiente" con enlace a la tarea; si se decidió mantenerla, "Sin unidad en la comunidad: mantenido el {dd-mm-aaaa}".
 3. **Residentes:** enlace a "Unidades y residentes" (las membresías de residentes nacen de las ocupaciones).
 4. **Historial de roles:** otorgamientos y revocaciones, con quién, a quién, cuándo, vía (comunidad o ComVive) y referencia o motivo. Incluye los de administradores hechos por ComVive.
@@ -121,9 +122,23 @@ Cuándo aparece: al confirmar una venta en `admin-ocupaciones.md`, si la persona
 
 **Revocación del administrador (Operaciones ComVive)**
 
-1. En la consola de plataforma, "Revocar administrador" con motivo.
+1. En la consola de plataforma, "Revocar administrador" con motivo ("Indica el motivo de la revocación" si falta, S-63).
 2. El acceso se corta en la siguiente petición. Si la persona tiene otras comunidades, las sigue viendo.
-3. Si la comunidad queda sin administrador, la consola lo advierte: "La comunidad quedará sin administrador. Los residentes podrán seguir viendo y pagando, pero nadie podrá emitir ni registrar pagos manuales." (supuesto de diseño).
+3. **Último administrador (decisión del líder D9, 2026-11-07):** Operaciones no puede dejar una comunidad sin administrador. Si la persona es el único administrador vigente, la API responde 409 `LAST_ADMIN` con "No se puede revocar al único administrador de la comunidad. Otorga primero el rol a quien lo reemplazará" (aprobado por el líder, D10, 2026-11-07) y no se escribe nada (CA-69). Orden de los errores al revocar: `REASON_REQUIRED` → `ROLE_ALREADY_REVOKED` → `LAST_ADMIN`.
+4. **Cambio de administrador, en este orden:** primero "Otorgar administrador" a la persona nueva y después "Revocar" al anterior. El administrador nuevo cuenta como vigente desde que se le otorga el rol, aunque aún no haya hecho su primer ingreso (decisión del líder D10; S-68), así que la revocación se puede hacer de inmediato. La consola muestra esta guía junto al botón "Revocar" cuando la comunidad tiene un solo administrador (CON-11).
+
+```mermaid
+flowchart TD
+  R0["Administradores de la comunidad"] --> R1{"¿Cuántos administradores vigentes?"}
+  R1 -->|Dos o más| R2["Revocar con motivo"]
+  R2 --> R3["Revocado y auditado; acceso cortado"]
+  R1 -->|Uno| R4["Guía: primero otorga al nuevo administrador"]
+  R4 --> R5["Otorgar administrador: RUT, contacto y motivo"]
+  R5 --> R6["Dos administradores vigentes"]
+  R6 --> R2
+  R1 -->|Uno, y se pide revocar igual| R7["409 LAST_ADMIN: no se puede revocar al único administrador"]
+  R7 --> R4
+```
 
 **Auditoría de roles y accesos de ComVive** (Configuración > Registro de auditoría, MVP mínimo)
 
@@ -149,6 +164,8 @@ Los textos con código son los de la tabla "Códigos y mensajes de error" de la 
 | La persona elegida no es propietaria registrada | 422 `COMMITTEE_REQUIRES_OWNER` | "El rol de comité solo se otorga a propietarios registrados de la comunidad" | No se guarda (S-34, CA-43) |
 | La persona es administradora de la comunidad | 422 `ADMIN_COMMITTEE_CONFLICT` | "Esta persona es administradora de la comunidad. No puede integrar también el comité" | No se guarda (S-43) |
 | Operaciones ComVive otorga el rol de administrador a un miembro del comité (consola de plataforma) | 422 `ADMIN_COMMITTEE_CONFLICT` | "Esta persona integra el comité de la comunidad. Primero se debe revocar su rol de comité" | No se guarda (S-43) |
+| Operaciones ComVive: RUT, contacto o motivo inválidos, persona ya administradora, rol ya revocado | Ver "Validaciones de la consola de Operaciones ComVive" de la spec (S-63) | Textos de la spec | Detalle en `../wireframes/consola-plataforma.md`, CON-11 |
+| Operaciones ComVive revoca al último administrador | 409 `LAST_ADMIN` | "No se puede revocar al único administrador de la comunidad. Otorga primero el rol a quien lo reemplazará" | No se revoca; la consola guía a otorgar primero al nuevo administrador (decisión del líder D9, S-68, CA-69; texto aprobado, D10) |
 | Referencia a la asamblea vacía | 422 `ASSEMBLY_REFERENCE_REQUIRED` | "Indica la asamblea que eligió al comité: fecha y referencia" | El campo es inválido (CA-43) |
 | La persona ya integra el comité | 409 `ALREADY_COMMITTEE_MEMBER` | "Esta persona ya integra el comité" | Sin cambios; el buscador la marca como "Ya integra el comité" y no la deja elegir (S-34, CA-64) |
 | Administrador intenta otorgar o revocar un administrador por la ruta de comunidad | 403 `FORBIDDEN` | "Tu rol no permite esta acción" | La acción no se muestra (CA-43) |

@@ -115,6 +115,34 @@ Ocupaciones de arrendatario del Depto 102. Cada escenario es independiente: un c
 | O-5 | Ignacio Paz | 20.123.456-5 | 2026-12-10 | 2026-11-28 | 2026-12-10 (programada hasta esa fecha) | Sin término | CA-61 |
 | O-6 | Tomás Reyes | 19.876.543-0 | 2026-10-01 (dato de prueba) | 2026-10-01 | 2026-10-01 | Sin término | CA-45 |
 
+Administradores de CA-69 (spec rev. 7). En ese CA la Comunidad A parte con **un solo** administrador vigente, así que `admin2-A` no tiene membresía en ese escenario:
+
+| Persona | RUT | Rol | Actor en los casos | Casos |
+| --- | --- | --- | --- | --- |
+| Carolina Lagos | 10.987.654-2 | Administradora vigente, la única al empezar | AD1 = `admin-A` | CA-69 |
+| Valentina Ortiz | 21.345.678-4 | Administradora otorgada por Operaciones el 2026-11-10; no hace su primer ingreso hasta el caso que lo indique | AD2 | CA-69 |
+
+### Comercio Webpay y personas de plataforma (datos de prueba)
+
+Datos para CA-29 a CA-72 y para las pruebas de aislamiento de credenciales (ADR 0007, prueba 6). Los códigos de comercio son ficticios y viven en un doble de Transbank; las claves se cargan como secretos de prueba (`tbk-webpay-<communityId>`) y nunca se escriben en este documento ni en los fixtures.
+
+| Comunidad | Fila en `COMMUNITY_WEBPAY_MERCHANT` | Código de comercio (doble) | Ambiente | Casos |
+| --- | --- | --- | --- | --- |
+| A, por defecto | Vigente desde el 2026-10-01, sin `active_to` | `MC-A-1` | `integration` | Todos los de Webpay salvo los que siguen |
+| A, "sin comercio vigente" | **Sin fila** (estado inicial de CA-66, menor 5 de la revisión 4) | — | — | TC-GC-CA66-01 (a) |
+| A, comercio vencido | Una fila `MC-A-0` con `active_to` 2026-11-24 y ninguna otra vigente (**Supuesto (a validar):** dato propio; la spec dice "con la fila fuera de su vigencia") | — | `integration` | TC-GC-CA66-01 (b) |
+| A, rotación | `MC-A-1` con `active_to` 2026-11-30 y `MC-A-2` vigente desde el 2026-12-01 (dato propio) | `MC-A-2` | `integration` | ISO-GC-plataforma-10 |
+| B, por defecto | Vigente desde el 2026-10-01 | `MC-B-1` | `integration` | ISO-GC-plataforma-10 a 12, ISO-GC-gateway-1 y 2 |
+
+Personas de la Comunidad B y de la plataforma usadas en los casos de aislamiento:
+
+| Persona | RUT | Rol | Actor | Casos |
+| --- | --- | --- | --- | --- |
+| Felipe Rojas | 22.456.789-8 | Administrador de la Comunidad B | `admin-B` | ISO-GC-*, ISO-GC-operaciones-1 a 3 |
+| Carolina Lagos | 10.987.654-2 | En ISO-GC-operaciones-3, administradora de A **y** de B (dato de escenario) | `admin-A` | ISO-GC-operaciones-3 |
+| — | — | Soporte ComVive (`platform_support`) | `soporte-1`, `soporte-2` | CA-41, CA-55, CA-65, CA-68, CA-70, CA-71 |
+| — | — | Operaciones ComVive (`platform_operations`) | `operaciones-1` (OP1), `operaciones-2` | CA-43, CA-69, ISO-GC-operaciones-1 a 3 |
+
 ---
 
 ## Comunidad B · Condominio Las Brisas
@@ -369,6 +397,20 @@ Saldo del fondo (regla D-5) = recargos imputados + intereses imputados + multas 
 | GOLD-A62-05 | Después | Correcciones rechazadas (monto igual al vigente, −$1.000, anular lo ya anulado) | Sin cambio | $7.500 | — |
 
 Comprobación con la fórmula completa: 37.500 − (30.000 + 20.000) − (−5.000 − 15.000) = 37.500 − 50.000 + 20.000 = $7.500. Egreso de la cerradura vigente: 20.000 − 5.000 − 15.000 = $0.
+
+### CA-65 a CA-72 (spec rev. 7): sin pruebas de oro nuevas
+
+**Para revisión del líder del proyecto.** Estos CA no cambian ningún prorrateo ni ninguna prueba de oro aprobada: las resoluciones sin cobro, los reversos y los reembolsos no escriben movimientos en el libro (regla F-16), y los pagos manuales nuevos se imputan sobre cargos de GOLD-A. Los montos que sí mueven saldo o dinero en Transbank, con su cálculo:
+
+| Caso | Cálculo | Resultado |
+| --- | --- | --- |
+| CA-65, CA-68, CA-70, CA-71, CA-72 (Depto 101) | Deuda inicial (CA-5): ordinario 200.000 − 100.000 = 100.000 y fondo 10.000; ninguna resolución escribe movimientos | Saldo $110.000 antes y después |
+| CA-66 (Depto 101) | Pago manual de $10.000 al capital vencido: ordinario 100.000 − 10.000 = 90.000; fondo 10.000; luego $100.000: ordinario 90.000 − 90.000 = 0 y fondo 10.000 − 10.000 = 0 | Saldo 110.000 − 10.000 = $100.000; luego 100.000 − 100.000 = $0 |
+| CA-67 (Depto 202) | Ordinario 300.000 y fondo 15.000 (GOLD-A-04); pago de $100.000 no vencido al ordinario: 300.000 − 100.000 = 200.000 | Saldo 200.000 + 15.000 = $215.000 |
+| CA-71 (reembolso) | Autorizado $11.000; anulaciones previas 5.000 + 1.000 = 6.000; saldo anulable 11.000 − 6.000 = 5.000 | Reembolso $5.000; total devuelto 5.000 + 1.000 + 5.000 = $11.000 = autorizado |
+| CA-70 (reembolso sin estado concluyente) | Monto iniciado del intento (S-69) | Reembolso pedido $110.000; el 292 o el 310 lo dejan `failed` y no mueve dinero |
+
+La suma de cargos de cada periodo sigue igual al total emitido (regla 3 de `CLAUDE.md`): ningún caso nuevo emite ni corrige cargos.
 
 ---
 

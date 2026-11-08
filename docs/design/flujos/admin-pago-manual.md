@@ -10,7 +10,7 @@ Referencias en `docs/specs/gasto-comun.md`:
 - Versión confirmada: A-7.
 - Pagos: F-1 a F-4, F-6, F-9 (ámbito de los créditos), F-12 (un pago, un crédito por ámbito), F-13 (ocupación terminada) y F-15 (unidad sin propietario).
 - Textos que ve el residente: F-17. Códigos y mensajes de error: tabla de la spec.
-- Criterios de aceptación: CA-5, CA-11, CA-12, CA-15, CA-31, CA-32, CA-40, CA-53 y CA-56.
+- Criterios de aceptación: CA-5, CA-11, CA-12, CA-15, CA-31, CA-32, CA-40, CA-53, CA-56 y CA-67.
 
 Otras referencias: `docs/arquitectura.md` §4 (vistas previas con `previewHash` y 409 `PREVIEW_OUTDATED`; idempotencia de pagos manuales; grupo de pagos `payment_group_id` y rutas `payment-groups/{paymentGroupId}/void-preview` y `.../void`).
 
@@ -80,7 +80,7 @@ flowchart TD
    - **Monto:** campo de dígitos con máscara de miles. Envía un entero mayor que 0 y hasta $9.999.999.999 (B-5, B-6). Con "Ambos", cada campo es mayor que 0; el envío lleva una asignación por deuda, cada una con su monto (F-1).
    - **Fecha de pago:** hoy por defecto. No se aceptan fechas futuras en hora de Chile (F-1, CA-15).
    - **Medio:** transferencia, depósito, efectivo, cheque u otro.
-   - **Referencia:** obligatoria (F-1). La ayuda dice "Número de comprobante o de recibo. No incluyas datos personales". La referencia no tiene que ser única (F-2).
+   - **Referencia:** obligatoria (F-1); vacía o de solo espacios, la API responde 422 `PAYMENT_REFERENCE_REQUIRED` con "Ingresa la referencia del pago" (S-62, CA-67). La ayuda dice "Número de comprobante o de recibo. No incluyas datos personales". La referencia no tiene que ser única (F-2).
 5. **Aviso fijo** bajo el formulario (A-4, S-17): "Se registrará en el periodo en borrador {mes} con fecha de pago {dd-mm-aaaa}."
 6. **Posible duplicado** (F-3, CA-11, CA-31). El formulario consulta a la API y advierte sin bloquear en dos casos:
    - Misma unidad, monto, fecha y medio: "Ya existe un pago de ${monto} para {unidad} con fecha {dd-mm-aaaa} por {medio}. Revisa que no sea un duplicado".
@@ -116,6 +116,7 @@ Los textos con código son los de la tabla "Códigos y mensajes de error" de la 
 | Monto vacío, 0 o con decimales | 422 `INVALID_AMOUNT` | "El monto debe ser un número entero de pesos mayor que $0" | El campo no acepta otros caracteres (B-5) |
 | Monto sobre el máximo | 422 `AMOUNT_TOO_LARGE` | "El monto supera el máximo permitido de $9.999.999.999" | El campo es inválido (B-6) |
 | Fecha futura | 422 `PAID_ON_IN_FUTURE` | "La fecha de pago no puede ser futura" | El campo es inválido (F-1, CA-15) |
+| Referencia vacía o de solo espacios | 422 `PAYMENT_REFERENCE_REQUIRED` | "Ingresa la referencia del pago" | El campo es inválido. La API lo valida después de la deuda, el arriendo, el monto y la fecha (F-1, S-62, CA-67; texto aprobado por el líder el 2026-11-07) |
 | Unidad con arrendatario vigente sin elegir a qué deuda | 422 `SCOPE_REQUIRED` | "Elige a qué deuda aplicar el pago" | No se envía; si llega a la API, se rechaza sin escribir nada (F-9, CA-32) |
 | El arriendo terminó mientras el formulario estaba abierto | 409 `OCCUPANCY_ALREADY_ENDED` | "El arriendo de esta persona ya terminó. Aplica el pago a la deuda del propietario" | Recarga "Aplicar a la deuda de" sin la opción del arrendatario (CA-56) |
 | El pago se dirige a un arriendo programado | 409 `OCCUPANCY_NOT_STARTED` | "El arriendo aún no comienza. Aplica el pago a la deuda del propietario" | Recarga "Aplicar a la deuda de" (CA-53) |

@@ -60,7 +60,7 @@ flowchart TD
 
 ## Pasos
 
-1. **Operaciones ComVive** crea la comunidad y otorga el rol de administrador (ver `admin-usuarios-y-roles.md`). El administrador recibe la invitación e ingresa a la web con su RUT.
+1. **Operaciones ComVive** crea la comunidad y otorga el rol de administrador (ver `admin-usuarios-y-roles.md`). El administrador recibe la invitación e ingresa a la web con su RUT. Las validaciones del alta (nombre, RUT de la comunidad y del administrador, celular o correo, motivo y RUT de comunidad ya existente) son las de la spec, "Validaciones de la consola de Operaciones ComVive" (S-63); sus textos están en `../wireframes/consola-plataforma.md`, CON-11.
 2. **Datos de la comunidad:** nombre, dirección, comuna, tipo (edificio o condominio) y RUT de la comunidad (los dos últimos los trae Operaciones y se pueden revisar).
    - **Medios de pago** que aparecerán en el aviso y en "Cómo pagar" de la app (G-2): banco, tipo y número de cuenta, titular, RUT del titular y correo para comprobantes.
 3. **Cobro** (`community.billing.configure`):
@@ -88,7 +88,7 @@ flowchart TD
 | Unidades con alícuotas que suman 100 % | Pendiente, con advertencia o listo | Administrador |
 | Ocupantes registrados | "{n} unidades sin propietario" o listo | Administrador |
 | Residentes invitados | "{n} de {total} aceptaron" | Administrador y residentes |
-| Pago en línea (Webpay) | "Pendiente: ComVive lo activa cuando Transbank entregue el código de comercio de la comunidad" o "Activo" | ComVive (UX-33) |
+| Pago en línea (Webpay) | "Pendiente: ComVive lo activa cuando Transbank entregue el código de comercio de la comunidad" o "Activo" | Operaciones ComVive, por procedimiento auditado sin pantalla en el MVP (ADR 0007; UX-33 cerrada) |
 
 **Migración desde planilla (MVP mínimo: validar y confirmar; UX-16):**
 
@@ -113,7 +113,7 @@ flowchart TD
 | Alícuota con más de 4 decimales | "La alícuota admite hasta 4 decimales" | Fila marcada |
 | Alícuota fuera de rango | "La alícuota debe estar entre 0 % y 100 %" | Fila marcada |
 | RUT faltante o inválido | "Ingresa un RUT válido. Revisa el dígito verificador" | Fila marcada |
-| El mismo RUT con datos distintos en la planilla | "El RUT 12.345.678-9 aparece con nombres distintos" | Fila marcada |
+| El mismo RUT con datos distintos en la planilla | "El RUT 12.345.678-5 aparece con nombres distintos" | Fila marcada |
 | Formato de archivo no soportado | "Sube un archivo CSV o Excel con la plantilla de ComVive" | No se procesa |
 | Fondo de reserva bajo 5,00 % (422 `RESERVE_RATE_BELOW_MINIMUM`) | "El fondo de reserva no puede ser menor que 5,00 % (Ley 21.442, art. 39)" | El campo no se acepta |
 | Fondo de reserva sobre 50,00 % (422 `RESERVE_RATE_ABOVE_MAXIMUM`) | "El fondo de reserva no puede superar 50,00 %. Si el reglamento fija más, contacta a soporte" | El campo no se acepta |

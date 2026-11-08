@@ -32,7 +32,9 @@ Proporción orientativa: muchas unitarias y de propiedades, integración para ca
 | 1 | Intereses por mora | Interés sobre el tope legal, días cobrados dos veces o perdidos | Unitarias, propiedades, integración | Obligatorio |
 | 1 | Aislamiento entre comunidades | Un usuario ve o modifica datos de otra comunidad | Integración con el patrón de la sección 4, en cada endpoint | Obligatorio |
 | 1 | Aislamiento por ámbito (propietario y arrendatario) | Un arrendatario ve la deuda del propietario, o un residente ve más de lo que define la spec | Integración (sección 4.1) | Obligatorio |
-| 1 | Aislamiento de plataforma (Soporte ComVive, EX-1) | El equipo ComVive ve o escribe datos de negocio fuera de la vista mínima | Integración y base de datos (sección 4.2) | Obligatorio |
+| 1 | Aislamiento de plataforma (Soporte y Operaciones ComVive, EX-1) | El equipo ComVive ve o escribe datos de negocio fuera de la vista mínima, o una comunidad queda sin administrador | Integración, concurrencia y base de datos (sección 4.2) | Obligatorio |
+| 1 | Integración Webpay (Transbank) | Cobro, consulta o reembolso con el comercio de otra comunidad; reembolso por un monto distinto del que queda cobrado; intento en un estado imposible; retorno de Transbank que escribe en otra comunidad | Integración contra un doble de Transbank, propiedades (máquina de estados y monto del reembolso), aislamiento de la ruta de retorno (sección 4.3) y prueba de contrato contra el ambiente de integración de Transbank (sección 7) | Obligatorio |
+| 1 | Idempotencia y rechazos | Un doble envío duplica dinero; un rechazo deja datos de negocio o queda guardado con la clave e impide corregir | Integración y propiedades (sección 4.4) | Obligatorio |
 | 2 | Permisos por rol | Un rol ejecuta acciones que no le corresponden | Integración con matriz rol × acción por endpoint (sección 5) | Obligatorio |
 | 3 | Datos personales (Ley 21.719) | Exposición de RUT, deudas o visitas | Integración: respuestas sin campos innecesarios por rol; auditoría de lecturas y escrituras (sección 5.1) | Recomendado |
 
@@ -54,7 +56,8 @@ Reglas de TDD: es obligatorio en gasto común (incluidos redondeo, saldos y peri
 - La fuente de verdad es `docs/qa/comunidades-simuladas.md`. Cada comunidad trae sus datos, el cálculo paso a paso y el resultado esperado.
 - Un monto esperado solo es válido si muestra su cálculo y fue aprobado por el líder del proyecto. La validación por un contador se exige **antes del Piloto**; hasta entonces los montos se basan en los supuestos documentados.
 - Cobertura actual: Comunidad A (alícuota sin redondeo y pago parcial), B (redondeo con empate por `sort_order`), C (redondeo con varios pesos a repartir), C por cuenta (`GOLD-CE`, detecta el redondeo del total combinado; aprobada el 2026-11-07), D (alícuotas en escala 10^-6, fondo con techo y redondeo por cuenta).
-- Escenarios de la spec rev. 4, aprobados por el líder del proyecto (2026-11-07): pago "Ambas" por Webpay e interés siguiente (`GOLD-A29`), pago manual "Ambos" (`GOLD-A32`), anular gasto (`GOLD-A33` y `GOLD-B34`) emisión con la versión nueva del borrador (`GOLD-A39`) y saldo del fondo con egresos y correcciones (`GOLD-A62`).
+- Escenarios de la spec rev. 4, aprobados por el líder del proyecto (2026-11-07): pago "Ambas" por Webpay e interés siguiente (`GOLD-A29`), pago manual "Ambos" (`GOLD-A32`), anular gasto (`GOLD-A33` y `GOLD-B34`), emisión con la versión nueva del borrador (`GOLD-A39`) y saldo del fondo con egresos y correcciones (`GOLD-A62`).
+- Spec rev. 7 (CA-65 a CA-72): no cambia ninguna prueba de oro. Las resoluciones de Soporte, los reversos y los reembolsos no escriben movimientos; los montos que sí cambian (pagos manuales de CA-66 y CA-67, montos de reembolso de CA-70 y CA-71) están calculados en `comunidades-simuladas.md`, "CA-65 a CA-72 (spec rev. 7): sin pruebas de oro nuevas", para revisión del líder.
 - Casos de prueba derivados de cada especificación: `docs/qa/casos/`. Gasto común: [`docs/qa/casos/gasto-comun.md`](casos/gasto-comun.md).
 - Pendiente de datos: prueba de oro en UF (total UF convertido una vez a CLP y luego prorrateado).
 - Pendiente: comunidades para conciliación (incluida una línea de cartola que cubre varias unidades), multas e intereses y ajustes en periodo siguiente.
@@ -69,7 +72,7 @@ Reglas de TDD: es obligatorio en gasto común (incluidos redondeo, saldos y peri
 
 ### 3.3 Propiedades (fast-check)
 
-Generadores: total entero no negativo y lista no vacía de **pesos enteros no negativos arbitrarios** (al menos uno mayor que 0), con `sort_order` únicos. No se generan "porcentajes que suman 100", porque eso esconde el caso de alícuotas que no suman 100 %. Los rangos siguen la spec vigente: montos de $0 a $9.999.999.999 (regla B-6), como `bigint`; porcentaje del fondo de 500 a 5000 pb (regla D-2). Los valores fuera de rango se generan aparte, solo para probar el rechazo. El detalle por módulo está en los casos (gasto común: PROP-GC-01 a PROP-GC-34).
+Generadores: total entero no negativo y lista no vacía de **pesos enteros no negativos arbitrarios** (al menos uno mayor que 0), con `sort_order` únicos. No se generan "porcentajes que suman 100", porque eso esconde el caso de alícuotas que no suman 100 %. Los rangos siguen la spec vigente: montos de $0 a $9.999.999.999 (regla B-6), como `bigint`; porcentaje del fondo de 500 a 5000 pb (regla D-2). Los valores fuera de rango se generan aparte, solo para probar el rechazo. El detalle por módulo está en los casos (gasto común: PROP-GC-01 a PROP-GC-40).
 
 1. La suma de los cargos es exactamente el total emitido.
 2. Cada cargo difiere de su cargo exacto en menos de un peso.
@@ -83,6 +86,9 @@ Generadores: total entero no negativo y lista no vacía de **pesos enteros no ne
 10. Imputación por ámbito: un crédito solo se imputa a débitos de su mismo ámbito y su remanente queda a favor en ese ámbito; un cobro de varios ámbitos crea exactamente un pago por ámbito y la suma de esos pagos es el monto cobrado.
 11. Traspaso: al terminar una ocupación, su ámbito queda en $0 y el ámbito `owner` recibe exactamente su saldo; el saldo de la unidad no cambia.
 12. Escritura acotada: ninguna operación de un actor (incluido Soporte ComVive) inserta filas fuera de su comunidad, ni fuera de la unidad y los ámbitos que la regla permite.
+13. Rechazos sin efecto: ninguna respuesta 4xx o 5xx escribe datos de negocio ni queda guardada con la clave de idempotencia; solo los éxitos se guardan (decisión del líder D12). Única excepción: el intento `abandoned` del 503 al iniciar un pago en línea.
+14. Reembolso acotado: lo pedido a Transbank más lo ya anulado nunca supera lo autorizado, y hay a lo más una solicitud de reembolso por intento.
+15. Siempre un administrador: ningún intercalado concurrente de otorgamientos y revocaciones deja a una comunidad sin administrador vigente, y una comunidad nunca espera ni cuenta los administradores de otra.
 
 ### 3.4 Regla de bloqueo
 
@@ -117,7 +123,7 @@ Después de cada caso se verifica en base de datos que B (y la unidad ajena de A
 
 | Situación | Código |
 | --- | --- |
-| Sin sesión | 401 |
+| Sin sesión | 401, salvo la ruta de retorno de Transbank (302, sección 4.3) |
 | Sin membresía vigente en la comunidad, o recurso de otra comunidad | 404 |
 | Residente pide una unidad ajena, o un movimiento, pago o intento fuera de los ámbitos que ve | 404 |
 | Rol que no ve ese tipo de recurso (p. ej. el conserje pide un aviso; el comité pide las tareas del administrador; un ex miembro del comité pide el registro de copropietarios) | 404 |
@@ -152,9 +158,26 @@ Soporte ComVive (`platform_support`) es la única excepción a la regla 4 de `CL
 | ISO-P5 | Sesión de comunidad (incluido un administrador) en `/platform/...`; cada rol de plataforma en los endpoints del otro | 404 |
 | ISO-P6 | Grant de plataforma revocado o vencido | Sin acceso en la petición siguiente |
 | ISO-P7 | El rol de base de datos de plataforma consulta tablas base | Rechazado por PostgreSQL; solo lee su vista |
-| ISO-P8 | Cualquier petición de plataforma, lecturas incluidas | Exactamente un registro de auditoría; si la auditoría falla, la petición falla |
+| ISO-P8 | Cualquier petición de plataforma, lecturas y rechazos incluidos | Exactamente un registro de auditoría, con el código si es un rechazo; si la auditoría falla, la petición falla |
+| ISO-P9 | Toda llamada a Transbank de un intento (inicio, retorno, consulta, reembolso, resolución sin cobro) | Usa siempre el comercio guardado en el intento, aunque la petición anterior fuera de otra comunidad o el comercio vigente haya cambiado; ningún registro contiene la clave ni el token |
+| ISO-P10 | Operaciones ComVive revoca u otorga con el identificador de una membresía de otra comunidad | 404; nada cambia en ninguna comunidad |
+| ISO-P11 | Revocación del último administrador y revocaciones concurrentes | Cuenta solo los administradores de la misma comunidad; el bloqueo es por comunidad y no detiene a otra |
 
 Operaciones ComVive (`platform_operations`) no ve datos de negocio: toda lectura de negocio le responde 404 (ISO-P5).
+
+### 4.3 Ruta de retorno de Transbank (única ruta de negocio sin membresía)
+
+`GET` y `POST /gateway/webpay/communities/{communityId}/webpay-attempts/{attemptId}/return` no exige sesión: Transbank redirige el navegador del pagador (`docs/arquitectura.md` §2; ADR 0007). Su guard propio busca el intento en la comunidad de la ruta y compara el token. Además del patrón de la sección 4:
+
+| Caso | Acción | Resultado esperado |
+| --- | --- | --- |
+| ISO-G1 | Retorno con un intento de otra comunidad, en las dos direcciones | El mismo 302 neutro que un intento inexistente; sin llamadas a Transbank; ninguna fila escrita en ninguna tabla |
+| ISO-G2 | Retorno con un token ajeno, alterado o de un pago abortado de otro intento | Igual que ISO-G1; el intento sigue en su estado |
+| ISO-G3 | Retorno correcto sin sesión, o con la sesión de otra persona o de otra comunidad | El resultado sale solo de Transbank y la sesión se ignora; la redirección lleva solo el id del intento |
+
+### 4.4 Idempotencia y rechazos (decisión del líder D12)
+
+Toda escritura de dinero, de responsable de deuda o de roles lleva `Idempotency-Key`. Para cada endpoint se prueba: un envío repetido con la misma clave y el mismo cuerpo devuelve la respuesta original sin escribir otra vez; con otro cuerpo, 422 `IDEMPOTENCY_KEY_REUSED`; un rechazo (400, 403, 404, 409, 422 o 503) no deja fila en `IDEMPOTENCY_KEY` ni datos de negocio, y su reenvío con la misma clave, corregido o después de un cambio de estado, se evalúa de nuevo y puede aplicarse. En las rutas `/platform/...` el rechazo sí deja su registro de auditoría. Casos de gasto común: TC-GC-CB-32 y PROP-GC-35.
 
 ## 5. Permisos por rol
 
@@ -170,7 +193,7 @@ Para cada endpoint se prueba la matriz completa rol × acción tomada de la tabl
 | Ex residente o ex miembro del comité | Nada de lo que veía con el rol perdido |
 | Soporte ComVive (`platform_support`) | Solo los intentos Webpay en revisión, con la vista mínima EX-1 (sección 4.2) |
 | Operaciones ComVive (`platform_operations`) | Alta de comunidades y rol de administrador; ningún dato de negocio |
-| Sin sesión | Nada |
+| Sin sesión | Nada, salvo la ruta de retorno de Transbank, que responde 302 sin escribir nada si el intento o el token no corresponden (sección 4.3) |
 
 Cada celda permitida tiene una prueba de éxito y cada celda denegada una prueba de rechazo con los códigos de la sección 4: **404 si el actor no ve el recurso y 403 solo si lo ve**. La matriz incluye pruebas del orden de validación (por ejemplo, un rol sin permiso sobre un periodo ya emitido recibe 403 y no 409). Si la plantilla de especificación tiene una sola fila "Residente", la especificación debe separar propietario y arrendatario antes de pasar a "Lista para desarrollo".
 
@@ -179,7 +202,8 @@ Cada celda permitida tiene una prueba de éxito y cada celda denegada una prueba
 - Se crea **un registro de auditoría por petición** que devuelva RUT completo, deuda de terceros o datos de visitas.
 - No se audita al residente cuando consulta su propio ámbito.
 - **Sí** se audita al propietario cuando lee el ámbito del arrendatario vigente de su unidad: es deuda de un tercero (spec de gasto común, S-44).
-- Se audita **toda** petición de Soporte ComVive, lecturas incluidas (EX-1), y todo aviso enviado a un pagador sin membresía.
+- Se audita **toda** petición de Soporte ComVive y de Operaciones ComVive, lecturas y rechazos incluidos (EX-1; D12), y todo aviso enviado a un pagador sin membresía.
+- Cada llamada a Transbank queda registrada (`WEBPAY_GATEWAY_CALL`), sin token, clave del comercio ni datos de la tarjeta.
 - Pruebas: cada endpoint de esos tipos verifica que se crea exactamente un registro por petición (con actor, comunidad, recurso y fecha) y que la consulta del residente sobre su propio ámbito no crea registro.
 
 ## 6. Criterios de salida por etapa
@@ -188,7 +212,7 @@ Cada celda permitida tiene una prueba de éxito y cada celda denegada una prueba
 | --- | --- |
 | 0 · Cimientos | Plan de pruebas y comunidades simuladas aprobados por el líder del proyecto, con los supuestos de cálculo documentados; checks `docs` y `secrets` de la CI marcados como obligatorios en la protección de `main`. |
 | 1 · Diseño | Cada especificación del MVP tiene casos de prueba derivados (uno por CA y por caso borde) revisados; pruebas de oro cubren gasto común, pagos y conciliación; matriz de permisos definida por módulo con todos los actores de la sección 5 (incluidos ex residentes y roles de plataforma) y la regla 404/403; casos de aislamiento por ámbito y de plataforma para cada endpoint que los requiera. |
-| 2 · MVP | Suite completa en verde en CI; pruebas de oro y propiedades automatizadas, corriendo en todo PR y bloqueantes; cada endpoint con pruebas de aislamiento (dos vías) y permisos; E2E de flujos críticos en web y app; cobertura de líneas mayor o igual a 90 % en módulos de dinero y permisos. |
+| 2 · MVP | Suite completa en verde en CI; pruebas de oro y propiedades automatizadas, corriendo en todo PR y bloqueantes; cada endpoint con pruebas de aislamiento (dos vías) y permisos, incluida la ruta de retorno de Transbank; Webpay probado contra el doble de Transbank en CI y con la prueba de contrato del ambiente de integración de Transbank en verde antes de cada despliegue a pruebas; E2E de flujos críticos en web y app; cobertura de líneas mayor o igual a 90 % en módulos de dinero y permisos. |
 | 3 · Piloto | **Antes de iniciar:** regla de redondeo, supuestos de cálculo y pruebas de oro validados por un contador. Durante: datos reales de la comunidad piloto migrados y cuadrados contra su contabilidad anterior; al menos un cierre de mes completo validado por el administrador; cero defectos abiertos de dinero, aislamiento o permisos. |
 | 4 · Lanzamiento | Pruebas de carga y de recuperación ante fallos; revisión de seguridad externa sin hallazgos críticos; auditoría de datos personales según Ley 21.719 aprobada; regresión completa en verde. |
 
@@ -207,6 +231,8 @@ Cada celda permitida tiene una prueba de éxito y cada celda denegada una prueba
 4. Integración con PostgreSQL efímero, incluidas aislamiento y permisos.
 5. E2E web (Playwright) en PR que tocan `apps/web`; E2E app (Maestro) en compilaciones de EAS.
 6. Análisis de dependencias vulnerables.
+
+Fuera del CI de cada cambio y antes de cada despliegue a pruebas: prueba de contrato contra el ambiente de integración de Transbank (crear, confirmar, consultar y reembolsar; ADR 0007, prueba 10). En el CI, Webpay se prueba contra un doble de Transbank con dos comercios simulados, que registra cada llamada con su comercio y su token (ADR 0007, prueba 6).
 
 Las semillas de fast-check que encuentren un fallo se registran en el reporte y se agregan como caso fijo de regresión.
 
@@ -235,6 +261,7 @@ Las semillas de fast-check que encuentren un fallo se registran en el reporte y 
 - [ ] ¿El umbral de 90 % de cobertura en módulos de dinero y permisos es adecuado o se prefiere medir cobertura de mutación? (Líder del proyecto)
 - [ ] La CI de la Etapa 0 usa `gitleaks` para detectar secretos. ¿Se confirma con un ADR? (Arquitecto)
 - [ ] ¿Las pruebas E2E de la app (Maestro) corren en cada PR o solo antes de publicar con EAS? (Arquitecto)
+- [ ] Hallazgos H-30 a H-42 de los casos de gasto común (huella de plataforma, `webpay-attempts/current` del arrendatario, ruta de retorno, estado desconocido en `mark_for_reversal`, posición del 400, entre otros): `docs/qa/casos/gasto-comun.md`, sección final. (Analista y arquitecto)
 
 Cerradas:
 
