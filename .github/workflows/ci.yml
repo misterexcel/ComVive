@@ -31,6 +31,8 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version-file: .nvmrc
+          # This job does not install pnpm; skip the automatic pnpm cache.
+          package-manager-cache: false
       - run: npx --yes markdownlint-cli2@0.17.2
 
   secrets:
