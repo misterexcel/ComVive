@@ -170,7 +170,7 @@ Operaciones ComVive (`platform_operations`) no ve datos de negocio: toda lectura
 
 ### 4.3 Ruta de retorno de Transbank (única ruta de negocio sin membresía)
 
-`GET` y `POST /gateway/webpay/communities/{communityId}/webpay-attempts/{attemptId}/return` no exige sesión: Transbank redirige el navegador del pagador (`docs/arquitectura.md` §2; ADR 0007). Su guard propio busca el intento en la comunidad de la ruta y compara el token o, en una expiración sin token, `TBK_ID_SESION` y `TBK_ORDEN_COMPRA`. Un retorno inválido responde un 302 neutro a la pantalla genérica, sin id de intento, no escribe en la base de datos y deja un evento en el registro de eventos de seguridad (spec S-75 y S-83). Además del patrón de la sección 4:
+`GET` y `POST /gateway/webpay/communities/{communityId}/webpay-attempts/{attemptId}/return` no exige sesión: Transbank redirige el navegador del pagador (`docs/arquitectura.md` §2; ADR 0007). Su guard propio busca el intento en la comunidad de la ruta y compara el token o, en una expiración sin token, `TBK_ID_SESION` y `TBK_ORDEN_COMPRA`. Un retorno inválido responde un 302 neutro a la pantalla genérica, sin id de intento, no escribe en la base de datos y deja un evento en el registro de eventos de seguridad con el motivo del primer paso que falla (`missing_params`, `attempt_not_found`, `token_mismatch`, `expiration_mismatch`); la app muestra el texto neutro de GLB-02 (spec S-75, S-83 y decisión del líder D19). Además del patrón de la sección 4:
 
 | Caso | Acción | Resultado esperado |
 | --- | --- | --- |
@@ -265,10 +265,10 @@ Las semillas de fast-check que encuentren un fallo se registran en el reporte y 
 - [ ] ¿El umbral de 90 % de cobertura en módulos de dinero y permisos es adecuado o se prefiere medir cobertura de mutación? (Líder del proyecto)
 - [ ] La CI de la Etapa 0 usa `gitleaks` para detectar secretos. ¿Se confirma con un ADR? (Arquitecto)
 - [ ] ¿Las pruebas E2E de la app (Maestro) corren en cada PR o solo antes de publicar con EAS? (Arquitecto)
-- [ ] Hallazgos H-43 a H-46 de los casos de gasto común (reembolso pasadas las 168 horas en CA-73, reversa imposible en CA-74, textos menores de la spec rev. 8, motivo del evento de un retorno sin parámetros y dos fallas en el paso de forma): `docs/qa/casos/gasto-comun.md`, sección final. (Analista y arquitecto)
 
 Cerradas:
 
+- [x] Hallazgos H-43 a H-46 de los casos de gasto común: resueltos el 2026-11-08 en la spec rev. 8, ADR 0003 y 0007 y `docs/arquitectura.md`.
 - [x] Hallazgos H-30 a H-42 de los casos de gasto común: resueltos en la spec rev. 8, los ADR 0002, 0003, 0005, 0006 y 0007 y `docs/arquitectura.md`, con las decisiones del líder D17 y D18 (tabla de resolución en `docs/qa/casos/gasto-comun.md`).
 
 - [x] Códigos de respuesta (decisión del líder del proyecto, 2026-11-07): 404 si el actor no puede ver el recurso; 403 solo si lo ve pero no puede hacer la acción (sección 4).

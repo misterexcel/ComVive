@@ -72,7 +72,7 @@ Wireframes de baja fidelidad de las pantallas del MVP de ComVive, en ASCII, para
 | APP-10 | Carga y copia local | `app-inicio.md` |
 | APP-11 | Selector de unidad | `app-inicio.md` |
 | APP-PAG-01 a 09 | Hoja "¿Qué quieres pagar?", advertencias, 409, Webpay, comprobante y resultados | `app-hoja-de-pago.md` |
-| APP-PAG-10 | Retorno inválido de Webpay (pantalla genérica, no el 404 neutro) | `app-hoja-de-pago.md` |
+| APP-PAG-10 | Retorno inválido de Webpay (pantalla propia con el texto del 404 neutro; D19, D21) | `app-hoja-de-pago.md` |
 | APP-HIS-01 a 03 | Historial de pagos del propietario y del arrendatario | `app-pagos-y-cobros.md` |
 | APP-COB-01 a 03 | Avisos del propietario, vista del cobro del arrendatario y resumen de gastos | `app-pagos-y-cobros.md` |
 | APP-MAS-01 a 04 | Más, perfil, privacidad y notificaciones | `app-pagos-y-cobros.md` |

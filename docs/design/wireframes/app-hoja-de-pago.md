@@ -250,7 +250,7 @@ Escenario: CA-65. Ana Pérez, Depto 101, el 26-11-2026. El intento `OC-2026-0006
 - En el historial, el intento muestra el mismo texto (APP-HIS-03). Como en `reversed`, la franja se cierra con "Entendido".
 - Si la persona ya no tiene membresía, recibe por correo o SMS el aviso de F-13 para `resolve_without_charge` (CA-65).
 
-## APP-PAG-10 · Retorno inválido de Webpay (pantalla genérica)
+## APP-PAG-10 · Retorno inválido de Webpay (pantalla propia)
 
 Escenario: CA-75. La API recibe un retorno de Webpay que no puede validar: intento de otra comunidad, intento inexistente, o token u orden que no coinciden con el intento (spec F-12, H-32). Responde un 302 neutro a esta pantalla, sin el id del intento.
 
@@ -259,20 +259,19 @@ Escenario: CA-75. La API recibe un retorno de Webpay que no puede validar: inten
 |
 |        (icono triangle-alert, 48 px)
 |
-|  No pudimos mostrar el resultado del
-|  pago. Revisa tu estado de cuenta en
-|  Inicio antes de pagar de nuevo
+|  No encontramos lo que buscas o no
+|  tienes acceso
 |
 | [[        Volver al inicio        ]]
 |
 +---------------------------------------
 ```
 
-- Texto de F-17, fila "Retorno inválido de Webpay", tal cual y sin punto final. **Supuesto (a validar)** de la spec (S-83); texto pendiente de aprobación del líder (P-59). Si el líder cambia el texto, se cambia aquí y en el flujo.
+- Texto neutro de GLB-02 (404 `NOT_FOUND` de la spec), tal cual y sin punto final, por **decisión del líder D19** (2026-11-08, cierra P-59). Se descarta el texto de S-83 ("No pudimos mostrar el resultado del pago…").
 - **Igual para toda causa:** misma pantalla, mismo texto y mismo botón para un intento ajeno, uno inexistente o datos que no coinciden. Así no revela si el intento existe.
 - **Sin datos del pago:** no muestra número de orden (`buy_order`), monto, estado, unidad ni comunidad. La app no consulta ningún intento al abrirla: la ruta no trae id.
-- **No es el 404 neutro (GLB-02):** no usa "No encontramos lo que buscas o no tienes acceso" ni el ícono `search-x`. El texto lleva a revisar Inicio antes de volver a pagar, para evitar un pago doble si el pago sí existía.
-- **Ícono:** `triangle-alert` (advertencia, design system 7), decorativo y oculto para lectores de pantalla; el texto se entiende solo. Sin barra de pestañas, como las demás pantallas de resultado (APP-PAG-08).
+- **Mismo texto que GLB-02, pero pantalla propia:** comparte el texto y el botón "Volver al inicio" con el 404 neutro, pero no es GLB-02: usa el ícono `triangle-alert` en vez de `search-x` y no tiene barra de pestañas. Para evitar un pago doble si el pago sí existía, "Volver al inicio" lleva a Inicio, que muestra el pago en curso si lo hay (ver más abajo).
+- **Ícono:** `triangle-alert` (advertencia, design system 7), decorativo y oculto para lectores de pantalla; el texto se entiende solo. Sin barra de pestañas, como las demás pantallas de resultado (APP-PAG-08). Ícono y ausencia de barra aprobados por el líder (D21).
 - **"Volver al inicio"** (`Button` `primary`, a todo el ancho, 48 px de alto): abre Inicio, que consulta `webpay-attempts/current`. Si la persona tenía un pago propio en curso, Inicio lo muestra en el bloque de esa deuda (APP-05). Si la sesión expiró, pide el ingreso y luego abre Inicio.
 - **Accesibilidad:** al abrirse, el foco va al texto; el gesto atrás equivale a "Volver al inicio".
 
@@ -288,6 +287,6 @@ Textos de la tabla "Códigos y mensajes de error" de la spec y del flujo, tal cu
 | 422 `ONLINE_PAYMENT_NOT_AVAILABLE` | "Esta comunidad aún no recibe pagos en línea. Pide a la administración los datos para pagar por transferencia" | Reemplaza el botón (APP-07 de `app-inicio.md`) |
 | 422 `IDEMPOTENCY_KEY_REUSED` | "Esta operación ya se envió con otros datos. Vuelve a abrir el formulario" | Cierra la hoja y recarga Inicio |
 | 404 `NOT_FOUND` (ámbito que no ve) | "No encontramos lo que buscas o no tienes acceso" | GLB-02 |
-| Retorno inválido de Webpay (302 neutro, sin id del intento; H-32, CA-75) | "No pudimos mostrar el resultado del pago. Revisa tu estado de cuenta en Inicio antes de pagar de nuevo" (F-17; S-83, pendiente de aprobación, P-59) | Pantalla genérica APP-PAG-10 con "Volver al inicio"; no GLB-02 |
+| Retorno inválido de Webpay (302 neutro, sin id del intento; H-32, CA-75) | "No encontramos lo que buscas o no tienes acceso" (texto de GLB-02; decisión del líder D19) | Pantalla propia APP-PAG-10 con ícono `triangle-alert`, sin barra de pestañas (D21) y "Volver al inicio" |
 | 503 `PAYMENT_GATEWAY_UNAVAILABLE` (Transbank no responde al crear la transacción) | "No pudimos conectar con Webpay. Intenta en unos minutos" | Banner `danger` en Inicio; la hoja se cierra y no se abre el navegador. El intento queda `abandoned` y el ámbito libre: "Pagar gasto común" sigue activo (S-57, CA-66) |
 | Sin conexión | "Necesitas conexión para pagar" (UX-63) | Bajo el botón desactivado (GLB-04) |

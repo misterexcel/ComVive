@@ -428,7 +428,7 @@ La suma de cargos de cada periodo sigue igual al total emitido (regla 3 de `CLAU
 | --- | --- | --- |
 | CA-73, CA-74 (Depto 101) | Deuda inicial (CA-5): 100.000 + 10.000; ni el 422 `TRANSBANK_STATUS_UNEXPECTED` ni el 409 `REFUND_PENDING` ni el reverso escriben movimientos | Saldo $110.000 antes y después |
 | CA-73 (reembolso con `balance` válido) | Autorizado $11.000; `balance` 6.000 = 11.000 − 5.000 anulados | Reembolso $6.000; con `balance` ausente, $0 o 12.000 (> 11.000), 422 y sin reembolso |
-| CA-73 (pasadas las 168 horas) | Última concluyente: `AUTHORIZED` $11.000 de "confirmar" (Supuesto (a validar), hallazgo H-43 de los casos); sin ninguna concluyente, monto iniciado (S-69) | Reembolso $11.000; sin concluyente, $110.000 |
+| CA-73 (pasadas las 168 horas) | Última respuesta concluyente guardada por `called_at` (fila `status` o `commit` con estado conocido): `AUTHORIZED` $11.000 de "confirmar", o `PARTIALLY_NULLIFIED` con `balance` 11.000 − 5.000 = 6.000 si es la última; sin ninguna concluyente, monto iniciado (S-69; H-43 resuelto) | Reembolso $11.000 (o $6.000); sin concluyente, $110.000 |
 | CA-73 (plazo) | `create` enviado el 2026-11-25 21:40 hora de Chile = 2026-11-26 00:40 UTC; + 168 horas = 2026-12-03 00:40 UTC | Consultable hasta antes del 2026-12-02 21:40 hora de Chile |
 | CA-75, expiración con `AUTHORIZED` por $110.000 (D18) | Pago Webpay de $110.000 al capital vencido: ordinario 100.000 − 100.000 = 0; fondo 10.000 − 10.000 = 0 | Saldo 110.000 − 110.000 = $0 |
 | CA-75, expiración con `INITIALIZED`, sin respuesta u otro estado, y retornos inválidos | Ningún pago ni movimiento | Saldo $110.000 |

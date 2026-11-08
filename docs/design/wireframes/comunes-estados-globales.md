@@ -85,7 +85,7 @@ Cuándo: el actor no puede ver el recurso (otra comunidad, membresía vencida, p
 
 - Casos típicos: el arrendatario abre el enlace de un aviso PDF (G-7), el comprobante completo de un pago de otro, el detalle de un intento que no inició él, o una unidad que ya no es suya (CA-23, CA-47, CA-60).
 - Si la respuesta 404 es de **toda la unidad** (pérdida de acceso), se usa APP-09 de `app-inicio.md`, no esta pantalla.
-- El **retorno inválido de Webpay** (H-32, CA-75) **no** usa esta pantalla: va a la pantalla genérica APP-PAG-10 de `app-hoja-de-pago.md`, con el texto de F-17 "No pudimos mostrar el resultado del pago. Revisa tu estado de cuenta en Inicio antes de pagar de nuevo" y "Volver al inicio" (S-83; pendiente de aprobación, P-59).
+- El **retorno inválido de Webpay** (H-32, CA-75) usa el mismo texto de esta pantalla, "No encontramos lo que buscas o no tienes acceso", y el mismo botón "Volver al inicio" (decisión del líder D19), pero en una pantalla propia: APP-PAG-10 de `app-hoja-de-pago.md`, con ícono `triangle-alert` y sin barra de pestañas (D21).
 
 ## GLB-03 · 403 en la misma pantalla (web)
 
