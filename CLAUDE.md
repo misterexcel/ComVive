@@ -18,9 +18,11 @@ Quien compra es el administrador (multi-comunidad). Quien más usa la app es el 
 
 ## Etapa actual
 
-**Etapa 1 · Diseño.** Objetivo: mapa de usuarios y flujos, wireframes, design system, arquitectura y especificación del motor de gasto común con sus casos de prueba y pruebas de oro. Hito de cierre: diseño aprobado por el líder del proyecto.
+**Etapa 2 · MVP.** Objetivo: construir el MVP en rebanadas verticales (base de datos → API → web/app → pruebas) desde el diseño aprobado de la Etapa 1, con TDD en todo lo que mueve dinero o datos de otra comunidad. Primera tarjeta: ADR 0008 "Tareas en segundo plano" (decisión del líder D14), antes de que Webpay pase a "Lista para desarrollo". Hito de cierre: MVP aprobado por el líder del proyecto en el ambiente de pruebas.
 
-Etapas: 0 Cimientos (cerrada) → 1 Diseño → 2 MVP → 3 Piloto → 4 Lanzamiento. Cada etapa cierra con un hito aprobado por el líder del proyecto. No trabajamos con plazos; trabajamos por etapas.
+**Etapa 1 · Diseño: cerrada el 2026-11-08** con la aprobación en bloque del líder del proyecto (ADR 0001 a 0007, arquitectura, spec de gasto común rev. 8, design system, wireframes y QA). Quedan para antes del Piloto los supuestos marcados **(a validar)** y las preguntas P-55 y P-56.
+
+Etapas: 0 Cimientos (cerrada) → 1 Diseño (cerrada) → 2 MVP → 3 Piloto → 4 Lanzamiento. Cada etapa cierra con un hito aprobado por el líder del proyecto. No trabajamos con plazos; trabajamos por etapas.
 
 Por ahora se trabaja con **comunidades pequeñas simuladas** (`docs/qa/comunidades-simuladas.md`). El segmento comercial se define más adelante.
 
@@ -36,7 +38,8 @@ Flujo del tablero: Backlog → Especificación → Lista para desarrollo → En 
 - **Hecho:** pruebas en verde, revisión cruzada y de seguridad aprobadas, documentación actualizada, validación del líder del proyecto en el ambiente de pruebas.
 - Pocas tarjetas en curso a la vez.
 - Entregas en rebanadas verticales: base de datos → API → web/app → pruebas.
-- Pruebas primero (TDD) en gasto común, conciliación y permisos.
+- Pruebas primero (TDD) en todo lo que mueve dinero o datos de otra comunidad: gasto común (incluidos redondeo, saldos y periodos cerrados), intereses por mora, imputación de pagos (incluido Webpay), conciliación, permisos y aislamiento.
+- Cada revisión crítica queda en `docs/revisiones/AAAA-MM-DD-<entregable>.md`, con sus hallazgos y cómo se resolvió cada uno.
 - Trunk-based development con ramas cortas y feature flags.
 - Toda decisión técnica relevante queda en `docs/adr/`.
 
@@ -65,7 +68,7 @@ Flujo del tablero: Backlog → Especificación → Lista para desarrollo → En 
 6. **Periodos cerrados** son inmutables. Las correcciones se hacen con ajustes en el periodo siguiente.
 7. **Datos personales:** RUT, deudas y datos de visitas se tratan según la Ley 21.719. Solo lo mínimo necesario, acceso por rol y registro de auditoría.
 8. **Normativa:** el diseño respeta la Ley 21.442 de Copropiedad Inmobiliaria y su reglamento. Ante dudas legales, se deja una pregunta abierta para el líder del proyecto y, mientras tanto, un supuesto documentado y marcado como tal (ver "Fase de prueba y desarrollo"); nunca un supuesto implícito.
-9. **Secretos:** nunca en el código ni en commits. Solo variables de entorno.
+9. **Secretos:** nunca en el código ni en commits. Solo variables de entorno o Google Secret Manager (credenciales por comunidad, como Webpay; ver ADR 0007).
 10. **Sin aprobación no hay producción.**
 
 ## Convenciones
@@ -96,6 +99,7 @@ docs/specs/             especificaciones por módulo
 docs/adr/               decisiones de arquitectura
 docs/design/            flujos, wireframes, design system
 docs/qa/                plan de pruebas, comunidades simuladas, pruebas de oro
+docs/revisiones/        informes del revisor crítico y su resolución
 docs/operaciones/       ambientes y procedimientos (desde la Etapa 2)
 docs/contexto/          investigación de mercado y plan de puesta en marcha
 apps/api | web | mobile se crean en la Etapa 2
