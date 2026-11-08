@@ -18,7 +18,7 @@ Quien compra es el administrador (multi-comunidad). Quien más usa la app es el 
 
 ## Etapa actual
 
-**Etapa 2 · MVP.** Objetivo: construir el MVP en rebanadas verticales (base de datos → API → web/app → pruebas) desde el diseño aprobado de la Etapa 1, con TDD en todo lo que mueve dinero o datos de otra comunidad. Primera tarjeta: ADR 0008 "Tareas en segundo plano" (decisión del líder D14), antes de que Webpay pase a "Lista para desarrollo". Hito de cierre: MVP aprobado por el líder del proyecto en el ambiente de pruebas.
+**Etapa 2 · MVP.** Objetivo: construir el MVP en rebanadas verticales (base de datos → API → web/app → pruebas) desde el diseño aprobado de la Etapa 1, con TDD en todo lo que mueve dinero o datos de otra comunidad. Primera tarjeta: ADR 0008 "Tareas en segundo plano" (decisión del líder D14), **aceptado el 2026-11-08** tras tres pasadas de revisión crítica (decisiones D22 a D31); con eso se cumple su condición para que Webpay pase a "Lista para desarrollo". La spec de gasto común rev. 9 sigue en revisión. Hito de cierre: MVP aprobado por el líder del proyecto en el ambiente de pruebas.
 
 **Etapa 1 · Diseño: cerrada el 2026-11-08** con la aprobación en bloque del líder del proyecto (ADR 0001 a 0007, arquitectura, spec de gasto común rev. 8, design system, wireframes y QA). Quedan para antes del Piloto los supuestos marcados **(a validar)** y las preguntas P-55 y P-56.
 
