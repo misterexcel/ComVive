@@ -92,7 +92,7 @@ Escenario: Comunidad A después de CA-43 y de la venta de CA-57 (tarea abierta).
 ```text
 +-- Diálogo: Quitar del comité -----------------------------------------------
 | Rosa Díaz dejará de ver la comunidad como comité de inmediato. Seguirá viendo
-| su unidad como propietario. Deberá volver a ingresar en sus dispositivos.
+| su unidad como propietario.
 |
 | Motivo (obligatorio)
 | [ Término del periodo                                      v ]
@@ -104,6 +104,7 @@ Escenario: Comunidad A después de CA-43 y de la venta de CA-57 (tarea abierta).
 
 - Texto del flujo. Con "Otro" aparece un campo de texto con "No incluyas datos personales". En el caso de Rosa Díaz, que ya no es propietaria, la frase "Seguirá viendo su unidad como propietario" no aplica. **Supuesto (a validar), UX-72:** la API indica si la persona conserva una unidad y el diálogo omite esa frase si no.
 - Resultado: la tarea abierta de esa persona se cierra sola (`revoked_elsewhere`) y sale de Tareas pendientes.
+- Sus sesiones no se cierran (H-42): desde su petición siguiente, lo que veía como comité le responde 404 (GLB-01); su app de propietario y sus otras comunidades siguen funcionando. Se eliminan sus suscripciones push de la membresía de comité. Por eso el diálogo ya no dice "Deberá volver a ingresar en sus dispositivos".
 
 ## WEB-USR-04 · Historial de roles
 

@@ -189,7 +189,7 @@ Cobro vigente (AUTHORIZED, CAPTURED o PARTIALLY_NULLIFIED)
 Cobro ya devuelto (REVERSED o NULLIFIED)
 +-- Panel: Marcar para reverso -----------------------------------------------
 | Estado en Transbank: NULLIFIED (consultado el 26-11-2026 10:15)
-| Se pedirá reembolso: no. Transbank ya devolvió el cobro
+| Se pedirá reembolso: no
 | Pago a crear: ninguno
 |
 | No se registrará ningún pago ni se pedirá un reembolso nuevo. El intento

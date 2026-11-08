@@ -12,7 +12,7 @@ Reglas que se ven en estas pantallas (spec F-12, F-16, F-17; arquitectura §4, "
 - Al iniciar, la app envía los ámbitos elegidos y el total que vio (`expectedTotalClp`). Si la deuda cambió, la API responde 409 `AMOUNT_CHANGED` con los montos nuevos.
 - Solo se ofrecen ámbitos con deuda mayor que $0. "Ambas" solo si los dos tienen deuda y ninguno tiene un pago en curso.
 
-Criterios de aceptación: CA-10, CA-29, CA-30, CA-41 y CA-55.
+Criterios de aceptación: CA-10, CA-29, CA-30, CA-41, CA-55 y CA-75.
 
 ## APP-PAG-01 · Hoja de pago del propietario con dos deudas
 
@@ -186,7 +186,7 @@ Escenario: CA-29. Luis Muñoz pagó "Ambas" el 05-01-2027 con la orden `OC-2027-
 ## APP-PAG-08 · Otros resultados al volver
 
 ```text
-Rechazado por Transbank                    Cancelado o expirado (abandoned)
+Rechazado por Transbank                    Cancelado (abandoned)
 (rejectionKind = transbank_rejected)
 +--------------------------------------    +--------------------------------------
 | (icono circle-alert)                      | (icono circle-alert)
@@ -212,6 +212,10 @@ En proceso                                 En revisión por ComVive
 - Textos del flujo (paso 6) y de F-17 ("En revisión por ComVive" y su detalle). El número de orden de "En proceso" es ilustrativo.
 - **Un texto por estado (M-6, rev. 4):** `rejected` se muestra según el campo `rejectionKind` que entrega la API: `transbank_rejected`, "Tu banco rechazó el pago. No se hizo ningún cargo" (esta pantalla); `resolved_without_charge`, "Tu pago no se completó. No se hizo ningún cargo" (APP-PAG-09). `abandoned` tiene un único texto, "Pago cancelado. No se hizo ningún cargo" (texto del diseño aprobado con UX-69, D15), también si el intento quedó así por el 503 al iniciar. Sin punto final y sin otras variantes.
 - "Podrás reintentar en {n} min" solo aparece si el intento aún bloquea el ámbito (la persona cerró el navegador sin volver). Cómo se obtiene {n}: UX-52.
+- **Formulario de Webpay expirado (decisión del líder D18; ADR 0007, decisión 4; spec F-12):** la expiración no lleva directo a `abandoned`. Antes de cancelar, ComVive consulta el estado a Transbank y la app muestra la pantalla que corresponda al estado resultante, sin una pantalla propia de "expirado":
+  - **Sin cobro** (`INITIALIZED`): `abandoned`, "Pago cancelado. No se hizo ningún cargo" (esta pantalla, sin la línea "Podrás reintentar", porque el ámbito queda libre).
+  - **Autorizado:** confirmación normal, con el comprobante (APP-PAG-07) o "En revisión por ComVive" si el monto no coincide.
+  - **Sin respuesta, error u otro estado:** el intento sigue `initiated`; la app muestra "En proceso" (esta pantalla) y en Inicio el bloque de esa deuda muestra "Tienes un pago en proceso" y "Número de orden {buy_order}. Te avisaremos el resultado" (APP-05). Lo resuelve la consulta de los 15 minutos.
 - "Intentar de nuevo" vuelve a abrir la hoja o a iniciar el pago con una clave de idempotencia nueva.
 
 ## APP-PAG-09 · Resultados de un pago en revisión resuelto por Soporte
@@ -246,6 +250,32 @@ Escenario: CA-65. Ana Pérez, Depto 101, el 26-11-2026. El intento `OC-2026-0006
 - En el historial, el intento muestra el mismo texto (APP-HIS-03). Como en `reversed`, la franja se cierra con "Entendido".
 - Si la persona ya no tiene membresía, recibe por correo o SMS el aviso de F-13 para `resolve_without_charge` (CA-65).
 
+## APP-PAG-10 · Retorno inválido de Webpay (pantalla genérica)
+
+Escenario: CA-75. La API recibe un retorno de Webpay que no puede validar: intento de otra comunidad, intento inexistente, o token u orden que no coinciden con el intento (spec F-12, H-32). Responde un 302 neutro a esta pantalla, sin el id del intento.
+
+```text
++---------------------------------------
+|
+|        (icono triangle-alert, 48 px)
+|
+|  No pudimos mostrar el resultado del
+|  pago. Revisa tu estado de cuenta en
+|  Inicio antes de pagar de nuevo
+|
+| [[        Volver al inicio        ]]
+|
++---------------------------------------
+```
+
+- Texto de F-17, fila "Retorno inválido de Webpay", tal cual y sin punto final. **Supuesto (a validar)** de la spec (S-83); texto pendiente de aprobación del líder (P-59). Si el líder cambia el texto, se cambia aquí y en el flujo.
+- **Igual para toda causa:** misma pantalla, mismo texto y mismo botón para un intento ajeno, uno inexistente o datos que no coinciden. Así no revela si el intento existe.
+- **Sin datos del pago:** no muestra número de orden (`buy_order`), monto, estado, unidad ni comunidad. La app no consulta ningún intento al abrirla: la ruta no trae id.
+- **No es el 404 neutro (GLB-02):** no usa "No encontramos lo que buscas o no tienes acceso" ni el ícono `search-x`. El texto lleva a revisar Inicio antes de volver a pagar, para evitar un pago doble si el pago sí existía.
+- **Ícono:** `triangle-alert` (advertencia, design system 7), decorativo y oculto para lectores de pantalla; el texto se entiende solo. Sin barra de pestañas, como las demás pantallas de resultado (APP-PAG-08).
+- **"Volver al inicio"** (`Button` `primary`, a todo el ancho, 48 px de alto): abre Inicio, que consulta `webpay-attempts/current`. Si la persona tenía un pago propio en curso, Inicio lo muestra en el bloque de esa deuda (APP-05). Si la sesión expiró, pide el ingreso y luego abre Inicio.
+- **Accesibilidad:** al abrirse, el foco va al texto; el gesto atrás equivale a "Volver al inicio".
+
 ## Errores
 
 Textos de la tabla "Códigos y mensajes de error" de la spec y del flujo, tal cual.
@@ -258,5 +288,6 @@ Textos de la tabla "Códigos y mensajes de error" de la spec y del flujo, tal cu
 | 422 `ONLINE_PAYMENT_NOT_AVAILABLE` | "Esta comunidad aún no recibe pagos en línea. Pide a la administración los datos para pagar por transferencia" | Reemplaza el botón (APP-07 de `app-inicio.md`) |
 | 422 `IDEMPOTENCY_KEY_REUSED` | "Esta operación ya se envió con otros datos. Vuelve a abrir el formulario" | Cierra la hoja y recarga Inicio |
 | 404 `NOT_FOUND` (ámbito que no ve) | "No encontramos lo que buscas o no tienes acceso" | GLB-02 |
+| Retorno inválido de Webpay (302 neutro, sin id del intento; H-32, CA-75) | "No pudimos mostrar el resultado del pago. Revisa tu estado de cuenta en Inicio antes de pagar de nuevo" (F-17; S-83, pendiente de aprobación, P-59) | Pantalla genérica APP-PAG-10 con "Volver al inicio"; no GLB-02 |
 | 503 `PAYMENT_GATEWAY_UNAVAILABLE` (Transbank no responde al crear la transacción) | "No pudimos conectar con Webpay. Intenta en unos minutos" | Banner `danger` en Inicio; la hoja se cierra y no se abre el navegador. El intento queda `abandoned` y el ámbito libre: "Pagar gasto común" sigue activo (S-57, CA-66) |
 | Sin conexión | "Necesitas conexión para pagar" (UX-63) | Bajo el botón desactivado (GLB-04) |

@@ -350,7 +350,7 @@ Responde en una mirada: de quién es la deuda, cuánto es, desde o hasta cuándo
   - Intento propio en `reversed`: "Tu pago fue anulado en Transbank. El reembolso a tu medio de pago depende de tu banco".
   - Intento propio en `rejected` con `rejectionKind = resolved_without_charge` (Soporte lo resolvió sin cobro): "Tu pago no se completó. No se hizo ningún cargo" (F-17, S-59).
   - Intento propio en `rejected` con `rejectionKind = transbank_rejected`: "Tu banco rechazó el pago. No se hizo ningún cargo".
-  - Intento propio en `abandoned` (cancelado, expirado o sin conexión con Webpay al iniciar): "Pago cancelado. No se hizo ningún cargo" (texto del diseño, UX-69 aprobado, D15).
+  - Intento propio en `abandoned` (cancelado, sin conexión con Webpay al iniciar, o formulario expirado que Transbank informó sin cobro tras la consulta previa de D18): "Pago cancelado. No se hizo ningún cargo" (texto del diseño, UX-69 aprobado, D15).
   - La app elige el texto de `rejected` por `rejectionKind` y el de `reversal_pending` por `reversalKind`; nunca lo deduce. Un texto por caso, sin variantes ni punto final (M-6, rev. 4).
 - **Aviso de intereses** (E-8, solo con el flag `billing.interest`): banner `warning` dentro de la tarjeta con "Tu deuda está vencida. Se pueden generar intereses hasta la fecha de tu pago, que se cobrarán en el próximo aviso".
 - **Accesibilidad:** la tarjeta es una región con título (`aria-labelledby` o `accessibilityRole="summary"`); el lector lee título, estado, monto y vencimientos en ese orden.

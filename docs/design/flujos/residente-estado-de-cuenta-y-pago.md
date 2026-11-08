@@ -11,7 +11,7 @@ Referencias en `docs/specs/gasto-comun.md`:
 - Ámbito, visibilidad y aviso legal: F-9, F-13, F-15, S-14, S-19, S-25 y S-48. "Datos del arrendatario que ve el propietario" (S-44).
 - Vista del cobro del arrendatario y resumen de gastos: G-7 y G-8.
 - Aviso al pagar: E-8, solo con el flag `billing.interest`.
-- Criterios de aceptación: CA-10, CA-22, CA-23, CA-29, CA-30, CA-35, CA-41, CA-47, CA-55, CA-60 y CA-68.
+- Criterios de aceptación: CA-10, CA-22, CA-23, CA-29, CA-30, CA-35, CA-41, CA-47, CA-55, CA-60, CA-68 y CA-75.
 - Cobro ya devuelto (decisiones del líder D4 y D8, 2026-11-07): F-16 y F-17 de la spec rev. 6.
 
 Otras referencias: `docs/arquitectura.md` §2 (respuestas neutras), §4 (Webpay: `webpay-attempts`, bloqueo por (unidad, ámbito), estados; visibilidad por ámbito y `payerKind`) y §5 (copia local y push).
@@ -30,13 +30,14 @@ Objetivo: desde abrir la app hasta iniciar el pago, **un toque** ("Pagar gasto c
   - **Arrendatario:** un solo bloque con su ámbito. Ningún texto, monto ni enlace menciona o insinúa la deuda del propietario (S-19).
   - Dentro de un mismo ámbito nunca coexisten deuda y saldo a favor (F-6), así que cada bloque muestra uno de los dos.
 - **Qué se puede pagar (F-12):**
-  - El propietario elige "Mi deuda", "Deuda del arrendatario" o "Ambas". Solo se ofrecen los ámbitos con deuda mayor que $0; "Ambas" solo si los dos tienen deuda y ninguno tiene un pago en curso.
+  - El propietario elige "Mi deuda", "Deuda del arrendatario" o "Ambas". Solo se ofrecen los ámbitos con deuda mayor que $0; "Ambas" solo si los dos tienen deuda y ninguno tiene un pago propio en curso. La app no sabe de intentos ajenos (H-31): si el arrendatario está pagando su deuda, "Deuda del arrendatario" y "Ambas" se ofrecen igual y la API responde 409 `PAYMENT_IN_PROGRESS` al elegirlas.
   - El arrendatario paga solo su ámbito.
   - Si el propietario no tiene arrendatario vigente, o solo uno de los ámbitos tiene deuda, no hay elección: el botón paga ese ámbito.
 - **Monto del pago:** la app no calcula ni suma montos. Muestra los montos que entrega la API para cada opción (incluido el de "Ambas") y, al iniciar, envía los ámbitos elegidos y el total que el residente vio (`expectedTotalClp`). Si la deuda cambió, la API responde 409 `AMOUNT_CHANGED` con los montos nuevos.
 - **Pagos en curso por (unidad, ámbito) (M3, F-12, F-17):** un intento en curso bloquea solo los ámbitos que cubre.
-  - **Quien inició el intento** (`startedByMe`, estado `initiated`) ve en el bloque de esa deuda el estado "Tienes un pago en proceso" y debajo "Número de orden {buy_order}. Te avisaremos el resultado". Es un estado, no un error.
-  - **Los demás residentes** que ven ese ámbito no ven ningún estado. Si intentan pagarlo, la API responde 409 `PAYMENT_IN_PROGRESS` y la app muestra "Ya hay un pago en proceso para esta deuda", sin decir quién paga (CA-30).
+  - **Solo intentos propios (H-31, S-74):** `GET .../webpay-attempts/current` devuelve solo los intentos que inició quien consulta. Nunca devuelve un intento de otra persona, ni su id, ni su monto, ni el ámbito bloqueado.
+  - **Quien inició el intento** (estado `initiated`) ve en el bloque de esa deuda el estado "Tienes un pago en proceso" y debajo "Número de orden {buy_order}. Te avisaremos el resultado". Es un estado, no un error.
+  - **Los demás residentes** que ven ese ámbito no ven ningún estado: ni el arrendatario ve el intento del propietario sobre su deuda, ni el propietario ve el intento del arrendatario sobre "Deuda del arrendatario". Si intentan pagarlo, la API responde 409 `PAYMENT_IN_PROGRESS` y la app muestra "Ya hay un pago en proceso para esta deuda", sin decir quién paga (CA-30).
 - **Quién pagó (F-12, F-17, S-25, S-48):** cada pago muestra una etiqueta relativa a quien mira. La API entrega `payerKind` y la app solo traduce:
 
   | `payerKind` | Quién pagó | Etiqueta | Quién la ve |
@@ -85,6 +86,12 @@ flowchart TD
   L1 -->|Correcta| M["Webpay en navegador seguro"]
   M --> N{"Acción en Transbank"}
   N -->|Abandona o cierra| O["Pago cancelado. No se hizo ningún cargo"]
+  N -->|Formulario expira| X1["API consulta a Transbank antes de cancelar (D18)"]
+  X1 -->|Sin cobro| O
+  X1 -->|Autorizada| Q
+  X1 -->|Sin respuesta o error| T
+  N -->|Retorno inválido| Z["Pantalla genérica: No pudimos mostrar el resultado del pago. Revisa tu estado de cuenta en Inicio antes de pagar de nuevo"]
+  Z --> F
   N -->|Rechazada| P["Tu banco rechazó el pago. No se hizo ningún cargo"]
   N -->|Autorizada| Q["API confirma con Transbank"]
   Q --> R{"¿Confirmación correcta y monto igual al iniciado?"}
@@ -137,8 +144,10 @@ flowchart TD
 6. **Al volver,** la app siempre consulta el estado del intento a la API:
    - **Aprobado:** comprobante (`Receipt`, design system 5.18) con "Pagado por ti", el monto, la unidad, la fecha y el número de orden, en líneas separadas, y "Compartir comprobante". Si el propietario pagó "Ambas", el comprobante detalla "Tu deuda ${monto}" y "Deuda del arrendatario ${monto}" (F-12). El formato de una línea "{etiqueta} · ${monto} · {dd-mm-aaaa} · {medio}" (`PayerLabel`) es solo para el historial (UX-67).
    - **Rechazado por Transbank** (`rejected` con `rejectionKind = transbank_rejected`): "Tu banco rechazó el pago. No se hizo ningún cargo" con "Intentar de nuevo".
-   - **Cancelado o expirado** (`abandoned`): "Pago cancelado. No se hizo ningún cargo". Es el único texto de `abandoned`, también cuando el intento quedó así por el 503 al iniciar. Si el intento aún bloquea el ámbito (cerró el navegador sin volver), "Podrás reintentar en {n} min".
+   - **Cancelado** (`abandoned`): "Pago cancelado. No se hizo ningún cargo". Es el único texto de `abandoned`, también cuando el intento quedó así por el 503 al iniciar o por un formulario expirado que Transbank informó sin cobro (D18, más abajo). Si el intento aún bloquea el ámbito (cerró el navegador sin volver), "Podrás reintentar en {n} min". Un formulario expirado no pasa directo a `abandoned`: ver el punto siguiente.
    - **En proceso:** "Estamos confirmando tu pago con Transbank. No vuelvas a pagar. Te avisaremos cuando se confirme." con el número de orden.
+   - **Formulario de Webpay expirado (D18; ADR 0007, decisión 4):** antes de cancelar, ComVive consulta el estado a Transbank. Si Transbank informa que no hubo cobro, el intento queda `abandoned` y se ve "Pago cancelado. No se hizo ningún cargo" (F-17). Si informa que se autorizó, sigue como un retorno normal (comprobante "Pagado por ti", o "En revisión por ComVive" si el monto no coincide). **Si Transbank no responde** (o responde con error u otro estado), el intento sigue en `initiated` hasta la consulta de los 15 minutos. La app no distingue esta causa de otras: al volver muestra la pantalla "En proceso" de arriba, y en Inicio el bloque de esa deuda muestra los textos de F-17 "Tienes un pago en proceso" y debajo "Número de orden {buy_order}. Te avisaremos el resultado" (APP-05). Ese ámbito no se puede pagar de nuevo mientras tanto. La consulta de los 15 minutos lo resuelve con los textos de siempre: "Pago cancelado. No se hizo ningún cargo" si no hubo cobro, "Pagado por ti" si se aprobó o "En revisión por ComVive" si no es concluyente.
+   - **Retorno inválido** (intento de otra comunidad o inexistente, o datos de Transbank que no coinciden; H-32, CA-75): la API redirige a la **pantalla genérica** de la app, sin id del intento, igual para toda causa. La app muestra el texto de F-17 para el retorno inválido, "No pudimos mostrar el resultado del pago. Revisa tu estado de cuenta en Inicio antes de pagar de nuevo", con "Volver al inicio" (APP-PAG-10), no el 404 neutro GLB-02 (spec rev. 8, S-83; texto pendiente de aprobación del líder, P-59). No consulta ningún intento ni dice si el pago existe; si la persona tenía un pago propio en curso, Inicio lo muestra con `current`.
    - **En revisión** (`in_review`, F-16, F-17): el estado dice "En revisión por ComVive" y debajo "Te avisaremos cuando se resuelva. Número de orden {buy_order}". La deuda no cambia mientras tanto.
 7. **Resolución de un pago en revisión** (la hace Soporte ComVive; ver `plataforma-soporte-webpay.md`). El residente recibe una notificación y la app muestra (F-16, F-17):
    - **Registrado** (`resolved_paid`): el pago aparece como "Pagado por ti" por el monto autorizado.
@@ -148,7 +157,7 @@ flowchart TD
    - **Sin cobro** (`rejected` con `rejectionKind = resolved_without_charge`, por `resolve_without_charge` desde `in_review` o, con D13, desde `reversal_pending`; F-16, CA-65): "Tu pago no se completó. No se hizo ningún cargo". La deuda no cambia y desaparece la advertencia de pago en revisión.
    - **Un texto por caso (M-6, rev. 4):** la app no deduce si un `rejected` vino de Transbank o de Soporte: lo elige por el campo `rejectionKind` del intento que entrega la API, como `reversalKind`. `transbank_rejected` muestra "Tu banco rechazó el pago. No se hizo ningún cargo" y `resolved_without_charge`, "Tu pago no se completó. No se hizo ningún cargo". No hay otras variantes.
    - Si quien pagó ya no tiene membresía en la comunidad (por ejemplo, su arriendo terminó durante la revisión), no ve la app: recibe el aviso por correo o SMS de F-13, sin montos (CA-54).
-8. **Sin retorno a la app** (por ejemplo, si cerró el navegador): la próxima vez que abra la app, Inicio consulta los intentos en curso visibles para la persona (`webpay-attempts/current`) y muestra su estado en el bloque que corresponda.
+8. **Sin retorno a la app** (por ejemplo, si cerró el navegador): la próxima vez que abra la app, Inicio consulta los intentos en curso que inició la persona (`webpay-attempts/current`, solo propios, H-31) y muestra su estado en el bloque que corresponda.
 9. **Confirmación duplicada:** si Transbank confirma dos veces, el residente ve un solo pago (F-2, CA-10).
 
 **Lo que ve cada uno cuando el propietario paga la deuda del arrendatario (CA-29, CA-30):**
@@ -163,6 +172,7 @@ flowchart TD
 
 | Caso | Propietario | Arrendatario |
 | --- | --- | --- |
+| Intento en curso del arrendatario sobre su ámbito (H-31) | Ningún estado en "Deuda del arrendatario". Si elige esa opción o "Ambas", 409 con "Ya hay un pago en proceso para esta deuda" | "Tienes un pago en proceso" y "Número de orden {buy_order}. Te avisaremos el resultado" |
 | El arrendatario paga su ámbito por Webpay | En "Deuda del arrendatario": "Pagado por el arrendatario · ${monto} · {dd-mm-aaaa} · Webpay". El detalle del intento le responde 404 | "Pagado por ti · ${monto} · {dd-mm-aaaa} · Webpay" |
 | El administrador registra un pago manual en el ámbito del arrendatario | En "Deuda del arrendatario": "Registrado por la administración · ${monto} · {dd-mm-aaaa} · {medio}" | "Registrado por la administración · ${monto} · {dd-mm-aaaa} · {medio}" |
 | El administrador registra un pago manual en el ámbito `owner` | En "Tu deuda": "Registrado por la administración · ${monto} · {dd-mm-aaaa} · {medio}" | Nada: no se muestra |
@@ -217,6 +227,7 @@ Los textos con código son los de la tabla "Códigos y mensajes de error" y de F
 | Falla de la confirmación después de autorizar | Mensaje de "En proceso" (paso 6) | La API consulta a Transbank a los 15 minutos |
 | Monto autorizado distinto del iniciado, o estado no concluyente | "En revisión por ComVive" y debajo "Te avisaremos cuando se resuelva. Número de orden {buy_order}" (F-16, F-17) | Lo resuelve Soporte ComVive; la deuda no cambia mientras tanto |
 | Pago en revisión y el residente quiere pagar de nuevo | "Tienes un pago en revisión por ${monto}; si pagas de nuevo podría quedar saldo a favor" (F-16, F-17) | Supuesto (a validar) de la arquitectura: el intento en revisión no bloquea |
+| Retorno inválido de Webpay (intento de otra comunidad o inexistente, o datos que no coinciden; H-32, CA-75) | "No pudimos mostrar el resultado del pago. Revisa tu estado de cuenta en Inicio antes de pagar de nuevo" (F-17; S-83, pendiente de aprobación, P-59) | Pantalla genérica APP-PAG-10 con "Volver al inicio", igual para toda causa, sin número de orden, monto ni estado; no es el 404 neutro |
 | Sesión expirada al volver de Webpay | Pide ingreso y luego muestra el resultado | El pago no depende de la sesión |
 | Pérdida de acceso (venta, fin de arriendo, revocación) | "Ya no tienes acceso a esta unidad. Si crees que es un error, contacta a tu administración." | Quita la unidad, borra su copia local y deja de recibir notificaciones de esa comunidad (S-14) |
 | Ruta a un recurso que no existe o no es suyo (PDF del aviso para el arrendatario, comprobante completo de un pago de otro, intento de otra persona) (404 `NOT_FOUND`) | "No encontramos lo que buscas o no tienes acceso" | 404 neutro, igual exista o no |

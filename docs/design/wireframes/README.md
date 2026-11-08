@@ -72,6 +72,7 @@ Wireframes de baja fidelidad de las pantallas del MVP de ComVive, en ASCII, para
 | APP-10 | Carga y copia local | `app-inicio.md` |
 | APP-11 | Selector de unidad | `app-inicio.md` |
 | APP-PAG-01 a 09 | Hoja "¿Qué quieres pagar?", advertencias, 409, Webpay, comprobante y resultados | `app-hoja-de-pago.md` |
+| APP-PAG-10 | Retorno inválido de Webpay (pantalla genérica, no el 404 neutro) | `app-hoja-de-pago.md` |
 | APP-HIS-01 a 03 | Historial de pagos del propietario y del arrendatario | `app-pagos-y-cobros.md` |
 | APP-COB-01 a 03 | Avisos del propietario, vista del cobro del arrendatario y resumen de gastos | `app-pagos-y-cobros.md` |
 | APP-MAS-01 a 04 | Más, perfil, privacidad y notificaciones | `app-pagos-y-cobros.md` |
@@ -123,7 +124,7 @@ Wireframes de baja fidelidad de las pantallas del MVP de ComVive, en ASCII, para
 | `admin-pago-manual.md` | WEB-PAG-01 a 06, WEB-CTA-03 | CA-5, CA-11, CA-12, CA-15, CA-24, CA-31, CA-32, CA-40, CA-53, CA-56, CA-61, CA-67 |
 | `admin-ocupaciones.md` | WEB-OCU-01 a 07, WEB-CTA-03 | CA-21, CA-22, CA-35, CA-36, CA-37, CA-38, CA-44, CA-53, CA-54, CA-56, CA-57, CA-61 |
 | `admin-usuarios-y-roles.md` | WEB-USR-01 a 06, WEB-INI-02 a 05, CON-11 | CA-24, CA-43, CA-44, CA-57, CA-64, CA-69 |
-| `residente-estado-de-cuenta-y-pago.md` | APP-01 a 11, APP-PAG-01 a 09, APP-HIS-01 a 03, APP-COB-01 a 03 | CA-5, CA-10, CA-22, CA-23, CA-26, CA-29, CA-30, CA-32, CA-33, CA-41, CA-46, CA-47, CA-49, CA-53, CA-55, CA-56, CA-60, CA-63, CA-65, CA-66, CA-68 |
+| `residente-estado-de-cuenta-y-pago.md` | APP-01 a 11, APP-PAG-01 a 10, APP-HIS-01 a 03, APP-COB-01 a 03 | CA-5, CA-10, CA-22, CA-23, CA-26, CA-29, CA-30, CA-32, CA-33, CA-41, CA-46, CA-47, CA-49, CA-53, CA-55, CA-56, CA-60, CA-63, CA-65, CA-66, CA-68, CA-75 |
 | `residente-primer-ingreso.md` | APP-ING-01 a 07, APP-MAS-01 a 04, APP-09 | CA-23, CA-46, CA-53, CA-60 |
 | `plataforma-soporte-webpay.md` | CON-01 a 10, WEB-PAG-07, APP-06, APP-PAG-09 | CA-41, CA-42, CA-54, CA-55, CA-59, CA-65, CA-68 |
 | `conserje-encomienda.md` | CNJ-01 a 03 | CA-24 (el conserje no ve nada del gasto común) |

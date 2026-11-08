@@ -58,6 +58,7 @@ Reglas de TDD: es obligatorio en gasto común (incluidos redondeo, saldos y peri
 - Cobertura actual: Comunidad A (alícuota sin redondeo y pago parcial), B (redondeo con empate por `sort_order`), C (redondeo con varios pesos a repartir), C por cuenta (`GOLD-CE`, detecta el redondeo del total combinado; aprobada el 2026-11-07), D (alícuotas en escala 10^-6, fondo con techo y redondeo por cuenta).
 - Escenarios de la spec rev. 4, aprobados por el líder del proyecto (2026-11-07): pago "Ambas" por Webpay e interés siguiente (`GOLD-A29`), pago manual "Ambos" (`GOLD-A32`), anular gasto (`GOLD-A33` y `GOLD-B34`), emisión con la versión nueva del borrador (`GOLD-A39`) y saldo del fondo con egresos y correcciones (`GOLD-A62`).
 - Spec rev. 7 (CA-65 a CA-72): no cambia ninguna prueba de oro. Las resoluciones de Soporte, los reversos y los reembolsos no escriben movimientos; los montos que sí cambian (pagos manuales de CA-66 y CA-67, montos de reembolso de CA-70 y CA-71) están calculados en `comunidades-simuladas.md`, "CA-65 a CA-72 (spec rev. 7): sin pruebas de oro nuevas", para revisión del líder.
+- Spec rev. 8 (CA-73 a CA-75): tampoco cambia ninguna prueba de oro. Los montos de reembolso de CA-73, el pago confirmado por una expiración con `AUTHORIZED` (D18) y el caso borde del 284 están en `comunidades-simuladas.md`, "CA-73 a CA-75 (spec rev. 8): sin pruebas de oro nuevas".
 - Casos de prueba derivados de cada especificación: `docs/qa/casos/`. Gasto común: [`docs/qa/casos/gasto-comun.md`](casos/gasto-comun.md).
 - Pendiente de datos: prueba de oro en UF (total UF convertido una vez a CLP y luego prorrateado).
 - Pendiente: comunidades para conciliación (incluida una línea de cartola que cubre varias unidades), multas e intereses y ajustes en periodo siguiente.
@@ -119,7 +120,7 @@ Todo endpoint nuevo que exponga datos de negocio lleva este patrón estándar, c
 
 Después de cada caso se verifica en base de datos que B (y la unidad ajena de A en ISO-9) no cambió. La revisión de seguridad rechaza endpoints sin estas pruebas.
 
-**Códigos de respuesta (decisión del líder del proyecto, 2026-11-07; M-4 de la revisión 3 del diseño):** 404 si el actor **no puede ver** el recurso; 403 **solo si lo ve** pero su rol no permite la acción. Orden de validación fijo: sesión → membresía (o rol de plataforma) → visibilidad del recurso → permiso → estado (409) → reglas de negocio (422). Así la respuesta nunca depende de si el recurso existe.
+**Códigos de respuesta (decisión del líder del proyecto, 2026-11-07; M-4 de la revisión 3 del diseño):** 404 si el actor **no puede ver** el recurso; 403 **solo si lo ve** pero su rol no permite la acción. Orden de validación fijo (precisado en la spec rev. 8, S-77; ADR 0003, decisión 9): autenticación (401) → membresía (o rol de plataforma), visibilidad del recurso de la ruta (404) y permiso (403) → forma de la petición (400 `BAD_REQUEST`, y 422 `INVALID_AMOUNT` por un monto negativo, con decimales o de texto) → 404/403 que dependen de un dato del cuerpo → idempotencia (respuesta guardada, `IDEMPOTENCY_KEY_REUSED` o `IDEMPOTENCY_KEY_IN_PROGRESS`) → reglas de negocio, incluidos los 409 de estado. Así la respuesta nunca depende de si el recurso existe, y un reenvío de una acción aplicada devuelve su resultado y no un 409. Cada endpoint de escritura lleva una prueba con una petición que falla en dos o más pasos y espera el error del primero.
 
 | Situación | Código |
 | --- | --- |
@@ -144,6 +145,7 @@ Dentro de una misma unidad, lo que ve un residente se decide por el **ámbito** 
 | ISO-13 | Ocupación programada, terminada o venta: el arrendatario antes de su inicio efectivo, el ex arrendatario o el ex propietario después del registro, leen o pagan en la unidad | 404 |
 | ISO-14 | El propietario lee el ámbito del arrendatario vigente | Solo nombre, deuda, cargos y pagos de ese ámbito; sin RUT, teléfono ni correo; un registro de auditoría por petición |
 | ISO-15 | El propietario lee datos de una ocupación terminada o un intento del arrendatario | 404 |
+| ISO-16 | Un residente consulta el pago en curso de su unidad (`webpay-attempts/current`) mientras otra persona paga un ámbito que él ve | Solo sus propios intentos; la respuesta es idéntica a la de una unidad sin intentos ajenos (spec S-74) |
 
 ### 4.2 Aislamiento de plataforma (Soporte ComVive, excepción EX-1)
 
@@ -160,20 +162,22 @@ Soporte ComVive (`platform_support`) es la única excepción a la regla 4 de `CL
 | ISO-P7 | El rol de base de datos de plataforma consulta tablas base | Rechazado por PostgreSQL; solo lee su vista |
 | ISO-P8 | Cualquier petición de plataforma, lecturas y rechazos incluidos | Exactamente un registro de auditoría, con el código si es un rechazo; si la auditoría falla, la petición falla |
 | ISO-P9 | Toda llamada a Transbank de un intento (inicio, retorno, consulta, reembolso, resolución sin cobro) | Usa siempre el comercio guardado en el intento, aunque la petición anterior fuera de otra comunidad o el comercio vigente haya cambiado; ningún registro contiene la clave ni el token |
-| ISO-P10 | Operaciones ComVive revoca u otorga con el identificador de una membresía de otra comunidad | 404; nada cambia en ninguna comunidad |
+| ISO-P10 | Operaciones ComVive revoca con el identificador de una membresía de otra comunidad, de una que no es de administrador o inexistente | 404 con el mismo cuerpo, antes del 400 y de las reglas, sin tomar bloqueos; nada cambia en ninguna comunidad (spec S-79) |
 | ISO-P11 | Revocación del último administrador y revocaciones concurrentes | Cuenta solo los administradores de la misma comunidad; el bloqueo es por comunidad y no detiene a otra |
+| ISO-P12 | Se revoca la membresía de una persona en B mientras trabaja en A | Su sesión no cambia; B le responde 404 desde la petición siguiente y A, 2xx; solo se eliminan las suscripciones push de la membresía revocada (spec S-81) |
 
 Operaciones ComVive (`platform_operations`) no ve datos de negocio: toda lectura de negocio le responde 404 (ISO-P5).
 
 ### 4.3 Ruta de retorno de Transbank (única ruta de negocio sin membresía)
 
-`GET` y `POST /gateway/webpay/communities/{communityId}/webpay-attempts/{attemptId}/return` no exige sesión: Transbank redirige el navegador del pagador (`docs/arquitectura.md` §2; ADR 0007). Su guard propio busca el intento en la comunidad de la ruta y compara el token. Además del patrón de la sección 4:
+`GET` y `POST /gateway/webpay/communities/{communityId}/webpay-attempts/{attemptId}/return` no exige sesión: Transbank redirige el navegador del pagador (`docs/arquitectura.md` §2; ADR 0007). Su guard propio busca el intento en la comunidad de la ruta y compara el token o, en una expiración sin token, `TBK_ID_SESION` y `TBK_ORDEN_COMPRA`. Un retorno inválido responde un 302 neutro a la pantalla genérica, sin id de intento, no escribe en la base de datos y deja un evento en el registro de eventos de seguridad (spec S-75 y S-83). Además del patrón de la sección 4:
 
 | Caso | Acción | Resultado esperado |
 | --- | --- | --- |
-| ISO-G1 | Retorno con un intento de otra comunidad, en las dos direcciones | El mismo 302 neutro que un intento inexistente; sin llamadas a Transbank; ninguna fila escrita en ninguna tabla |
+| ISO-G1 | Retorno con un intento de otra comunidad, en las dos direcciones | El mismo 302 neutro sin id que un intento inexistente; sin llamadas a Transbank; ninguna fila escrita en ninguna tabla; un evento de seguridad sin datos personales |
 | ISO-G2 | Retorno con un token ajeno, alterado o de un pago abortado de otro intento | Igual que ISO-G1; el intento sigue en su estado |
 | ISO-G3 | Retorno correcto sin sesión, o con la sesión de otra persona o de otra comunidad | El resultado sale solo de Transbank y la sesión se ignora; la redirección lleva solo el id del intento |
+| ISO-G4 | Expiración sin token con los parámetros de un intento de otra comunidad; y con los del intento propio (decisión del líder D18) | Ajena: 302 neutro sin consultar a Transbank con ningún comercio. Propia: una sola consulta de estado con el comercio del intento antes de cancelar |
 
 ### 4.4 Idempotencia y rechazos (decisión del líder D12)
 
@@ -261,9 +265,11 @@ Las semillas de fast-check que encuentren un fallo se registran en el reporte y 
 - [ ] ¿El umbral de 90 % de cobertura en módulos de dinero y permisos es adecuado o se prefiere medir cobertura de mutación? (Líder del proyecto)
 - [ ] La CI de la Etapa 0 usa `gitleaks` para detectar secretos. ¿Se confirma con un ADR? (Arquitecto)
 - [ ] ¿Las pruebas E2E de la app (Maestro) corren en cada PR o solo antes de publicar con EAS? (Arquitecto)
-- [ ] Hallazgos H-30 a H-42 de los casos de gasto común (huella de plataforma, `webpay-attempts/current` del arrendatario, ruta de retorno, estado desconocido en `mark_for_reversal`, posición del 400, entre otros): `docs/qa/casos/gasto-comun.md`, sección final. (Analista y arquitecto)
+- [ ] Hallazgos H-43 a H-46 de los casos de gasto común (reembolso pasadas las 168 horas en CA-73, reversa imposible en CA-74, textos menores de la spec rev. 8, motivo del evento de un retorno sin parámetros y dos fallas en el paso de forma): `docs/qa/casos/gasto-comun.md`, sección final. (Analista y arquitecto)
 
 Cerradas:
+
+- [x] Hallazgos H-30 a H-42 de los casos de gasto común: resueltos en la spec rev. 8, los ADR 0002, 0003, 0005, 0006 y 0007 y `docs/arquitectura.md`, con las decisiones del líder D17 y D18 (tabla de resolución en `docs/qa/casos/gasto-comun.md`).
 
 - [x] Códigos de respuesta (decisión del líder del proyecto, 2026-11-07): 404 si el actor no puede ver el recurso; 403 solo si lo ve pero no puede hacer la acción (sección 4).
 

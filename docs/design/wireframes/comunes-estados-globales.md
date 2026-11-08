@@ -85,6 +85,7 @@ Cuándo: el actor no puede ver el recurso (otra comunidad, membresía vencida, p
 
 - Casos típicos: el arrendatario abre el enlace de un aviso PDF (G-7), el comprobante completo de un pago de otro, el detalle de un intento que no inició él, o una unidad que ya no es suya (CA-23, CA-47, CA-60).
 - Si la respuesta 404 es de **toda la unidad** (pérdida de acceso), se usa APP-09 de `app-inicio.md`, no esta pantalla.
+- El **retorno inválido de Webpay** (H-32, CA-75) **no** usa esta pantalla: va a la pantalla genérica APP-PAG-10 de `app-hoja-de-pago.md`, con el texto de F-17 "No pudimos mostrar el resultado del pago. Revisa tu estado de cuenta en Inicio antes de pagar de nuevo" y "Volver al inicio" (S-83; pendiente de aprobación, P-59).
 
 ## GLB-03 · 403 en la misma pantalla (web)
 
@@ -201,7 +202,7 @@ Paso 2: banner arriba y vista previa nueva, pedida sola por la pantalla:
 
 | Superficie | Cuándo | Texto | Acción |
 | --- | --- | --- | --- |
-| Web | Rol revocado con una pestaña abierta | "Tu acceso cambió. Vuelve a ingresar." (flujo de usuarios y roles) | Lleva al ingreso |
+| Web | Rol revocado con una pestaña abierta | No es sesión vencida: la sesión sigue activa (H-42). La comunidad revocada responde 404 desde la petición siguiente y se muestra GLB-01 | La comunidad sale del selector; las demás siguen funcionando sin volver a ingresar |
 | Web | 1 minuto antes de 30 minutos sin actividad | "Tu sesión se cerrará en 1 minuto por inactividad." con "Seguir conectado" (texto del diseño, UX-69; plazo: supuesto del flujo) | Mantiene la sesión |
 | Consola | Rol de plataforma revocado o sesión vencida | "Tu sesión terminó. Vuelve a ingresar." (flujo de Soporte) | Lleva al ingreso |
 | App | Sesión expirada al volver de Webpay | Pide ingreso y luego muestra el resultado del pago | El pago no depende de la sesión |

@@ -97,8 +97,8 @@ flowchart TD
 **Quitar del comité (revocación)**
 
 1. "Quitar del comité" pide un motivo (lista: término del periodo, renuncia, otro; texto libre si es "otro").
-2. **Confirmación:** "{nombre} dejará de ver la comunidad como comité de inmediato. Seguirá viendo su unidad como propietario. Deberá volver a ingresar en sus dispositivos."
-3. **Resultado:** desde ese momento, las pantallas y los datos que solo ve el comité (registro de copropietarios, deuda de otras unidades, reportes, intentos Webpay) le responden 404, porque ya no puede verlos (M-4). Conserva su rol de residente. Sus sesiones se revocan (supuesto de la arquitectura §3) y la revocación queda en el historial.
+2. **Confirmación:** "{nombre} dejará de ver la comunidad como comité de inmediato. Seguirá viendo su unidad como propietario."
+3. **Resultado:** desde la petición siguiente, las pantallas y los datos que solo ve el comité (registro de copropietarios, deuda de otras unidades, reportes, intentos Webpay) le responden 404, porque ya no puede verlos (M-4). Conserva su rol de residente. **Sus sesiones no se cierran** (H-42; spec, "Sesiones y notificaciones al revocar una membresía", Supuesto (a validar) S-81; arquitectura §3, "Revocación"): sigue usando la app como propietario y sus otras comunidades sin volver a ingresar. Se eliminan sus suscripciones push de la membresía de comité, en la misma transacción. La revocación y la eliminación de las suscripciones quedan en el historial y en auditoría.
 4. Si había una tarea "Revisar rol de comité" abierta para esa persona, se cierra sola (`revoked_elsewhere`) y sale de Inicio > Tareas pendientes.
 
 **Tarea "Revisar rol de comité" (Inicio > Tareas pendientes; M-7, CA-57)**
@@ -123,7 +123,7 @@ Cuándo aparece: al confirmar una venta en `admin-ocupaciones.md`, si la persona
 **Revocación del administrador (Operaciones ComVive)**
 
 1. En la consola de plataforma, "Revocar administrador" con motivo ("Indica el motivo de la revocación" si falta, S-63).
-2. El acceso se corta en la siguiente petición. Si la persona tiene otras comunidades, las sigue viendo.
+2. El acceso se corta en la siguiente petición: esa comunidad le responde 404 y sale de "Mis comunidades". Sus sesiones no se cierran: si tiene otras comunidades, las sigue viendo sin volver a ingresar. Se eliminan sus suscripciones push de esa membresía (H-42, S-81).
 3. **Último administrador (decisión del líder D9, 2026-11-07):** Operaciones no puede dejar una comunidad sin administrador. Si la persona es el único administrador vigente, la API responde 409 `LAST_ADMIN` con "No se puede revocar al único administrador de la comunidad. Otorga primero el rol a quien lo reemplazará" (aprobado por el líder, D10, 2026-11-07) y no se escribe nada (CA-69). Orden de los errores al revocar: `REASON_REQUIRED` → `ROLE_ALREADY_REVOKED` → `LAST_ADMIN`.
 4. **Cambio de administrador, en este orden:** primero "Otorgar administrador" a la persona nueva y después "Revocar" al anterior. El administrador nuevo cuenta como vigente desde que se le otorga el rol, aunque aún no haya hecho su primer ingreso (decisión del líder D10; S-68), así que la revocación se puede hacer de inmediato. La consola muestra esta guía junto al botón "Revocar" cuando la comunidad tiene un solo administrador (CON-11).
 
@@ -173,7 +173,7 @@ Los textos con código son los de la tabla "Códigos y mensajes de error" de la 
 | Decidir la tarea sin motivo | 422 `REASON_REQUIRED` | "Indica el motivo de tu decisión" | El campo es inválido (CA-57) |
 | Otro administrador ya decidió la tarea | 409 `TASK_ALREADY_RESOLVED` | "Esta tarea ya fue resuelta" | Cierra el panel y recarga Tareas pendientes (CA-57) |
 | Misma clave de idempotencia con otros datos | 422 `IDEMPOTENCY_KEY_REUSED` | "Esta operación ya se envió con otros datos. Vuelve a abrir el formulario" | Cierra el panel |
-| Persona revocada usa una pestaña abierta | — | "Tu acceso cambió. Vuelve a ingresar." | Lleva al ingreso |
+| Persona revocada usa una pestaña abierta | 404 `NOT_FOUND` | "No encontramos lo que buscas o no tienes acceso" | GLB-01 desde la petición siguiente. La sesión sigue activa: la comunidad sale del selector y sus otras comunidades siguen funcionando (H-42) |
 | Corte de conexión al otorgar, revocar o decidir | — | "Revisando si el cambio quedó registrado…" | Consulta el estado antes de reintentar con la misma clave |
 
 ## Carga
@@ -188,5 +188,5 @@ Los textos con código son los de la tabla "Códigos y mensajes de error" de la 
 - La tarea "Revisar rol de comité" no vence y exige motivo en ambas decisiones (S-43). Si la ley hace perder el rol al dejar de ser copropietario, la tarea pasaría a revocación automática (P-35).
 - Inactividad de 30 minutos en la web.
 - El contacto de ingreso de un administrador nuevo es el que registra Operaciones ComVive.
-- Al revocar se cierran todas las sesiones de la persona (arquitectura §8, pregunta "Revocación de rol").
+- Al revocar una membresía **no** se cierran las sesiones de la persona: esa comunidad le responde 404 desde la petición siguiente, sus demás comunidades siguen funcionando con la misma sesión y se eliminan las suscripciones push de esa membresía (H-42; spec, Supuesto (a validar) S-81; arquitectura §3, "Revocación").
 - El cónyuge, el conviviente civil o el representante de una persona jurídica propietaria no pueden integrar el comité hasta que se resuelva P-25.

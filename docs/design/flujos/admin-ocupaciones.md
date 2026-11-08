@@ -15,7 +15,7 @@ Referencias en `docs/specs/gasto-comun.md`:
 - Códigos y mensajes de error: tabla de la spec (filas de F-14).
 - Criterios de aceptación: CA-21, CA-22, CA-35, CA-36, CA-37, CA-38, CA-44, CA-53, CA-56 y CA-57.
 
-Otras referencias: `docs/arquitectura.md` §3 (la membresía de residente nace y termina con `UNIT_OCCUPANCY`; revocación de sesiones y push; "Comité que deja de ser propietario") y §4 ("Ocupaciones": fechas declaradas, de registro y efectivas, endpoints de vista previa y ejecución; movimientos `transfer`; "Visibilidad por ámbito").
+Otras referencias: `docs/arquitectura.md` §3 (la membresía de residente nace y termina con `UNIT_OCCUPANCY`; revocación: elimina las suscripciones push y no cierra sesiones, H-42; "Comité que deja de ser propietario") y §4 ("Ocupaciones": fechas declaradas, de registro y efectivas, endpoints de vista previa y ejecución; movimientos `transfer`; "Visibilidad por ámbito").
 
 En los mensajes, `{dato}` marca un valor variable. Las fechas se muestran como `dd-mm-aaaa`.
 
@@ -122,7 +122,7 @@ flowchart TD
 3. **Confirmación** (`POST .../occupancies/{occupancyId}/end`): el envío lleva la versión de la vista previa y una clave de idempotencia. Si la cuenta cambió (por ejemplo, entró un pago, CA-56), la API responde 409 `PREVIEW_OUTDATED` y la pantalla pide una vista previa nueva y marca lo que cambió.
 4. **Resultado:**
    - El traspaso queda en el estado de cuenta del propietario, sin el nombre del ex arrendatario (F-17, S-44, CA-56): la deuda como "Traspaso desde arriendo terminado el {dd-mm-aaaa}", por periodo y cuenta, y el saldo a favor como "Saldo a favor traspasado desde arriendo terminado el {dd-mm-aaaa}".
-   - El ex arrendatario pierde el acceso en ese momento: sus sesiones se revocan, su dispositivo deja de recibir notificaciones de la comunidad y su copia local se borra al abrir la app (S-14, arquitectura §3 y §5).
+   - El ex arrendatario pierde el acceso en ese momento: sus sesiones **no** se cierran (H-42, arquitectura §3, "Revocación"), pero la comunidad le responde 404 desde la petición siguiente, se eliminan sus suscripciones push de esa membresía y su copia local se borra al abrir la app (S-14, arquitectura §3 y §5). Si tiene otras comunidades, siguen funcionando con la misma sesión.
    - **Notificación al propietario** (supuesto de diseño, UX-36): "Hay cambios en la deuda de tu unidad. Revisa tu estado de cuenta." Sin montos.
 5. **Después del término:**
    - Un pago Webpay iniciado antes y confirmado después, o registrado por Soporte ComVive después de una revisión, se aplica a la deuda de la unidad (F-13, CA-35, CA-54). El pago queda en el ámbito del arriendo terminado y su monto pasa al propietario; el administrador lo ve en el estado de cuenta del propietario como "Saldo a favor traspasado desde arriendo terminado el {dd-mm-aaaa}" (F-17).

@@ -212,8 +212,9 @@ Lo que ve el propietario                   Lo que ve el arrendatario
 +--------------------------------------
 ```
 
-- Textos de F-17 (UX-46). Solo quien inició el intento ve el estado (`startedByMe`).
-- **El arrendatario no ve ningún estado de pago en curso** (CA-30 rev. 6, UX-68; B-1 de la rev. 4): ni franja, ni chip, ni banner, ni texto en su tarjeta, aunque `webpay-attempts/current` le devuelva su ámbito con `startedByMe` falso (arquitectura §4). Su Inicio es igual al de APP-03. El texto del 409 `PAYMENT_IN_PROGRESS` aparece solo como respuesta a un toque en "Pagar gasto común", y se dibuja en APP-PAG-04, no aquí.
+- Textos de F-17 (UX-46). Solo quien inició el intento ve el estado: `GET .../webpay-attempts/current` devuelve solo los intentos que inició quien consulta (H-31, S-74; spec F-12). La app dibuja la franja solo con lo que devuelve `current`.
+- **El arrendatario no ve ningún estado de pago en curso** (CA-30 rev. 6, UX-68; B-1 de la rev. 4): ni franja, ni chip, ni banner, ni texto en su tarjeta. `current` no le devuelve el intento del propietario: ni su id, ni su monto, ni el ámbito bloqueado (H-31). Su Inicio es igual al de APP-03. El texto del 409 `PAYMENT_IN_PROGRESS` aparece solo como respuesta a un toque en "Pagar gasto común", y se dibuja en APP-PAG-04, no aquí.
+- **Lo mismo al revés:** si el arrendatario inicia un pago de su deuda, el propietario no ve ningún estado en "Deuda del arrendatario"; solo recibe "Ya hay un pago en proceso para esta deuda" si elige esa opción (o "Ambas") en la hoja (APP-PAG-04).
 - Si **todos** los ámbitos con deuda tienen un pago propio en curso, el botón no aparece y queda solo la franja (flujo, diagrama, nodo I1).
 
 ## APP-06 · Pago en revisión, para reverso y reversado

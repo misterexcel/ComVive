@@ -1,6 +1,6 @@
 # ADR 0005 · Autenticación, auditoría y datos personales
 
-- **Estado:** Propuesto (requiere aprobación del líder del proyecto)
+- **Estado:** Propuesto (requiere aprobación del líder del proyecto). Hallazgo de QA H-42 aplicado (decisión 3).
 - **Fecha:** 2026-11-07
 - **Propone:** arquitecto de software
 - **Decide:** líder del proyecto
@@ -18,7 +18,7 @@ ComVive trata RUT, deudas y datos de visitas (regla 7 de `CLAUDE.md`, Ley 21.719
    - Ingreso con RUT y un código de un solo uso enviado al **contacto de ingreso verificado** de `PERSON` (único por persona). Respuesta neutra: "Si el RUT está registrado, te enviamos un código".
    - Canales del código en el MVP: SMS y correo, a través del proveedor de correo y SMS (su elección es un ADR posterior, `docs/arquitectura.md` §7). WhatsApp como canal de ingreso queda para el ADR del proveedor de WhatsApp, que está fuera del stack y requiere aprobación.
 2. **Segundo factor:** obligatorio en la audiencia `platform` y opcional para administradores en el MVP (decisión del líder). Método propuesto: TOTP de una app autenticadora, con códigos de recuperación de un solo uso; el secreto TOTP se guarda cifrado en la aplicación con una clave del gestor de secretos.
-3. **Sesiones y revocación:** `SESSION` con audiencia (`community` o `platform`), vencimiento y revocación. Token de acceso firmado de corta vida y renovación ligada a una `SESSION` vigente. El guard lee la membresía en cada petición (ADR 0002), así que revocar un rol corta el acceso de inmediato; además, la revocación cierra todas las sesiones de la persona y desvincula sus suscripciones push de esa comunidad, en la misma transacción.
+3. **Sesiones y revocación (H-42, resolución del coordinador pendiente de la aprobación del líder):** `SESSION` con audiencia (`community` o `platform`), vencimiento y revocación. Token de acceso firmado de corta vida y renovación ligada a una `SESSION` vigente. **La sesión es de identidad, no de una comunidad:** el token no lleva membresías ni roles, y el guard verifica la membresía vigente en cada petición (ADR 0002). Revocar o terminar una membresía **no revoca ninguna sesión**: en la misma transacción se marca la membresía, se eliminan las suscripciones push de esa membresía y se escribe la auditoría; desde la petición siguiente esa comunidad responde 404 y sale de "Mis comunidades", y las demás comunidades de la persona siguen funcionando con la misma sesión. Una sesión termina al cerrarla o al vencer, nunca por la revocación de una membresía. **Prueba de aislamiento (TDD; `docs/arquitectura.md` §3, prueba 15; ISO-GC-operaciones-3 (c)):** con una persona con membresía en A y B, revocar la de B deja `SESSION` sin cambios; con el mismo token, B responde 404 y A, 2xx; "Mis comunidades" lista solo A; se eliminan las suscripciones push de B y no las de A.
 4. **Límites de ingreso separados (`LOGIN_THROTTLE`, RUT guardado como HMAC):** por (RUT, dispositivo), por IP (primera barrera en Cloud Armor y segunda en la API) y por envíos de códigos (por RUT e IP y por RUT al día), con alerta en Sentry. Nadie puede bloquear el ingreso de otra persona escribiendo su RUT en otro dispositivo.
 5. **Auditoría (`AUDIT_LOG`) de solo inserción, en la misma transacción que la operación:** toda escritura sobre dinero, periodos, ocupaciones, membresías, alícuotas y datos personales; otorgamientos y revocaciones; tareas del administrador; toda petición de plataforma (incluidas las lecturas); avisos a personas sin membresía; y las lecturas de datos de terceros (RUT completo, deudas de terceros, intentos de terceros, visitas), incluida la lectura del propietario sobre el ámbito del arrendatario (`owner.tenant_scope.read`, uno por petición, sin montos ni datos del arrendatario). **Sin registro no hay respuesta** en las lecturas auditadas obligatorias.
 6. **RUT:** normalizado y enmascarado en la API salvo para los roles autorizados (el filtro lo aplica la API; el campo no viaja). En el MVP **no se cifra la columna del RUT** a nivel de aplicación: se confía en el cifrado en reposo de Cloud SQL, el acceso por rol, el enmascarado y la auditoría de lecturas con RUT completo. El RUT solo se guarda como HMAC en `LOGIN_THROTTLE`.
@@ -37,6 +37,8 @@ ComVive trata RUT, deudas y datos de visitas (regla 7 de `CLAUDE.md`, Ley 21.719
 | Contraseña | Más soporte (olvidos, reutilización) y peor experiencia para residentes que entran poco. El diseño ya supone ingreso sin contraseña (UX-7). |
 | Bloqueo del ingreso solo por RUT | Permite bloquear a otra persona escribiendo su RUT (rev. 2, hallazgo 12). |
 | Cifrado de columna del RUT con Cloud KMS desde el MVP | Exige un índice ciego (HMAC) para buscar y mantener la unicidad, complica migraciones y soporte, y protege poco mientras las deudas del libro no se cifran. Se reconsidera antes del Piloto con el abogado (ver "Supuestos"). |
+| Revocar todas las sesiones de la persona al revocar una membresía (versión anterior) | Una revocación en la comunidad B cortaba el trabajo de la persona en A: un efecto de una comunidad sobre otra (H-42). No agrega seguridad, porque el guard ya corta el acceso a B en la petición siguiente. |
+| Sesiones por comunidad, revocando solo las de la comunidad afectada | Obliga a ingresar una vez por comunidad o a mantener varias sesiones por persona, sin agregar control frente a la verificación por petición. |
 | Segundo factor por SMS | Vulnerable a duplicado de SIM; para la audiencia `platform`, que ve datos de todas las comunidades, el riesgo no se justifica. |
 
 ## Consecuencias
@@ -62,13 +64,13 @@ ComVive trata RUT, deudas y datos de visitas (regla 7 de `CLAUDE.md`, Ley 21.719
 
 ## Supuestos (a validar) y preguntas abiertas
 
-- **Supuestos (a validar) de la arquitectura §3:** contacto de ingreso único por persona; TOTP con códigos de recuperación; límites de 5 códigos fallidos por (RUT, dispositivo) con bloqueo de 15 minutos, 30 intentos por IP cada 10 minutos, 5 envíos por hora por (RUT, IP) y 20 por día por RUT; token de acceso de 15 minutos; sesión de plataforma de 8 horas; revocación de todas las sesiones de la persona.
+- **Supuestos (a validar) de la arquitectura §3:** contacto de ingreso único por persona; TOTP con códigos de recuperación; límites de 5 códigos fallidos por (RUT, dispositivo) con bloqueo de 15 minutos, 30 intentos por IP cada 10 minutos, 5 envíos por hora por (RUT, IP) y 20 por día por RUT; token de acceso de 15 minutos; sesión de plataforma de 8 horas. La revocación de todas las sesiones de la persona dejó de ser supuesto: la reemplazó la decisión 3 (H-42).
 - **Supuestos (a validar) de la arquitectura §5:** auditoría de lecturas por petición; copia local de 30 días; aviso sin membresía por correo o, si no hay, por SMS.
 - **ADR-0005-S1 · Supuesto (a validar):** la web cierra la sesión tras 30 minutos sin actividad, con aviso un minuto antes (supuesto de diseño de `docs/design/flujos/admin-usuarios-y-roles.md`); la app no tiene cierre por inactividad.
 - **ADR-0005-S2 · Supuesto (a validar):** no cifrar la columna del RUT en el MVP es proporcional bajo la Ley 21.719, con las medidas de la decisión 6. Se valida con el abogado antes del Piloto.
 - **ADR-0005-S3 · Supuesto (a validar):** ClaveÚnica no está disponible para un servicio privado como ComVive.
 - **Spec:** S-30 (RUT enmascarado en el PDF), S-42 y P-37 (aviso sin membresía), S-44 y P-34 (lectura del propietario), P-19 (RUT completo en el aviso), P-23 (remuneraciones), P-36 (segundo factor de administradores).
-- **Preguntas de `docs/arquitectura.md` §8:** 7 (retención), 8 (transferencia internacional a Sentry, Expo Push y proveedores de mensajería), 12 (revocación de sesiones), 13 (segundo factor de administradores), 15 y 16.
+- **Preguntas de `docs/arquitectura.md` §8:** 7 (retención), 8 (transferencia internacional a Sentry, Expo Push y proveedores de mensajería), 12 (revocación de sesiones, resuelta por H-42 y pendiente de aprobación), 13 (segundo factor de administradores), 15 y 16.
 - **Diseño:** UX-7 (método de ingreso) en `docs/design/mapa-de-usuarios.md`.
 
 ## Referencias

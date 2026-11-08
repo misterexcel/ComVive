@@ -122,6 +122,14 @@ Administradores de CA-69 (spec rev. 7). En ese CA la Comunidad A parte con **un 
 | Carolina Lagos | 10.987.654-2 | Administradora vigente, la única al empezar | AD1 = `admin-A` | CA-69 |
 | Valentina Ortiz | 21.345.678-4 | Administradora otorgada por Operaciones el 2026-11-10; no hace su primer ingreso hasta el caso que lo indique | AD2 | CA-69 |
 
+Administradores de CA-75 (spec rev. 8; dato de escenario independiente de CA-69). La Comunidad A conserva a AD1 como administradora; la Comunidad B tiene a AD1 y AD2 vigentes, así que revocar a AD1 en B no responde `LAST_ADMIN`:
+
+| Persona | RUT | Rol | Actor en los casos | Casos |
+| --- | --- | --- | --- | --- |
+| Carolina Lagos | 10.987.654-2 | Administradora vigente de A y de B, con una sesión y una suscripción push por membresía en el mismo dispositivo (PS-A y PS-B) | AD1 | TC-GC-CA75-03, 04; ISO-GC-revocacion-1 |
+| Valentina Ortiz | 21.345.678-4 | Administradora vigente de B | AD2 | TC-GC-CA75-03, 04 |
+| Admin revocado QA | — (dato de prueba, sin RUT en los casos) | Membresía `admin` de A ya revocada | — | TC-GC-CA75-03 (h) |
+
 ### Comercio Webpay y personas de plataforma (datos de prueba)
 
 Datos para CA-29 a CA-72 y para las pruebas de aislamiento de credenciales (ADR 0007, prueba 6). Los códigos de comercio son ficticios y viven en un doble de Transbank; las claves se cargan como secretos de prueba (`tbk-webpay-<communityId>`) y nunca se escriben en este documento ni en los fixtures.
@@ -139,7 +147,7 @@ Personas de la Comunidad B y de la plataforma usadas en los casos de aislamiento
 | Persona | RUT | Rol | Actor | Casos |
 | --- | --- | --- | --- | --- |
 | Felipe Rojas | 22.456.789-8 | Administrador de la Comunidad B | `admin-B` | ISO-GC-*, ISO-GC-operaciones-1 a 3 |
-| Carolina Lagos | 10.987.654-2 | En ISO-GC-operaciones-3, administradora de A **y** de B (dato de escenario) | `admin-A` | ISO-GC-operaciones-3 |
+| Carolina Lagos | 10.987.654-2 | En ISO-GC-operaciones-3 y en CA-75, administradora de A **y** de B (dato de escenario) | `admin-A` (AD1 en CA-75) | ISO-GC-operaciones-3, TC-GC-CA75-03 y 04 |
 | — | — | Soporte ComVive (`platform_support`) | `soporte-1`, `soporte-2` | CA-41, CA-55, CA-65, CA-68, CA-70, CA-71 |
 | — | — | Operaciones ComVive (`platform_operations`) | `operaciones-1` (OP1), `operaciones-2` | CA-43, CA-69, ISO-GC-operaciones-1 a 3 |
 
@@ -411,6 +419,20 @@ Comprobación con la fórmula completa: 37.500 − (30.000 + 20.000) − (−5.0
 | CA-70 (reembolso sin estado concluyente) | Monto iniciado del intento (S-69) | Reembolso pedido $110.000; el 292 o el 310 lo dejan `failed` y no mueve dinero |
 
 La suma de cargos de cada periodo sigue igual al total emitido (regla 3 de `CLAUDE.md`): ningún caso nuevo emite ni corrige cargos.
+
+### CA-73 a CA-75 (spec rev. 8): sin pruebas de oro nuevas
+
+**Para revisión del líder del proyecto.** Tampoco cambian prorrateos ni pruebas de oro. Los montos que intervienen, con su cálculo:
+
+| Caso | Cálculo | Resultado |
+| --- | --- | --- |
+| CA-73, CA-74 (Depto 101) | Deuda inicial (CA-5): 100.000 + 10.000; ni el 422 `TRANSBANK_STATUS_UNEXPECTED` ni el 409 `REFUND_PENDING` ni el reverso escriben movimientos | Saldo $110.000 antes y después |
+| CA-73 (reembolso con `balance` válido) | Autorizado $11.000; `balance` 6.000 = 11.000 − 5.000 anulados | Reembolso $6.000; con `balance` ausente, $0 o 12.000 (> 11.000), 422 y sin reembolso |
+| CA-73 (pasadas las 168 horas) | Última concluyente: `AUTHORIZED` $11.000 de "confirmar" (Supuesto (a validar), hallazgo H-43 de los casos); sin ninguna concluyente, monto iniciado (S-69) | Reembolso $11.000; sin concluyente, $110.000 |
+| CA-73 (plazo) | `create` enviado el 2026-11-25 21:40 hora de Chile = 2026-11-26 00:40 UTC; + 168 horas = 2026-12-03 00:40 UTC | Consultable hasta antes del 2026-12-02 21:40 hora de Chile |
+| CA-75, expiración con `AUTHORIZED` por $110.000 (D18) | Pago Webpay de $110.000 al capital vencido: ordinario 100.000 − 100.000 = 0; fondo 10.000 − 10.000 = 0 | Saldo 110.000 − 110.000 = $0 |
+| CA-75, expiración con `INITIALIZED`, sin respuesta u otro estado, y retornos inválidos | Ningún pago ni movimiento | Saldo $110.000 |
+| Caso borde del 284 (TC-GC-CB-34, S-84) | Reembolso pedido por el total autorizado de la última respuesta guardada (`AUTHORIZED` $11.000); Transbank lo rechaza; la comunidad devuelve $11.000 por transferencia fuera del libro de la unidad | Saldo del Depto 101 $110.000 antes y después |
 
 ---
 
