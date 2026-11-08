@@ -1,0 +1,7 @@
+# LF in every working copy (Windows included), so Prettier, ESLint and shell scripts behave the same
+# locally and in CI.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.ico binary
+*.pdf binary

@@ -60,6 +60,8 @@ flowchart LR
 
   Las rutas `/platform/...` tampoco usan membresía, pero no son rutas de comunidad: tienen su propio rol y su excepción acotada (sección 3 y vista `platform_webpay_review`).
 
+  **Rutas técnicas sin sesión (lista cerrada; menor 6 de `docs/revisiones/2026-11-08-monorepo-skeleton.md`):** `GET /health` (sonda de vida de Cloud Run) responde solo `{ "status": "ok" }`, sin datos de negocio, personales ni de configuración, y sin el encabezado `X-Powered-By`. No es ruta de negocio, así que no lleva prueba de aislamiento. Antes del primer endpoint de negocio, la API debe tener un **guard global de denegación por defecto**: toda ruta exige sesión y membresía salvo las de esta lista, la tabla anterior y `/platform/...`, declaradas explícitamente (tarjeta pendiente del arquitecto).
+
 **Barrera 2 · PostgreSQL Row Level Security (recomendada, sujeta a prototipo):**
 
 - Políticas RLS que comparan `community_id` con `current_setting('app.community_id')`, fijado con `SET LOCAL` en la transacción de cada petición. La API usa un rol sin `BYPASSRLS`; las migraciones, otro rol.

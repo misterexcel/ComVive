@@ -18,8 +18,9 @@ Etapas: 0 Cimientos → 1 Diseño → 2 MVP → 3 Piloto → 4 Lanzamiento.
 ## Empezar
 
 1. Instala las herramientas: [docs/guia-instalacion-windows.md](docs/guia-instalacion-windows.md)
-2. Lee [CLAUDE.md](CLAUDE.md): visión, metodología, stack y reglas del proyecto.
-3. Revisa el contexto en [docs/contexto/](docs/contexto/).
+2. Instala las dependencias y verifica el código: `corepack enable`, `pnpm install` y `pnpm run check`.
+3. Lee [CLAUDE.md](CLAUDE.md): visión, metodología, stack y reglas del proyecto.
+4. Revisa el contexto en [docs/contexto/](docs/contexto/).
 
 ## Stack
 
@@ -29,6 +30,8 @@ TypeScript en todo el monorepo · NestJS · PostgreSQL + Prisma · Next.js · Re
 
 | Carpeta | Contenido |
 | --- | --- |
+| `apps/api/` | API (NestJS) |
+| `packages/shared/` | Tipos y reglas compartidas: montos en CLP y reparto con redondeo (solo la API usa el motor de cálculo) |
 | `.claude/agents/` | Equipo de agentes de IA |
 | `.github/workflows/` | Integración continua |
 | `docs/arquitectura.md` | Componentes, modelo de datos y flujos técnicos |
@@ -41,7 +44,7 @@ TypeScript en todo el monorepo · NestJS · PostgreSQL + Prisma · Next.js · Re
 
 ## Integración continua
 
-Cada pull request corre el lint de Markdown y la detección de secretos. Ningún cambio llega a `main` si alguno falla.
+Cada pull request corre el lint de Markdown, la detección de secretos y la verificación de código (formato, lint, tipos, pruebas y compilación). Cada cambio a `main` corre además las pruebas de oro de dinero sin caché. Ningún cambio llega a `main` si alguno falla.
 
 ## Idioma
 

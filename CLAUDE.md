@@ -93,7 +93,7 @@ Flujo del tablero: Backlog → Especificación → Lista para desarrollo → En 
 ```text
 CLAUDE.md               este archivo
 .claude/agents/         definición de cada agente
-.github/workflows/      integración continua (lint de Markdown y detección de secretos)
+.github/workflows/      integración continua (Markdown, secretos, verificación de código, pruebas de oro)
 docs/arquitectura.md    componentes, modelo de datos y flujos técnicos
 docs/specs/             especificaciones por módulo
 docs/adr/               decisiones de arquitectura
@@ -102,10 +102,16 @@ docs/qa/                plan de pruebas, comunidades simuladas, pruebas de oro
 docs/revisiones/        informes del revisor crítico y su resolución
 docs/operaciones/       ambientes y procedimientos (desde la Etapa 2)
 docs/contexto/          investigación de mercado y plan de puesta en marcha
-apps/api | web | mobile se crean en la Etapa 2
-packages/shared         se crea en la Etapa 2
+apps/api                API NestJS (esqueleto con /health)
+apps/web | mobile       se crean en la Etapa 2
+packages/shared         montos CLP y reparto con redondeo (@comvive/shared/money-engine, solo API)
 ```
 
 ## Integración continua
 
-Cada pull request y cada cambio a `main` corre `.github/workflows/ci.yml`. Para revisar la documentación en local antes de subir: `npx markdownlint-cli2@0.17.2` (con `--fix` corrige lo automático).
+Cada pull request y cada cambio a `main` corre `.github/workflows/ci.yml`. Jobs: lint de Markdown, detección de secretos, verificación de código (`pnpm run format:check` y `pnpm run check`: lint, tipos, pruebas y compilación; obligatoria para fusionar a `main`) y, en cada cambio a `main`, las pruebas de oro de dinero sin caché.
+
+Antes de subir, en local:
+
+- Código: `pnpm run check` y `pnpm run format:check` (`pnpm run format` corrige el formato).
+- Documentación: `npx markdownlint-cli2@0.17.2` (con `--fix` corrige lo automático).
