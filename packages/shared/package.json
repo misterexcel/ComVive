@@ -7,6 +7,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./money-engine": {
+      "types": "./dist/money-engine.d.ts",
+      "default": "./dist/money-engine.js"
     }
   },
   "files": [

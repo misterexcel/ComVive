@@ -4,7 +4,7 @@ import { clp, type Clp } from './clp.js';
 export interface AllocationShare {
   /** Non-negative integer weight (e.g. `aliquot_e6` or `share_weight`). */
   readonly weight: bigint;
-  /** Integer order of the unit inside the community (`UNIT.sort_order`); unique per call. */
+  /** Safe integer order of the unit inside the community (`UNIT.sort_order`); unique per call. */
   readonly sortOrder: number;
 }
 
@@ -17,6 +17,13 @@ export interface AllocationShare {
  * 3. Equal remainders are broken by the lowest `sortOrder`.
  *
  * The result has the same order as `shares` and always adds up exactly to `total`.
+ *
+ * The business ceiling of rule B-6 ($9.999.999.999, 422 `AMOUNT_TOO_LARGE` in
+ * docs/specs/gasto-comun.md) is not checked here: the caller validates it before allocating. This
+ * function only rejects inputs that would make the result undefined (negative total, negative
+ * weights, all weights zero, no shares, or `sortOrder` values that are not unique safe integers).
+ *
+ * @throws {RangeError} When any of those inputs is invalid.
  */
 export function allocateLargestRemainder(total: Clp, shares: readonly AllocationShare[]): Clp[] {
   if (total < 0n) {
@@ -27,6 +34,10 @@ export function allocateLargestRemainder(total: Clp, shares: readonly Allocation
   }
   if (shares.some((share) => share.weight < 0n)) {
     throw new RangeError('Weights must not be negative');
+  }
+  // NaN, Infinity or a decimal would make the tie-break comparator inconsistent.
+  if (shares.some((share) => !Number.isSafeInteger(share.sortOrder))) {
+    throw new RangeError('sortOrder must be a safe integer');
   }
   if (new Set(shares.map((share) => share.sortOrder)).size !== shares.length) {
     throw new RangeError('sortOrder must be unique among shares');
@@ -39,7 +50,6 @@ export function allocateLargestRemainder(total: Clp, shares: readonly Allocation
 
   const charges = shares.map((share) => (total * share.weight) / weightSum);
   const allocated = charges.reduce((acc, charge) => acc + charge, 0n);
-  const missing = Number(total - allocated); // Always < shares.length.
 
   const byRemainder = shares
     .map((share, index) => ({
@@ -51,10 +61,19 @@ export function allocateLargestRemainder(total: Clp, shares: readonly Allocation
       if (a.remainder !== b.remainder) {
         return a.remainder > b.remainder ? -1 : 1;
       }
-      return a.sortOrder - b.sortOrder;
+      return a.sortOrder < b.sortOrder ? -1 : 1;
     });
 
-  const getsExtraPeso = new Set(byRemainder.slice(0, missing).map(({ index }) => index));
+  // Missing pesos, counted in bigint: always fewer than the number of shares with weight > 0.
+  let missing = total - allocated;
+  const getsExtraPeso = new Set<number>();
+  for (const { index } of byRemainder) {
+    if (missing === 0n) {
+      break;
+    }
+    getsExtraPeso.add(index);
+    missing -= 1n;
+  }
 
   return charges.map((charge, index) => clp(getsExtraPeso.has(index) ? charge + 1n : charge));
 }

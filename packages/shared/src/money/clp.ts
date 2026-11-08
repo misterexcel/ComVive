@@ -13,10 +13,29 @@ export function clp(value: bigint): Clp {
 }
 
 /**
- * Converts a JSON number into a CLP amount. Only safe integers are accepted, so a decimal or an
- * imprecise value can never become money.
+ * Converts a JSON number into a CLP amount for any amount field of the API contract. Only safe
+ * integers in `0..Number.MAX_SAFE_INTEGER` are accepted (ADR 0003, decision 2), so a decimal, an
+ * imprecise value or a negative amount can never become money. `-0` is read as `0`.
+ *
+ * Fields that may be negative use {@link signedClpFromJson} instead.
  */
 export function clpFromJson(value: number): Clp {
+  if (!Number.isSafeInteger(value) || value < 0) {
+    throw new RangeError(
+      `CLP amount must be a safe integer between 0 and ${String(Number.MAX_SAFE_INTEGER)}, got ${String(value)}`,
+    );
+  }
+  return clp(BigInt(value));
+}
+
+/**
+ * Converts a JSON number into a CLP amount that may be negative. Only for the closed list of signed
+ * fields of ADR 0003, decision 2 (`cashBalanceClp`, `reserveFundBalanceClp`, `differenceClp`,
+ * `balanceClp`); adding a field to that list requires updating the ADR, `docs/arquitectura.md` §1
+ * and the contract test. Accepts safe integers in
+ * `-Number.MAX_SAFE_INTEGER..Number.MAX_SAFE_INTEGER`; `-0` is read as `0`.
+ */
+export function signedClpFromJson(value: number): Clp {
   if (!Number.isSafeInteger(value)) {
     throw new RangeError(`CLP amount must be a safe integer, got ${String(value)}`);
   }
