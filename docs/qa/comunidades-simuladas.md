@@ -1,6 +1,6 @@
 # Comunidades simuladas y pruebas de oro
 
-Estado: **Borrador · pendiente de aprobación del líder del proyecto; validación por contador antes del Piloto**
+Estado: **Aprobado** (aprobado por el líder del proyecto el 2026-11-08, cierre de la Etapa 1) · validación por contador antes del Piloto
 
 Comunidades pequeñas y ficticias para diseñar, probar y demostrar ComVive. Cada monto esperado muestra su cálculo para que un contador pueda verificarlo a mano.
 
@@ -408,7 +408,7 @@ Comprobación con la fórmula completa: 37.500 − (30.000 + 20.000) − (−5.0
 
 ### CA-65 a CA-72 (spec rev. 7): sin pruebas de oro nuevas
 
-**Para revisión del líder del proyecto.** Estos CA no cambian ningún prorrateo ni ninguna prueba de oro aprobada: las resoluciones sin cobro, los reversos y los reembolsos no escriben movimientos en el libro (regla F-16), y los pagos manuales nuevos se imputan sobre cargos de GOLD-A. Los montos que sí mueven saldo o dinero en Transbank, con su cálculo:
+**Aprobado por el líder del proyecto (2026-11-08).** Estos CA no cambian ningún prorrateo ni ninguna prueba de oro aprobada: las resoluciones sin cobro, los reversos y los reembolsos no escriben movimientos en el libro (regla F-16), y los pagos manuales nuevos se imputan sobre cargos de GOLD-A. Los montos que sí mueven saldo o dinero en Transbank, con su cálculo:
 
 | Caso | Cálculo | Resultado |
 | --- | --- | --- |

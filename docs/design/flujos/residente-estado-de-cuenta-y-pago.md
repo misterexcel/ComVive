@@ -1,6 +1,6 @@
 # Flujo: ver estado de cuenta y pagar con Webpay
 
-Estado: Borrador
+Estado: **Aprobado** (aprobado por el líder del proyecto el 2026-11-08, cierre de la Etapa 1)
 Actor: residente propietario o arrendatario
 Superficie: app residente (celular)
 Alcance: MVP

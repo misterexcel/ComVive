@@ -1,6 +1,6 @@
 # Flujo: registrar y entregar una encomienda
 
-Estado: Borrador
+Estado: **Aprobado** (aprobado por el líder del proyecto el 2026-11-08, cierre de la Etapa 1)
 Actor: conserje (el residente recibe la notificación)
 Superficie: modo conserjería en tablet y app residente
 Alcance: **Posterior.** No entra al MVP hasta que exista la especificación de conserjería.

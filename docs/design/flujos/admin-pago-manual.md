@@ -1,6 +1,6 @@
 # Flujo: registrar un pago manual y anularlo
 
-Estado: Borrador
+Estado: **Aprobado** (aprobado por el líder del proyecto el 2026-11-08, cierre de la Etapa 1)
 Actor: administrador (el comité ve pagos y anulaciones en modo lectura)
 Superficie: web de administración
 Alcance: MVP

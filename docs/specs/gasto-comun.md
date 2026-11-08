@@ -1,6 +1,6 @@
 # Especificación: Motor de gasto común
 
-Estado: Borrador
+Estado: **Aprobada** (rev. 8, aprobado por el líder del proyecto el 2026-11-08, cierre de la Etapa 1)
 Responsable: analista-producto
 Aprobación: líder del proyecto
 

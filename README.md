@@ -11,7 +11,7 @@ ComVive digitaliza el gasto común, los pagos, la conciliación bancaria y la vi
 
 ## Estado
 
-Etapa 1 · Diseño. Todavía no hay código de la aplicación; la Etapa 0 (cimientos) está cerrada.
+Etapa 2 · MVP. El diseño de la Etapa 1 está aprobado (2026-11-08); el código de la aplicación se construye en esta etapa. Las Etapas 0 (cimientos) y 1 (diseño) están cerradas.
 
 Etapas: 0 Cimientos → 1 Diseño → 2 MVP → 3 Piloto → 4 Lanzamiento.
 

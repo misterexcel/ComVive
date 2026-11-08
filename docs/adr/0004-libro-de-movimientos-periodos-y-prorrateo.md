@@ -1,6 +1,6 @@
 # ADR 0004 · Libro de movimientos, periodos y prorrateo
 
-- **Estado:** Propuesto (requiere aprobación del líder del proyecto)
+- **Estado:** **Aprobado** (aprobado por el líder del proyecto el 2026-11-08, cierre de la Etapa 1)
 - **Fecha:** 2026-11-07
 - **Propone:** arquitecto de software
 - **Decide:** líder del proyecto

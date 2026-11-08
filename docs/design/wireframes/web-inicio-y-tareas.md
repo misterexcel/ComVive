@@ -1,6 +1,6 @@
 # Wireframes: Mis comunidades, Inicio y tareas pendientes (web)
 
-Estado: Borrador
+Estado: **Aprobado** (aprobado por el líder del proyecto el 2026-11-08, cierre de la Etapa 1)
 Responsable: disenador-ux
 Aprobación: líder del proyecto
 

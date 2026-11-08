@@ -1,6 +1,6 @@
 # Flujo: alta de comunidad y unidades
 
-Estado: Borrador
+Estado: **Aprobado** (aprobado por el líder del proyecto el 2026-11-08, cierre de la Etapa 1)
 Actor: Operaciones ComVive (crea la comunidad y su primer administrador) y administrador (completa la configuración)
 Superficie: consola de plataforma (Operaciones) y web de administración
 Alcance: MVP

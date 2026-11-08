@@ -1,6 +1,6 @@
 # Flujo: corregir o anular un gasto de un periodo emitido o cerrado
 
-Estado: Borrador
+Estado: **Aprobado** (aprobado por el líder del proyecto el 2026-11-08, cierre de la Etapa 1)
 Actor: administrador (el comité ve las correcciones, las anulaciones y sus ajustes en modo lectura)
 Superficie: web de administración
 Alcance: MVP

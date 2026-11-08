@@ -11,7 +11,7 @@ ComVive digitizes common expenses (*gasto común*), payments, bank reconciliatio
 
 ## Status
 
-Stage 1 · Design. There is no application code yet; Stage 0 (foundations) is complete.
+Stage 2 · MVP. The Stage 1 design was approved (2026-11-08); the application code is built in this stage. Stages 0 (foundations) and 1 (design) are complete.
 
 Stages: 0 Foundations → 1 Design → 2 MVP → 3 Pilot → 4 Launch.
 

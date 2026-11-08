@@ -1,6 +1,6 @@
 # Flujo: Soporte ComVive resuelve un pago Webpay en revisión
 
-Estado: Borrador
+Estado: **Aprobado** (aprobado por el líder del proyecto el 2026-11-08, cierre de la Etapa 1)
 Actor: Soporte ComVive (rol de plataforma `platform_support`); el administrador y el comité ven el resultado en lectura; el residente recibe el aviso
 Superficie: consola de plataforma (web, separada de la web de administración)
 Alcance: MVP

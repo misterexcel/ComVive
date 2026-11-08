@@ -1,6 +1,6 @@
 # Flujo: usuarios y roles
 
-Estado: Borrador
+Estado: **Aprobado** (aprobado por el líder del proyecto el 2026-11-08, cierre de la Etapa 1)
 Actor: Operaciones ComVive (rol de administrador), administrador (rol de comité) y la persona que recibe el rol
 Superficie: consola de plataforma (Operaciones) y web de administración
 Alcance: MVP

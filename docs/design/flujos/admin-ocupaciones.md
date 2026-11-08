@@ -1,6 +1,6 @@
 # Flujo: ocupaciones (arriendos y cambios de propietario)
 
-Estado: Borrador
+Estado: **Aprobado** (aprobado por el líder del proyecto el 2026-11-08, cierre de la Etapa 1)
 Actor: administrador (el comité ve el registro de copropietarios con datos limitados; los residentes ven el efecto en la app)
 Superficie: web de administración
 Alcance: MVP

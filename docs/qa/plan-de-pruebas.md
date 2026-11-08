@@ -1,6 +1,6 @@
 # Plan de pruebas
 
-Estado: **Para revisión del líder del proyecto**
+Estado: **Aprobado** (aprobado por el líder del proyecto el 2026-11-08, cierre de la Etapa 1)
 Responsable: ingeniero-qa
 Aprobación: líder del proyecto
 

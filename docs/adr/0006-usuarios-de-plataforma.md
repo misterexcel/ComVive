@@ -1,6 +1,6 @@
 # ADR 0006 · Usuarios de plataforma y excepción acotada al aislamiento
 
-- **Estado:** Propuesto (requiere aprobación del líder del proyecto). Puntos ya decididos por el líder el 2026-11-07: D9 (Operaciones ComVive no puede revocar al último administrador de una comunidad), D10 (código `LAST_ADMIN`, su texto y que cuenta el administrador sin primer ingreso), D12 (los rechazos no se guardan con la clave de idempotencia; la auditoría de plataforma sí los registra) y D13 (`resolve_without_charge` desde `reversal_pending` cuando el reembolso responde 292). Revisión 4 aplicada: B-3, M-2 y M-5. Hallazgos de QA H-35, H-41 y H-42 aplicados con las resoluciones del coordinador, pendientes de la aprobación del líder.
+- **Estado:** **Aprobado** (aprobado por el líder del proyecto el 2026-11-08, cierre de la Etapa 1). Puntos ya decididos por el líder el 2026-11-07: D9 (Operaciones ComVive no puede revocar al último administrador de una comunidad), D10 (código `LAST_ADMIN`, su texto y que cuenta el administrador sin primer ingreso), D12 (los rechazos no se guardan con la clave de idempotencia; la auditoría de plataforma sí los registra) y D13 (`resolve_without_charge` desde `reversal_pending` cuando el reembolso responde 292). Revisión 4 aplicada: B-3, M-2 y M-5. Hallazgos de QA H-35, H-41 y H-42 aplicados con las resoluciones del coordinador, aprobados por el líder el 2026-11-08.
 - **Fecha:** 2026-11-07
 - **Propone:** arquitecto de software
 - **Decide:** líder del proyecto
