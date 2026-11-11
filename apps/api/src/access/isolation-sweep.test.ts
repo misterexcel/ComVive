@@ -50,10 +50,32 @@ describe('isolation sweep generated from the inventory (test 10)', () => {
     const result = await runIsolationSweep(app, fixtures);
 
     expect(result.mismatches).toEqual([]);
-    // 3 routes × 3 cases, plus one foreign unit for each of the 2 routes with :unitId.
-    expect(result.casesRun).toBe(3 * 3 + 2);
+    // 3 routes × 3 cases, plus, for each of the 2 routes with :unitId, the positive control and
+    // one foreign unit.
+    expect(result.casesRun).toBe(3 * 3 + 2 * 2);
     expect(result.routesSwept).toBe(
       collectRouteInventory(app).filter((route) => route.policies[0]?.kind === 'community').length,
+    );
+  });
+
+  it('reports a control member that never reaches step 3b instead of trusting its 404 (M-4)', async () => {
+    const { app } = await createAccessTestApp({ controllers: [UnitPaymentsTestController] });
+    apps.push(app);
+
+    // The concierge does not see charges: every 404 would come from step 3a, not from 3b.
+    const result = await runIsolationSweep(app, {
+      ...fixtures,
+      memberOfCommunity: () => TOKENS.conciergeA,
+    });
+
+    expect(result.mismatches).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          route: 'POST /communities/{communityId}/units/{unitId}/payments',
+          case: 'control: member with every path resource visible must not get 401 or 404',
+          status: 404,
+        }),
+      ]),
     );
   });
 

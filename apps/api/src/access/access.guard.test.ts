@@ -1,3 +1,5 @@
+import { Agent, get as httpGet } from 'node:http';
+
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
@@ -339,19 +341,34 @@ describe('AccessGuard', () => {
       if (!server.listening) {
         await new Promise<void>((resolve) => server.listen(0, resolve));
       }
-      const agent = request.agent(server);
-      const first = await agent
-        .get(`/communities/${COMMUNITY_A}/billing-config`)
-        .set(bearer(TOKENS.adminA))
-        .set('Connection', 'keep-alive');
-      const second = await agent
-        .get('/me/communities')
-        .set(bearer(TOKENS.memberB))
-        .set('Connection', 'keep-alive');
+      // One keep-alive socket for both requests, verified by counting connections (m-8).
+      const { port } = server.address() as { port: number };
+      const agent = new Agent({ keepAlive: true, maxSockets: 1 });
+      let connections = 0;
+      const onConnection = () => (connections += 1);
+      server.on('connection', onConnection);
+      const get = (path: string, token: string) =>
+        new Promise<{ tenant: { communityId: string } | null; identity: unknown }>(
+          (resolve, reject) => {
+            httpGet({ port, path, agent, headers: { Authorization: `Bearer ${token}` } }, (res) => {
+              let text = '';
+              res.on('data', (chunk: Buffer) => (text += chunk.toString()));
+              res.on('end', () => resolve(JSON.parse(text)));
+            }).on('error', reject);
+          },
+        );
+      try {
+        const first = await get(`/communities/${COMMUNITY_A}/billing-config`, TOKENS.adminA);
+        const second = await get('/me/communities', TOKENS.memberB);
 
-      expect(first.body.tenant.communityId).toBe(COMMUNITY_A);
-      expect(second.body.tenant).toBeNull();
-      expect(second.body.identity).toEqual({ personId: 'member-b' });
+        expect(connections).toBe(1);
+        expect(first.tenant?.communityId).toBe(COMMUNITY_A);
+        expect(second.tenant).toBeNull();
+        expect(second.identity).toEqual({ personId: 'member-b' });
+      } finally {
+        server.off('connection', onConnection);
+        agent.destroy();
+      }
     });
   });
 

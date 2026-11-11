@@ -25,7 +25,7 @@ export interface SweepMismatch {
   readonly case: string;
   readonly status: number;
   readonly body: unknown;
-  readonly expected: { status: number; body: unknown };
+  readonly expected: { status: number; body: unknown } | 'past-step-3b';
 }
 
 export interface SweepResult {
@@ -83,7 +83,7 @@ export async function runIsolationSweep(
       label: string,
       path: string | undefined,
       token: string | undefined,
-      expected: { status: number; body: unknown },
+      expected: { status: number; body: unknown } | 'past-step-3b',
     ) => {
       const routeLabel = `${route.method} ${route.pathTemplate}`;
       if (path === undefined) {
@@ -106,10 +106,12 @@ export async function runIsolationSweep(
         pending = pending.send({});
       }
       const response = await pending;
-      if (
-        response.status !== expected.status ||
-        JSON.stringify(response.body) !== JSON.stringify(expected.body)
-      ) {
+      const matches =
+        expected === 'past-step-3b'
+          ? response.status !== 401 && response.status !== 404
+          : response.status === expected.status &&
+            JSON.stringify(response.body) === JSON.stringify(expected.body);
+      if (!matches) {
         mismatches.push({
           route: routeLabel,
           case: label,
@@ -129,6 +131,16 @@ export async function runIsolationSweep(
       fixtures.memberOfAnotherCommunity,
       NOT_FOUND,
     );
+    if (params.length > 0) {
+      // Positive control (M-4): with every path resource visible, the member must get past 3b;
+      // otherwise its 404s below would come from 3a and prove nothing about the path resources.
+      await call(
+        'control: member with every path resource visible must not get 401 or 404',
+        basePath,
+        fixtures.memberOfCommunity(route),
+        'past-step-3b',
+      );
+    }
     for (const name of params) {
       const resource = declared[name];
       const foreign = resource === undefined ? undefined : fixtures.foreignId(resource);

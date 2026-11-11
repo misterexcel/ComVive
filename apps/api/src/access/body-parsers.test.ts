@@ -154,12 +154,17 @@ describe('body is validated after the guards (decision 6; test 8)', () => {
     expect(response.body.body).toBeUndefined();
   });
 
-  it('with a global pipe, a valid unitId reaches the handler as unchanged text', async () => {
+  it('with a stand-in global pipe that follows decision 2, a valid unitId reaches the handler unchanged', async () => {
     const response = await post(payments(UNIT_A1), bearer(TOKENS.adminA), '{"amount":1}');
     expect(response.status).toBe(201);
     expect(response.body.unitId).toBe(UNIT_A1);
     expect(response.body.unitIdType).toBe('string');
   });
+
+  it.todo(
+    'with the real ValidationPipe (transform, whitelist), a unitId that is not a uuid is 404 and ' +
+      'a valid one reaches the handler as text: pending class-validator with the first DTO (m-7)',
+  );
 
   it('with a global pipe, a unitId that is not a uuid is still 404', async () => {
     const response = await post(payments('123'), bearer(TOKENS.adminA), '{"amount":1}');

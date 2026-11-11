@@ -308,7 +308,7 @@ describe('assertRouteInventory (test 5)', () => {
     expect(() => assertRouteInventory(app, 'api')).not.toThrow();
   });
 
-  it('passes on a well-formed community route and a platform route with communityId third', async () => {
+  it('passes on a well-formed community route with a declared path resource', async () => {
     const app = await appWith([WellFormedCommunityController]);
     expect(inventoryErrors(app, 'api')).toBe('');
   });

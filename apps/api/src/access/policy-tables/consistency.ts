@@ -5,17 +5,26 @@ const isPlatformPermission = (permission: string): boolean => permission.startsW
 /**
  * Internal coherence of the access tables (ADR 0009, decision 4, M-6; test 14): every community
  * permission is granted to some role, every role with a permission sees the resource of that
- * permission (no impossible 403), every resource type has a `PathResourceVisibility`
- * implementation, and community and platform permissions do not mix. That each table matches its
- * spec is verified by the isolation test of each endpoint, not here.
+ * permission (no impossible 403), every resource type used in some `pathResources` has a
+ * `PathResourceVisibility` implementation (D66), community and platform resource types and
+ * permissions do not mix (m-10). That each table matches its spec is verified by the isolation
+ * test of each endpoint, not here.
  */
 export function policyTableProblems(
   tables: AccessPolicyTables,
-  implementedResources: readonly string[],
+  resources: { implemented: readonly string[]; used: readonly string[] },
 ): string[] {
   const problems: string[] = [];
   const communityResources = new Set(tables.communityResources);
-  const implemented = new Set(implementedResources);
+  const implemented = new Set(resources.implemented);
+
+  for (const resource of tables.platformPathResources) {
+    if (communityResources.has(resource)) {
+      problems.push(
+        `resource type ${resource} is both a community resource and a platform path resource`,
+      );
+    }
+  }
 
   for (const entry of tables.communityVisibility) {
     if (!communityResources.has(entry.resource)) {
@@ -52,15 +61,10 @@ export function policyTableProblems(
     }
   }
 
-  for (const resource of tables.communityResources) {
-    if (!implemented.has(resource)) {
-      problems.push(`community resource ${resource} has no PathResourceVisibility implementation`);
-    }
-  }
-  for (const resource of tables.platformPathResources) {
+  for (const resource of new Set(resources.used)) {
     if (!implemented.has(resource)) {
       problems.push(
-        `platform path resource ${resource} has no PathResourceVisibility implementation`,
+        `resource type ${resource} is used in pathResources but has no PathResourceVisibility implementation`,
       );
     }
   }
