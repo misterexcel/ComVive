@@ -13,8 +13,10 @@ import {
   NEUTRAL_BODIES,
   PlatformAuditFailedException,
   PlatformAuditUnavailableException,
+  isContractErrorBody,
+  neutralBodyFor,
 } from './access-errors.js';
-import { PlatformAccessAudit } from './platform-access-audit.js';
+import { PlatformAccessAudit, routeTemplateOf } from './platform-access-audit.js';
 import { isPlatformPath } from './route-template.js';
 
 type Answer =
@@ -26,13 +28,20 @@ type Answer =
     }
   | { readonly kind: 'redirect'; readonly location: string };
 
-const INTERNAL_ERROR_BODY = { statusCode: 500, message: 'Internal server error' };
+const json = (status: number, body: { code: string }): Answer => ({
+  kind: 'json',
+  status,
+  body,
+  code: body.code,
+});
 
 /**
  * Global filter registered by `createApp` (ADR 0009, decision 3, "Cuerpos únicos"; menor 5).
  * Normalizes every 401, 403 and 404, whoever throws it (the guard, a service with
- * `new NotFoundException('Unidad 123')` or NestJS for a missing route): only the code, never a
- * message. Under `/platform/` it writes the access row of any rejection that has none yet.
+ * `new NotFoundException('Unidad 123')` or NestJS for a missing route): only the code. Any other
+ * error answers its ADR 0003 contract body (`{ code, ... }`) or the neutral code of its status,
+ * never a message (D60). Under `/platform/` it writes the access row of any rejection that has
+ * none yet.
  */
 @Catch()
 @Injectable()
@@ -46,7 +55,7 @@ export class AccessExceptionFilter implements ExceptionFilter {
     const request = http.getRequest<Request>();
     const response = http.getResponse<Response>();
 
-    let answer = this.answerFor(exception);
+    let answer = this.answerFor(exception, request);
     const auditFailure =
       exception instanceof PlatformAuditFailedException ||
       exception instanceof PlatformAuditUnavailableException;
@@ -59,7 +68,7 @@ export class AccessExceptionFilter implements ExceptionFilter {
             : { status: 302, code: null },
         );
       } catch (auditError) {
-        answer = this.answerFor(auditError);
+        answer = this.answerFor(auditError, request);
       }
     }
 
@@ -73,29 +82,44 @@ export class AccessExceptionFilter implements ExceptionFilter {
     response.status(answer.status).json(answer.body);
   }
 
-  private answerFor(exception: unknown): Answer {
+  private answerFor(exception: unknown, request: Request): Answer {
     if (exception instanceof GatewayRejectedException) {
       return { kind: 'redirect', location: exception.redirectTo };
     }
     if (exception instanceof HttpException) {
       const status = exception.getStatus();
-      if (status === 401 || status === 403 || status === 404) {
-        const body = NEUTRAL_BODIES[status];
-        return { kind: 'json', status, body, code: body.code };
+      // A 400 without a matched route comes from Express before the guard: a path parameter
+      // that cannot be decoded. It answers like a missing route (D61).
+      if (status === 400 && routeTemplateOf(request) === null) {
+        return json(404, NEUTRAL_BODIES[404]);
       }
-      const raw = exception.getResponse();
-      const body = typeof raw === 'string' ? { statusCode: status, message: raw } : raw;
-      const code =
-        typeof (body as { code?: unknown }).code === 'string'
-          ? (body as { code: string }).code
-          : null;
-      return { kind: 'json', status, body, code };
+      if (status === 401 || status === 403 || status === 404) {
+        return json(status, NEUTRAL_BODIES[status]);
+      }
+      const body = exception.getResponse();
+      return isContractErrorBody(body)
+        ? { kind: 'json', status, body, code: body.code }
+        : json(status, neutralBodyFor(status));
     }
     if (!(exception instanceof PlatformAuditFailedException)) {
-      this.logger.error(
-        exception instanceof Error ? (exception.stack ?? exception.name) : 'Unknown error thrown',
-      );
+      this.logUnexpected(exception, request);
     }
-    return { kind: 'json', status: 500, body: INTERNAL_ERROR_BODY, code: null };
+    return json(500, NEUTRAL_BODIES[500]);
+  }
+
+  /**
+   * Only the class, its code (`P2002` and similar) and the route template: the message and the
+   * stack may carry personal data such as a RUT (security m-7; CLAUDE.md, rule 7).
+   */
+  private logUnexpected(exception: unknown, request: Request): void {
+    const code = (exception as { code?: unknown } | null)?.code;
+    this.logger.error(
+      JSON.stringify({
+        unexpectedError: exception instanceof Error ? exception.constructor.name : typeof exception,
+        code: typeof code === 'string' || typeof code === 'number' ? code : undefined,
+        httpMethod: request.method,
+        routeTemplate: routeTemplateOf(request),
+      }),
+    );
   }
 }

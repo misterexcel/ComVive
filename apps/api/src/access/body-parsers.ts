@@ -56,7 +56,7 @@ export function createBodyParsers(hooks: BodyParserHooks): RequestHandler {
       return;
     }
     // PlatformAuditFailedException or anything unexpected: the 413 cannot go out unaudited.
-    response.status(500).json({ statusCode: 500, message: 'Internal server error' });
+    response.status(500).json(NEUTRAL_BODIES[500]);
   };
 
   const onError = (error: unknown, request: Request, response: Response, next: NextFunction) => {

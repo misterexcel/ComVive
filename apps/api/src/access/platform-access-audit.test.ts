@@ -318,6 +318,7 @@ describe('platform access audit (ADR 0009, decision 3; test 11)', () => {
       doubles.audit.mode = 'fail';
       const response = await http().get('/platform/webpay-attempts');
       expect(response.status).toBe(500);
+      expect(response.body).toEqual({ code: 'INTERNAL_ERROR' });
       expect(doubles.events.securityEvents).toEqual([
         {
           name: 'platform_audit.failed',
@@ -333,6 +334,16 @@ describe('platform access audit (ADR 0009, decision 3; test 11)', () => {
       const response = await http().get('/platform/webpay-attempts').set(bearer(TOKENS.support));
       expect(response.status).toBe(500);
       expect(response.body).not.toHaveProperty('handler');
+    });
+
+    it('a failed write of the 413 row answers 500 INTERNAL_ERROR from the body parser wrapper', async () => {
+      doubles.audit.mode = 'fail';
+      const response = await http()
+        .post(`/platform/webpay-attempts/${ATTEMPT_IN_REVIEW_A}/resolution`)
+        .set('Content-Type', 'application/json')
+        .send(JSON.stringify({ filler: 'x'.repeat(101 * 1024) }));
+      expect(response.status).toBe(500);
+      expect(response.body).toEqual({ code: 'INTERNAL_ERROR' });
     });
 
     it('an exhausted pool answers 503 SERVICE_UNAVAILABLE with platform_audit.unavailable', async () => {

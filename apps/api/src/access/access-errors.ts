@@ -1,3 +1,5 @@
+import { STATUS_CODES } from 'node:http';
+
 import { HttpException } from '@nestjs/common';
 
 /**
@@ -11,8 +13,43 @@ export const NEUTRAL_BODIES = {
   403: { code: 'FORBIDDEN' },
   404: { code: 'NOT_FOUND' },
   413: { code: 'PAYLOAD_TOO_LARGE' },
+  500: { code: 'INTERNAL_ERROR' },
   503: { code: 'SERVICE_UNAVAILABLE' },
 } as const;
+
+const CONTRACT_CODE = /^[A-Z][A-Z0-9_]*$/;
+
+/** Body with the shape of the error contract of ADR 0003: `{ code, ... }` with an UPPER_SNAKE code. */
+export function isContractErrorBody(body: unknown): body is { code: string } {
+  return (
+    typeof body === 'object' &&
+    body !== null &&
+    !Array.isArray(body) &&
+    typeof (body as { code?: unknown }).code === 'string' &&
+    CONTRACT_CODE.test((body as { code: string }).code)
+  );
+}
+
+/**
+ * Neutral body of a status (D60): the closed list above, otherwise the HTTP reason phrase as an
+ * UPPER_SNAKE code (422 is `UNPROCESSABLE_ENTITY`). Never the message of whoever threw it.
+ */
+export function neutralBodyFor(status: number): { code: string } {
+  const known = (NEUTRAL_BODIES as Record<number, { code: string } | undefined>)[status];
+  if (known !== undefined) {
+    return known;
+  }
+  const reason = STATUS_CODES[status];
+  if (reason === undefined) {
+    return status >= 500 ? NEUTRAL_BODIES[500] : NEUTRAL_BODIES[400];
+  }
+  return {
+    code: reason
+      .toUpperCase()
+      .replace(/[^A-Z0-9]+/g, '_')
+      .replace(/^_|_$/g, ''),
+  };
+}
 
 export type NeutralStatus = 401 | 403 | 404;
 

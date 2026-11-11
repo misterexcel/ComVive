@@ -10,8 +10,9 @@ import type { Request, Response } from 'express';
 import { catchError, concatMap, from, throwError, type Observable } from 'rxjs';
 
 import {
-  GatewayRejectedException,
   NEUTRAL_BODIES,
+  isContractErrorBody,
+  neutralBodyFor,
   PlatformAuditFailedException,
   PlatformAuditUnavailableException,
 } from './access-errors.js';
@@ -51,27 +52,20 @@ function joinedRoles(roles: readonly string[]): string | null {
   return roles.length === 0 ? null : [...roles].sort().join(',');
 }
 
-/** Status and error code a thrown value ends up answering (for the audit row). */
+/**
+ * Status and error code a thrown value ends up answering (for the audit row), with the same rules
+ * as AccessExceptionFilter: neutral codes, or the code of an ADR 0003 contract body.
+ */
 export function outcomeOf(exception: unknown): RequestOutcome {
-  if (exception instanceof GatewayRejectedException) {
-    return { status: 302, code: null };
-  }
   if (exception instanceof HttpException) {
     const status = exception.getStatus();
-    const neutral = (NEUTRAL_BODIES as Record<number, { code: string } | undefined>)[status];
-    if (neutral !== undefined) {
-      return { status, code: neutral.code };
-    }
     const body = exception.getResponse();
-    const code =
-      typeof body === 'object' &&
-      body !== null &&
-      typeof (body as { code?: unknown }).code === 'string'
-        ? (body as { code: string }).code
-        : null;
-    return { status, code };
+    if (status !== 401 && status !== 403 && status !== 404 && isContractErrorBody(body)) {
+      return { status, code: body.code };
+    }
+    return { status, code: neutralBodyFor(status).code };
   }
-  return { status: 500, code: null };
+  return { status: 500, code: NEUTRAL_BODIES[500].code };
 }
 
 /** Route template of the matched Express route, or null when no route matched. */
