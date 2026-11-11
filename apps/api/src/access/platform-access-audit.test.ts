@@ -15,6 +15,7 @@ import { createAccessTestApp, type AccessDoubles } from './test-support/access-t
 import {
   ADMIN_MEMBERSHIP_A,
   ADMIN_MEMBERSHIP_B,
+  ATTEMPT_AUTHORIZED_A,
   ATTEMPT_IN_REVIEW_A,
   COMMUNITY_A,
   COMMUNITY_MISSING,
@@ -132,14 +133,60 @@ describe('platform access audit (ADR 0009, decision 3; test 11)', () => {
       expect(onlyRow()).toMatchObject({ communityId: COMMUNITY_A, code: 'NOT_FOUND' });
     });
 
-    it('a rejection in step 3a (the other platform role) leaves a platform row with its role', async () => {
+    it('a rejection in step 3a (the other platform role) records the current roles of the person (D67)', async () => {
       await http().get('/platform/webpay-attempts').set(bearer(TOKENS.operations));
       expect(onlyRow()).toMatchObject({
         actorType: 'platform',
         personId: 'ops-1',
-        platformRole: null,
+        platformRole: 'platform_operations',
         code: 'NOT_FOUND',
       });
+    });
+
+    it('a rejection of a person with several platform roles records them all, sorted and comma-separated (D67)', async () => {
+      doubles.grants.grants.set('ops-1', ['platform_support', 'platform_operations']);
+      try {
+        await http()
+          .post(revoke(COMMUNITY_MISSING, ADMIN_MEMBERSHIP_A))
+          .set(bearer(TOKENS.operations));
+        expect(onlyRow()).toMatchObject({
+          platformRole: 'platform_operations,platform_support',
+          code: 'NOT_FOUND',
+        });
+      } finally {
+        doubles.grants.grants.set('ops-1', ['platform_operations']);
+      }
+    });
+
+    it('a step 2 rejection (no current grant) records the person without a role', async () => {
+      await http().get('/platform/webpay-attempts').set(bearer(TOKENS.platformWithoutGrant));
+      expect(onlyRow()).toMatchObject({
+        actorType: 'platform',
+        personId: 'ops-gone',
+        platformRole: null,
+      });
+    });
+
+    it('an error of a port after identifying the person is audited as that platform person (m-2, security m-3)', async () => {
+      const original = doubles.adminMemberships.isVisible.bind(doubles.adminMemberships);
+      doubles.adminMemberships.isVisible = async () => {
+        throw new Error('database unavailable');
+      };
+      try {
+        const response = await http()
+          .post(revoke(COMMUNITY_A, ADMIN_MEMBERSHIP_A))
+          .set(bearer(TOKENS.operations));
+        expect(response.status).toBe(500);
+        expect(onlyRow()).toMatchObject({
+          actorType: 'platform',
+          personId: 'ops-1',
+          platformRole: 'platform_operations',
+          communityId: COMMUNITY_A,
+          status: 500,
+        });
+      } finally {
+        doubles.adminMemberships.isVisible = original;
+      }
     });
 
     it('malformed JSON on a resolution is 400 with one row BAD_REQUEST written by the interceptor (TC-GC-CB-33 (e))', async () => {
@@ -159,7 +206,29 @@ describe('platform access audit (ADR 0009, decision 3; test 11)', () => {
         .set(bearer(TOKENS.support));
       expect(response.status).toBe(409);
       expect(response.body).toEqual({ code: 'PREVIEW_OUTDATED' });
-      expect(onlyRow()).toMatchObject({ status: 409, code: 'PREVIEW_OUTDATED' });
+      expect(onlyRow()).toMatchObject({
+        status: 409,
+        code: 'PREVIEW_OUTDATED',
+        communityId: COMMUNITY_A,
+      });
+    });
+
+    it('a request on a visible attempt keeps the community of the attempt only in the audit row (D46, D65)', async () => {
+      const response = await http()
+        .post(`/platform/webpay-attempts/${ATTEMPT_IN_REVIEW_A}/resolution`)
+        .set(bearer(TOKENS.support))
+        .send({ decision: 'resolve_without_charge' });
+      expect(response.status).toBe(201);
+      expect(response.body.tenant).toBeNull();
+      expect(onlyRow()).toMatchObject({ status: 201, communityId: COMMUNITY_A });
+    });
+
+    it('an existing attempt outside the view is audited with community_id null (D65)', async () => {
+      const response = await http()
+        .post(`/platform/webpay-attempts/${ATTEMPT_AUTHORIZED_A}/resolution`)
+        .set(bearer(TOKENS.support));
+      expect(response.status).toBe(404);
+      expect(onlyRow()).toMatchObject({ code: 'NOT_FOUND', communityId: null });
     });
   });
 

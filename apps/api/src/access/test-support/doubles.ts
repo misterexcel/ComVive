@@ -12,6 +12,7 @@ import {
   type MembershipReader,
   type PathResourceCheck,
   type PathResourceVisibility,
+  type PathResourceVisibilityResult,
   type PlatformAccessAuditRow,
   type PlatformAuditWriter,
   type PlatformGrantReader,
@@ -19,6 +20,7 @@ import {
   type SessionVerifier,
   type VerifiedSession,
 } from '../ports.js';
+import { requireTenantContext } from '../request-context.js';
 import { isCanonicalUuid } from '../route-template.js';
 import {
   ADMIN_MEMBERSHIP_A,
@@ -156,20 +158,21 @@ export class FakeUnitVisibility implements PathResourceVisibility {
     return isCanonicalUuid(id);
   }
 
-  async isVisible(check: PathResourceCheck): Promise<boolean> {
+  // Like the per-community Prisma client, it reads the tenant from the request container.
+  async isVisible(check: PathResourceCheck): Promise<PathResourceVisibilityResult> {
     this.checks.push(check);
-    const tenant = check.tenant;
-    if (tenant === undefined || this.units.get(check.id) !== tenant.communityId) {
-      return false;
+    const tenant = requireTenantContext();
+    if (this.units.get(check.id) !== tenant.communityId) {
+      return { visible: false };
     }
     if (tenant.actor.type !== 'member') {
-      return true;
+      return { visible: true };
     }
     const { roles, personId } = tenant.actor;
     if (roles.includes('admin') || roles.includes('committee')) {
-      return true;
+      return { visible: true };
     }
-    return this.residentUnits.get(personId)?.has(check.id) ?? false;
+    return { visible: this.residentUnits.get(personId)?.has(check.id) ?? false };
   }
 }
 
@@ -187,13 +190,16 @@ export class FakeAdminMembershipVisibility implements PathResourceVisibility {
     return isCanonicalUuid(id);
   }
 
-  async isVisible(check: PathResourceCheck): Promise<boolean> {
+  // Per-community client of the community of the route: reads the container (M-1).
+  async isVisible(check: PathResourceCheck): Promise<PathResourceVisibilityResult> {
+    const tenant = requireTenantContext();
     const membership = this.memberships.get(check.id);
-    return (
-      membership !== undefined &&
-      membership.role === 'admin' &&
-      membership.communityId === check.tenant?.communityId
-    );
+    return {
+      visible:
+        membership !== undefined &&
+        membership.role === 'admin' &&
+        membership.communityId === tenant.communityId,
+    };
   }
 }
 
@@ -209,9 +215,13 @@ export class FakeWebpayAttemptVisibility implements PathResourceVisibility {
     return isCanonicalUuid(id);
   }
 
-  async isVisible(check: PathResourceCheck): Promise<boolean> {
-    const status = this.attempts.get(check.id)?.status;
-    return status === 'in_review' || status === 'reversal_pending';
+  // Only the view: a visible attempt reports its community for the audit row (D46, D65).
+  async isVisible(check: PathResourceCheck): Promise<PathResourceVisibilityResult> {
+    const attempt = this.attempts.get(check.id);
+    const visible = attempt?.status === 'in_review' || attempt?.status === 'reversal_pending';
+    return visible && attempt !== undefined
+      ? { visible, auditCommunityId: attempt.communityId }
+      : { visible: false };
   }
 }
 

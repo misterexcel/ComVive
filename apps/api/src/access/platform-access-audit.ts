@@ -28,6 +28,8 @@ import {
 } from './ports.js';
 import {
   currentRequestContainer,
+  isPlatformAccessAudited,
+  markPlatformAccessAudited,
   type PlatformPrincipal,
   type RequestContainer,
 } from './request-context.js';
@@ -42,6 +44,11 @@ export interface IdentifiedPlatformRequest {
 export interface RequestOutcome {
   readonly status: number;
   readonly code: string | null;
+}
+
+/** Every current platform role, sorted and comma-separated, or null without any (D67). */
+function joinedRoles(roles: readonly string[]): string | null {
+  return roles.length === 0 ? null : [...roles].sort().join(',');
 }
 
 /** Status and error code a thrown value ends up answering (for the audit row). */
@@ -97,12 +104,10 @@ export class PlatformAccessAudit {
     identified?: IdentifiedPlatformRequest,
   ): Promise<void> {
     const container = currentRequestContainer();
-    if (container?.platformAccessAudited === true) {
+    if (isPlatformAccessAudited()) {
       return;
     }
-    if (container !== undefined) {
-      container.platformAccessAudited = true;
-    }
+    markPlatformAccessAudited();
     await this.write(
       this.rowFor(request, container, outcome, routeTemplateOf(request), identified),
     );
@@ -128,7 +133,8 @@ export class PlatformAccessAudit {
       status: outcome.status,
       code: outcome.code,
     };
-    const platform = container?.platform ?? identified?.principal;
+    // A guard rejection names the person it identified; otherwise the container does.
+    const platform = identified?.principal ?? container?.platform;
     if (platform === undefined) {
       return { ...common, actorType: 'anonymous', truncatedIp: truncateClientIp(request.ip) };
     }
@@ -136,8 +142,12 @@ export class PlatformAccessAudit {
       ...common,
       actorType: 'platform',
       personId: platform.personId,
-      platformRole: platform.platformRole ?? null,
-      communityId: container?.tenant?.communityId ?? identified?.communityId ?? null,
+      platformRole: platform.platformRole ?? joinedRoles(platform.platformRoles),
+      communityId:
+        container?.tenant?.communityId ??
+        container?.audit.communityId ??
+        identified?.communityId ??
+        null,
       origin: request.ip ?? null,
     };
   }

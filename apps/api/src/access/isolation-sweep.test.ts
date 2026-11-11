@@ -64,7 +64,7 @@ describe('isolation sweep generated from the inventory (test 10)', () => {
         {
           resource: 'unit',
           isWellFormed: () => true,
-          isVisible: async () => true,
+          isVisible: async () => ({ visible: true }),
         },
       ],
     });

@@ -3,7 +3,10 @@ import { describe, expect, expectTypeOf, it } from 'vitest';
 import {
   currentRequestContainer,
   fillIdentityContext,
+  fillPlatformContext,
   fillTenantContext,
+  isPlatformAccessAudited,
+  markPlatformAccessAudited,
   openRequestContainer,
   requireTenantContext,
   runInCommunity,
@@ -70,6 +73,23 @@ describe('request context container', () => {
   });
 
   describe('runInCommunity (R2-M-2)', () => {
+    it('is tied to the request container: shares its audit marker and its platform person (security m-6)', async () => {
+      const principal = {
+        personId: 'support-1',
+        platformRoles: ['platform_support'],
+        platformRole: 'platform_support',
+      } as const;
+      await openRequestContainer(async () => {
+        fillPlatformContext(principal);
+        const innerPlatform = await runInCommunity(COMMUNITY_B, { type: 'system' }, async () => {
+          markPlatformAccessAudited();
+          return currentRequestContainer()?.platform;
+        });
+        expect(innerPlatform).toEqual(principal);
+        expect(isPlatformAccessAudited()).toBe(true);
+      });
+    });
+
     it('runs fn in a nested container with the given community and restores the outer one', async () => {
       await openRequestContainer(async () => {
         fillTenantContext({

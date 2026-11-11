@@ -113,6 +113,13 @@ describe('AccessGuard', () => {
         401,
         UNAUTHORIZED,
       ],
+      [
+        'a lowercase bearer scheme (RFC 7235: case-insensitive) and no permission',
+        { Authorization: `bearer ${TOKENS.committeeA}` },
+        UNIT_A1,
+        403,
+        FORBIDDEN,
+      ],
       ['an expired or revoked session', bearer(TOKENS.expired), UNIT_A1, 401, UNAUTHORIZED],
       ['a platform session', bearer(TOKENS.operations), UNIT_A1, 404, NOT_FOUND],
       ['no membership', bearer(TOKENS.noMembership), UNIT_A1, 404, NOT_FOUND],

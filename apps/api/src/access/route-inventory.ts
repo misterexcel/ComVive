@@ -7,7 +7,12 @@ import { AccessGuard } from './access.guard.js';
 import { readAccessPolicies, type AccessPolicy } from './access-policy.js';
 import { PATH_RESOURCE_VISIBILITIES, type PathResourceVisibility } from './ports.js';
 import { ROUTE_EXCEPTIONS, type AppKind, type RouteException } from './route-exceptions.js';
-import { pathSegments, routeParamNames, toPathTemplate } from './route-template.js';
+import {
+  hasRouteCommunity,
+  pathSegments,
+  routeParamNames,
+  toPathTemplate,
+} from './route-template.js';
 
 export interface RouteInventoryEntry {
   /** HTTP method in uppercase (`GET`, `POST`, ... or `ALL` for `@All()`). */
@@ -251,11 +256,7 @@ function pathResourceDifferences(
     return differences;
   }
 
-  const segments = pathSegments(route.expressPath);
-  const routeCommunityIsChecked =
-    policy.kind === 'community'
-      ? segments[1] === ':communityId'
-      : segments[1] === 'communities' && segments[2] === ':communityId';
+  const routeCommunityIsChecked = hasRouteCommunity(route.expressPath, policy.kind);
   const declared: Readonly<Record<string, string>> = policy.pathResources ?? {};
 
   for (const param of params) {

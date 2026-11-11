@@ -29,6 +29,19 @@ export function toPathTemplate(path: string): string {
   return `/${segments.join('/')}`;
 }
 
+/**
+ * Whether `:communityId` in this path is the community of the route, which the guard checks in
+ * step 2 (community) or 3b (platform) and not as a path resource. Single rule for the guard and
+ * the inventory (m-3): second segment of a community route, or third segment right after
+ * `communities` in a platform route.
+ */
+export function hasRouteCommunity(path: string, kind: 'community' | 'platform'): boolean {
+  const segments = pathSegments(path);
+  return kind === 'community'
+    ? segments[1] === ':communityId'
+    : segments[0] === 'platform' && segments[1] === 'communities' && segments[2] === ':communityId';
+}
+
 /** `/platform` and everything under `/platform/`, read by segments. */
 export function isPlatformPath(path: string): boolean {
   return pathSegments(path)[0] === 'platform';

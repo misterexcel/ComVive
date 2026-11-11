@@ -79,7 +79,11 @@ export class NoMembershipReader implements MembershipReader {
 // Path resources (D39)
 
 export interface PathResourceCheck {
-  /** Tenant context already filled by the guard (community routes and platform community routes). */
+  /**
+   * Tenant context the guard already put in the request container (community routes and platform
+   * community routes). Implementations query with the per-community client, which reads the same
+   * context from the container (M-1).
+   */
   readonly tenant: TenantContext | undefined;
   /** Platform person, on platform routes. */
   readonly platform?: PlatformPrincipal;
@@ -94,7 +98,16 @@ export interface PathResourceVisibility {
   /** Shape of the id: canonical uuid unless the spec of the resource says otherwise. */
   isWellFormed(id: string): boolean;
   /** One query with the per-community client (RLS), inside the community of the route. */
-  isVisible(check: PathResourceCheck): Promise<boolean>;
+  isVisible(check: PathResourceCheck): Promise<PathResourceVisibilityResult>;
+}
+
+export interface PathResourceVisibilityResult {
+  readonly visible: boolean;
+  /**
+   * Only for a visible platform path resource outside a community route (a Webpay attempt): its
+   * community, for the audit row (D46, D65). Never part of the TenantContext.
+   */
+  readonly auditCommunityId?: string;
 }
 export const PATH_RESOURCE_VISIBILITIES = Symbol('PathResourceVisibilities');
 
@@ -133,7 +146,12 @@ export type PlatformAccessAuditRow =
       readonly action: 'platform.request';
       readonly actorType: 'platform';
       readonly personId: string;
-      readonly platformRole: PlatformRole | null;
+      /**
+       * Role that held the permission of a request that passed the guard; for a guard rejection,
+       * every current platform role of the person, sorted and comma-separated (D67); null
+       * without any current role.
+       */
+      readonly platformRole: string | null;
       /** Only if it exists; null across communities or for a missing one (D44, D46). */
       readonly communityId: string | null;
       readonly routeTemplate: string | null;

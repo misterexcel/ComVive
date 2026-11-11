@@ -4,6 +4,8 @@ import type { Request } from 'express';
 import {
   AccessDeniedException,
   GatewayRejectedException,
+  PlatformAuditFailedException,
+  PlatformAuditUnavailableException,
   type NeutralStatus,
 } from './access-errors.js';
 import { readAccessPolicies, type AccessPolicy } from './access-policy.js';
@@ -37,12 +39,13 @@ import {
   fillIdentityContext,
   fillPlatformContext,
   fillTenantContext,
+  setPlatformAuditCommunity,
   type PlatformPrincipal,
   type TenantContext,
 } from './request-context.js';
 import {
+  hasRouteCommunity,
   isCanonicalUuid,
-  pathSegments,
   routeParamNames,
   toPathTemplate,
 } from './route-template.js';
@@ -131,7 +134,7 @@ export class AccessGuard implements CanActivate {
   /** Step 1: only `Authorization: Bearer`, never cookies or the query string. */
   private async requireSession(request: Request): Promise<VerifiedSession> {
     const header = request.headers.authorization;
-    const token = header === undefined ? undefined : /^Bearer ([^\s]+)$/.exec(header)?.[1];
+    const token = header === undefined ? undefined : /^Bearer ([^\s]+)$/i.exec(header)?.[1];
     const session = token === undefined ? null : await this.sessions.verify(token);
     if (session === null) {
       throw deny(401);
@@ -170,7 +173,9 @@ export class AccessGuard implements CanActivate {
       throw deny(404);
     }
     // Step 3b: each path resource, in route order, before the shape of the body (D39).
-    await this.checkPathResources(request, routePath, policy.pathResources ?? {}, { tenant });
+    await this.checkPathResources(request, routePath, 'community', policy.pathResources ?? {}, {
+      tenant,
+    });
     // Step 3c: permission of the action.
     if (policy.permission !== undefined && !this.communityRolesMay(roles, policy.permission)) {
       throw deny(403);
@@ -202,7 +207,10 @@ export class AccessGuard implements CanActivate {
     }
   }
 
-  /** Platform routes write their own rejections to the audit log before throwing (D41). */
+  /**
+   * Platform routes write their own rejections, and any other error once the person is known,
+   * to the audit log before throwing (D41; m-2).
+   */
   private async checkPlatform(
     request: Request,
     routePath: string,
@@ -214,7 +222,10 @@ export class AccessGuard implements CanActivate {
     try {
       await this.runPlatformSteps(request, routePath, policy, identified);
     } catch (error) {
-      if (error instanceof AccessDeniedException) {
+      const auditFailure =
+        error instanceof PlatformAuditFailedException ||
+        error instanceof PlatformAuditUnavailableException;
+      if (!auditFailure) {
         await this.audit.recordRequest(request, outcomeOf(error), identified);
       }
       throw error;
@@ -233,7 +244,7 @@ export class AccessGuard implements CanActivate {
       throw deny(404);
     }
 
-    // Step 2: current PLATFORM_ROLE_GRANT.
+    // Step 2: current PLATFORM_ROLE_GRANT. A rejection records every current role (D67).
     const roles = await this.grants.readCurrentRoles(session.personId, this.clock.now());
     identified.principal = { personId: session.personId, platformRoles: roles };
     if (roles.length === 0) {
@@ -245,13 +256,17 @@ export class AccessGuard implements CanActivate {
     if (platformRole === undefined) {
       throw deny(404);
     }
-    const principal: PlatformPrincipal = { ...identified.principal, platformRole };
-    identified.principal = principal;
+    const principal: PlatformPrincipal = {
+      personId: session.personId,
+      platformRoles: roles,
+      platformRole,
+    };
 
-    // Step 3b: the community of the route, only as the third segment (menor 9, R2-m-4).
+    // Step 3b: the community of the route, only as the third segment (menor 9, R2-m-4). The
+    // container is filled before the path resources, which query with the per-community client
+    // of that community (M-1).
     let tenant: TenantContext | undefined;
-    const segments = pathSegments(routePath);
-    if (segments[1] === 'communities' && segments[2] === ':communityId') {
+    if (hasRouteCommunity(routePath, 'platform')) {
       const communityId = request.params['communityId'];
       if (typeof communityId !== 'string' || !isCanonicalUuid(communityId)) {
         throw deny(404);
@@ -265,29 +280,34 @@ export class AccessGuard implements CanActivate {
         actor: { type: 'platform', personId: session.personId, platformRole },
       };
     }
-    await this.checkPathResources(request, routePath, policy.pathResources ?? {}, {
+    fillPlatformContext(principal, tenant);
+
+    await this.checkPathResources(request, routePath, 'platform', policy.pathResources ?? {}, {
       tenant,
       platform: principal,
+      onAuditCommunity: (communityId) => {
+        identified.communityId ??= communityId;
+        setPlatformAuditCommunity(communityId);
+      },
     });
-
-    fillPlatformContext(principal, tenant);
   }
 
   private async checkPathResources(
     request: Request,
     routePath: string,
+    kind: 'community' | 'platform',
     declared: Readonly<Record<string, string>>,
-    context: { tenant: TenantContext | undefined; platform?: PlatformPrincipal },
+    context: {
+      tenant: TenantContext | undefined;
+      platform?: PlatformPrincipal;
+      onAuditCommunity?: (communityId: string) => void;
+    },
   ): Promise<void> {
     const previous: Record<string, string> = {};
-    const segments = pathSegments(routePath);
+    const skipCommunity = hasRouteCommunity(routePath, kind);
     for (const name of routeParamNames(routePath)) {
-      // communityId was already checked in step 2 (community) or 3b (platform, third segment).
-      const isRouteCommunity =
-        name === 'communityId' &&
-        (segments[1] === ':communityId' ||
-          (segments[0] === 'platform' && segments[2] === ':communityId'));
-      if (isRouteCommunity) {
+      // The community of the route was already checked in step 2 (community) or 3b (platform).
+      if (name === 'communityId' && skipCommunity) {
         continue;
       }
       const resource = declared[name];
@@ -300,8 +320,12 @@ export class AccessGuard implements CanActivate {
         context.platform === undefined
           ? { tenant: context.tenant, id, previous: { ...previous } }
           : { tenant: context.tenant, platform: context.platform, id, previous: { ...previous } };
-      if (!(await port.isVisible(check))) {
+      const result = await port.isVisible(check);
+      if (!result.visible) {
         throw deny(404);
+      }
+      if (result.auditCommunityId !== undefined && context.tenant === undefined) {
+        context.onAuditCommunity?.(result.auditCommunityId);
       }
       previous[name] = id;
     }

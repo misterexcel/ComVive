@@ -43,8 +43,19 @@ export interface RequestContainer {
   tenant: TenantContext | undefined;
   identity: IdentityContext | undefined;
   platform: PlatformPrincipal | undefined;
+  /** Platform access audit of the request, shared with nested `runInCommunity` containers. */
+  readonly audit: PlatformAuditState;
+}
+
+/** One per request, shared by the containers nested in it (security m-6). */
+export interface PlatformAuditState {
   /** Set by whoever wrote the platform access row, so no one writes a second one (R3-m-2). */
-  platformAccessAudited: boolean;
+  audited: boolean;
+  /**
+   * Community a visible platform path resource reported for the audit row only (D46, D65);
+   * never part of the TenantContext.
+   */
+  communityId: string | undefined;
 }
 
 const storage = new AsyncLocalStorage<RequestContainer>();
@@ -54,7 +65,7 @@ function emptyContainer(): RequestContainer {
     tenant: undefined,
     identity: undefined,
     platform: undefined,
-    platformAccessAudited: false,
+    audit: { audited: false, communityId: undefined },
   };
 }
 
@@ -136,7 +147,32 @@ export function runInCommunity<T>(
   actor: SystemActor | PlatformActor,
   fn: () => T,
 ): T {
-  const container = emptyContainer();
-  container.tenant = { communityId, actor };
+  // Tied to the request container, if any: same platform person and same audit state, so a
+  // row written inside (recordPlatformAction, D45) marks the request (security m-6).
+  const parent = storage.getStore();
+  const container: RequestContainer = {
+    tenant: { communityId, actor },
+    identity: undefined,
+    platform: parent?.platform,
+    audit: parent?.audit ?? { audited: false, communityId: undefined },
+  };
   return storage.run(container, fn);
+}
+
+/** Whether the platform access row of the current request was already written. */
+export function isPlatformAccessAudited(): boolean {
+  return storage.getStore()?.audit.audited === true;
+}
+
+/** Marks the platform access row of the current request as written (R3-m-2; D45). */
+export function markPlatformAccessAudited(): void {
+  const container = storage.getStore();
+  if (container !== undefined) {
+    container.audit.audited = true;
+  }
+}
+
+/** Community of a visible platform path resource, for the audit row only (D46, D65). */
+export function setPlatformAuditCommunity(communityId: string): void {
+  requireContainer().audit.communityId = communityId;
 }
