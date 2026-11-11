@@ -69,6 +69,15 @@ export default tseslint.config(
     },
   },
   {
+    // NestJS injects constructor dependencies from `design:paramtypes`, so a class used only as a
+    // constructor parameter type is a runtime import; with these options
+    // consistent-type-imports no longer asks to turn it into `import type`.
+    files: ['apps/api/**/*.ts'],
+    languageOptions: {
+      parserOptions: { emitDecoratorMetadata: true, experimentalDecorators: true },
+    },
+  },
+  {
     files: ['apps/web/**', 'apps/mobile/**'],
     languageOptions: {
       globals: { ...globals.browser },

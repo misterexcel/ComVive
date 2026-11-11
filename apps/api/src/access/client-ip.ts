@@ -42,7 +42,7 @@ function expandIPv6(ip: string): number[] {
 function compressIPv6(groups: number[]): string {
   let bestStart = -1;
   let bestLength = 0;
-  for (let start = 0; start < groups.length; ) {
+  for (let start = 0; start < groups.length;) {
     if (groups[start] !== 0) {
       start += 1;
       continue;

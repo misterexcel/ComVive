@@ -59,8 +59,14 @@ describe('request context container', () => {
       ),
     );
     expect(seen).toHaveLength(2);
-    expect(seen).toContainEqual({ communityId: COMMUNITY_A, actor: { ...member, personId: 'p-0' } });
-    expect(seen).toContainEqual({ communityId: COMMUNITY_B, actor: { ...member, personId: 'p-1' } });
+    expect(seen).toContainEqual({
+      communityId: COMMUNITY_A,
+      actor: { ...member, personId: 'p-0' },
+    });
+    expect(seen).toContainEqual({
+      communityId: COMMUNITY_B,
+      actor: { ...member, personId: 'p-1' },
+    });
   });
 
   describe('runInCommunity (R2-M-2)', () => {
