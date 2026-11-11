@@ -173,6 +173,7 @@ class WildcardsController {
     return '';
   }
 
+  // eslint-disable-next-line no-restricted-syntax -- test 5 proves @All() makes the inventory fail.
   @All('everything')
   @CommunityRoute({ resource: testResource('unit') })
   everything(): string {
