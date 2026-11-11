@@ -5,7 +5,7 @@
 - **Entregable:** `docs/specs/comunidades-y-membresias.md`, rev. 1, borrador del analista-producto, rama `docs/spec-comunidades-y-membresias`.
 - **Base revisada:** el archivo completo (667 líneas): alcance, matriz de recursos, acciones, errores, órdenes de validación, reglas A a G, CA-CM-1 a CA-CM-23, casos borde, supuestos S-CM-1 a S-CM-20, preguntas P-CM-1 a P-CM-15 y "Contradicciones y vacíos".
 - **Veredicto:** **Rechazado** (un crítico, C-1; nueve mayores). La estructura es sólida y la mayoría de las citas son exactas; las correcciones son acotadas y no obligan a rehacer la spec.
-- **Estado de la resolución:** rev. 2 incorporada; pendiente de segunda pasada.
+- **Estado de la resolución:** rev. 2 incorporada; segunda pasada: Rechazado (R2-C-1, R2-M-1 a R2-M-4); pendiente de las respuestas del líder a sus preguntas 1 a 5.
 
 ## Documentos con que se contrastó
 
@@ -211,3 +211,137 @@ El líder del proyecto respondió las siete preguntas el 2026-11-11 (D47 a D53, 
 | Observación 1 `role-grant` sin lectura | Anotada | La matriz dice que `role-grant` no tiene lectura y existe solo para otorgar |
 | Observación 2 CM-F1 y el contacto por membresía | Resuelto | CM-F3 suma el requisito de habilitación por contacto (C-1, D47) |
 | Observación 3 Complejidad | Resuelto | Un solo endpoint de lote (`POST …/units/batch`) para altas y ediciones; fuera los `GET` de plataforma (D49) y la conserjería (D50) |
+
+## Segunda pasada (rev. 2)
+
+### Base revisada
+
+- **Fecha:** 2026-11-11. **Revisor:** agente `revisor-critico`.
+- **Entregable:** `docs/specs/comunidades-y-membresias.md` rev. 2 (854 líneas, completa), la prueba de oro GOLD-ACM7 de `docs/qa/comunidades-simuladas.md` y la tabla "Resolución" de este informe.
+- **Contrastado con:** `CLAUDE.md`; GC rev. 9 ("Respuestas de error", S-53, tabla de errores, "Validaciones de la consola de Operaciones ComVive" con S-63, S-72 y D27, CA-33 y CA-43); `docs/arquitectura.md` §2, §3, §4 (modelo `MEMBERSHIP`) y "Cuando haga falta"; ADR 0002 (decisión 3), ADR 0003 (decisiones 3, 6 y 9), ADR 0005 (decisiones 1 y 3) y ADR 0009 (decisiones 2 a 4, 6 y 7); `docs/design/wireframes/consola-plataforma.md` (CON-11) y los flujos de `docs/design/flujos/`.
+
+### Veredicto
+
+**Rechazado.** Hay un crítico: R2-C-1, un camino que sigue abierto hacia la fuga de C-1 por el contacto del administrador. Además hay cuatro mayores. Casi toda la rev. 2 resuelve bien la primera pasada; las correcciones son acotadas.
+
+### Verificación de la primera pasada
+
+| Hallazgo | ¿Resuelto en el texto? | Observación |
+| --- | --- | --- |
+| C-1 | **Parcial** | La ficha por (persona, comunidad), CM-C4, CM-F3 y CA-CM-24 están en el texto. Quedan abiertos dos caminos: el contacto del administrador (R2-C-1) y la corrección o el reemplazo del contacto junto con las acciones de identidad (R2-M-1) |
+| M-1 | Sí | CA-CM-8 tiene los tres escenarios y CM-B7 está corregido; coherente con ADR 0003, decisión 9, paso 5 |
+| M-2 | Sí | CM-A4, "Fuera de alcance", el punto 6 y CA-CM-1 |
+| M-3 | Sí | CM-C4, CA-CM-12, CA-CM-25 y el punto 11 |
+| M-4 | Sí | CM-B6, CM-D2, CA-CM-11 y CA-CM-23. Falta el orden dentro del paso 4 al otorgar (R2-m-2) |
+| M-5 | Sí, con reparos | Todas las rutas tienen `resource`, `pathResources` y un único `permission`, coherentes con ADR 0009. Hay dos inconsistencias en E-CM-1 (R2-m-1 y R2-m-2) |
+| M-6 | Sí | CM-B8 trae la lista completa. Faltan las referencias sin clave foránea (R2-m-6) |
+| M-7 | Sí | CM-E6, CA-CM-14 y CA-CM-26. Falta definir el mecanismo del flag (R2-M-3) |
+| M-8 | Sí | (a) CM-D5 y CA-CM-15; (b) CA-CM-25; (c) la ficha |
+| M-9 | Sí en la spec, no en la lista de alineación | El formulario de CON-11 no pide el nombre (R2-M-2) |
+| Menores 1 a 14 y 17 | Sí | Verificados uno a uno contra el texto de la rev. 2 |
+| Menor 15 | Parcial | No define la normalización Unicode y "código normalizado" es ambiguo (R2-m-5) |
+| Menor 16 | Parcial | CM-A5 cambia desde cuándo corre el plazo de GC S-72, aprobada, y no aparece en "Contradicciones" (R2-M-2) |
+| Observaciones 1 a 3 | Sí | — |
+
+**M-5, ruta por ruta.**
+
+- **Rutas de plataforma:** `POST /platform/communities` no tiene parámetros y es uno de los usos de `runInCommunity` de la lista cerrada de ADR 0009; la revocación declara `{ membershipId: 'admin-membership' }`, que está en `PlatformPathResource`; otorgar administrador no tiene más parámetros que `communityId`, verificado en el paso 3b.
+- **Rutas de comunidad:** cada parámetro está declarado (verificación 7) y todo `POST`, `PATCH` y `DELETE` lleva permiso (verificación 6).
+- **Lectura con permiso:** el `GET` del historial de ocupaciones con `owner_roster.read` está permitido y coincide con `docs/arquitectura.md` §4.
+- **Tareas:** `admin-task` con `committee_role.grant` coincide con §4.
+- **Coherencia con GC S-53:** `role-grant` da 403 al comité (GC CA-43); `membership` da 404 al comité; `unit-config` da 404 al residente y 403 al comité.
+
+**GOLD-ACM7, recalculado a mano.**
+
+| Concepto | Cálculo | Resultado |
+| --- | --- | --- |
+| Fondo | (1.000.000 × 500 + 9.999) div 10.000 = 500.009.999 div 10.000 | $50.000 |
+| Depto 101 | 1.000.000 × 0,19 = 190.000; 50.000 × 0,19 = 9.500 | $199.500 |
+| Deptos 102 y 201 | 250.000 + 12.500 | $262.500 cada uno |
+| Depto 202 | 310.000 + 15.500 | $325.500 |
+| Suma | 199.500 + 262.500 + 262.500 + 325.500 | $1.050.000 (regla 3) |
+| Notas de crédito del Depto 101, con la foto del 20 % | O corregido 950.000; F = 475.009.999 div 10.000 = 47.500. Ordinario 190.000 − 200.000 = −10.000; fondo 9.500 − 10.000 = −500 | −$10.500, igual a GOLD-A33-01 y GC CA-33 |
+| Contraste con el 19 % | 180.500 − 200.000 = −19.500; 9.025 − 10.000 = −975 | −$20.475 |
+
+Todos los montos son correctos y todos los productos son exactos. Falta precisar en qué periodo caen las notas (R2-M-4).
+
+### R2 · Crítico
+
+#### R2-C-1 · El contacto del administrador se toma del "contacto verificado" de otra comunidad
+
+- **Ubicación:** CM-C1, fila Administrador, columna "Celular o correo" ("Obligatorio si la persona no tiene cuenta en ComVive (GC S-63)"); "Orden de validación por acción", Otorgar administrador ("`INVALID_CONTACT` (solo si la persona no tiene cuenta en ComVive, GC S-63)"). Lo heredan GC "Validaciones de la consola…", segundo punto ("Si la persona ya tiene cuenta en ComVive … se usa su contacto verificado y no se pide de nuevo") y CON-11, línea 469 y fila "Otorgar administrador: 2".
+- **Problema:**
+  - D47 prohíbe que un contacto registrado o verificado por una comunidad sirva para otra (CM-C4, último punto; CM-F3). La regla que se mantiene hace justo eso con el rol de mayor privilegio:
+    1. El administrador malicioso de A registra a X con el contacto c_att.
+    2. El atacante verifica c_att con la invitación de A; c_att queda como contacto verificado de `PERSON` X.
+    3. Operaciones otorga a X el rol `admin` en C sin pedir contacto, porque "ya tiene cuenta".
+    4. La ficha o la invitación de C usan c_att, y el atacante entra como administrador de C: ve RUT, deudas y el registro completo de otra comunidad (reglas 4 y 7).
+  - En la rebanada 1, donde nadie tiene contacto verificado, "tiene cuenta" equivale a "existe `PERSON`": la ficha de C nace sin contacto (su administrador nunca podría ser invitado) o con el contacto copiado de la ficha de A, que es exactamente C-1.
+  - Que el campo sea opcional según la persona revela a Operaciones si el RUT ya existe en ComVive.
+- **Corrección:** en el alta y en cada otorgamiento de `admin`, el celular o correo es **siempre obligatorio** y se guarda solo en la ficha de esa comunidad; nunca se copia de `PERSON` ni de otra ficha. `INVALID_CONTACT` queda sin la condición en los dos órdenes y en CM-C1. Agregar a CA-CM-27: Felipe Rojas, administrador de B con contacto verificado, recibe `admin` en A sin contacto y la respuesta es 422 `INVALID_CONTACT`. Registrar en "Contradicciones y vacíos" el cambio a GC S-63 (coordinador) y a CON-11 (diseñador). Con esto, S-CM-22 queda sin ambigüedad.
+
+### R2 · Mayor
+
+#### R2-M-1 · CM-F3 no cierra la corrección del contacto ni las acciones de identidad desde una sesión limitada
+
+- **Ubicación:** CM-C6, último punto; CM-A2 / S-CM-22; CM-F3; CA-CM-24; P-CM-18.
+- **Problema:**
+  - **(a) La habilitación no tiene momento de evaluación.** Si se fija al verificar, corregir un contacto mal digitado (el remedio de C-1 dentro de A) no saca a quien ya lo verificó: el intruso conserva acceso a la unidad y la deuda de X. Si se evalúa en cada petición, el reemplazo que hace Operaciones (S-CM-22) corta en silencio el acceso de una propietaria a su comunidad.
+  - **(b) La sesión limitada sigue siendo de identidad.** Nada impide que, desde las rutas `/me/` ("Mi cuenta", "Mis comunidades", segundo factor, otras sesiones), se agreguen o cambien contactos verificados, se active un segundo factor o se cierren sesiones, lo que afecta a las demás comunidades de X: toma de la cuenta o denegación de servicio entre comunidades.
+  - **(c)** No se dice a qué contacto va el código en un ingreso normal de una persona con varios contactos verificados; ADR 0005 dice "único por persona".
+- **Corrección:** fijar en CM-F3 como requisitos heredados: (1) la habilitación se evalúa en cada petición, como la membresía (ADR 0005, decisión 3); (2) corregir o reemplazar el contacto de una ficha deshabilita esa comunidad para las sesiones obtenidas con el contacto anterior desde la petición siguiente, con auditoría (CA-CM-19 lo verifica en la rebanada de ingreso); (3) una sesión limitada no modifica datos de identidad que afecten a comunidades no habilitadas, y "Mis comunidades" lista solo las habilitadas; (4) el ingreso normal envía el código a cada contacto verificado y la sesión queda limitada al contacto con que se ingresó, u otra regla equivalente que elija el arquitecto. Sumar estos puntos a P-CM-18 y a CA-CM-24.
+
+#### R2-M-2 · La lista "Contradicciones y vacíos" está incompleta
+
+Faltan, con su responsable:
+
+1. GC S-63 y CON-11, por el contacto del administrador (R2-C-1).
+2. CON-11, formulario "Crear comunidad" (líneas 448 a 457) y "Otorgar administrador": no tienen el campo nombre ni `PERSON_NAME_REQUIRED` (D52). El punto 3 dice "CON-11 lo muestra", pero solo lo muestra en la tabla, no lo pide.
+3. ADR 0005, decisión 1 y su supuesto ("contacto de ingreso verificado de `PERSON` (único por persona)"); el punto 12 solo cita la decisión 3.
+4. ADR 0009, decisión 3, paso 2 (el guard deberá considerar la habilitación por contacto además de la membresía vigente) y `docs/arquitectura.md` §2, fila "Mis comunidades".
+5. GC S-72 y D27: CM-A5 cambia desde cuándo cuenta el plazo de 7 días (extensión de una regla aprobada que registra el coordinador).
+6. `docs/arquitectura.md` §3, lista de permisos (línea 134); el punto 16 solo cita ADR 0003 y ADR 0009.
+7. Diseño: no existe la acción "Corregir datos" que cita la vista previa de CM-C4, ni una pantalla para corregir la ficha (`admin-usuarios-y-roles.md` y `admin-ocupaciones.md`).
+8. El mecanismo de feature flags (R2-M-3).
+
+#### R2-M-3 · Dos feature flags sin mecanismo ni dueño
+
+- **Ubicación:** CM-E6, CM-A5, S-CM-27 y S-CM-30; `docs/arquitectura.md`, "Cuando haga falta: … ambientes y feature flags".
+- **Problema:** la protección de dinero de D51 depende de que `occupancy.end_and_transfer` siga apagado. No hay ADR ni supuesto que diga dónde vive el flag (variable de entorno, tabla, por comunidad o por ambiente), quién puede encenderlo ni cómo se prueba que está apagado. La regla 10 de `CLAUDE.md` y la definición de "Hecho" de la rebanada del libro no son verificables sin eso.
+- **Corrección:** supuesto (a validar): flag por ambiente, en la configuración de despliegue, no editable por API ni por comunidad; encenderlo es un cambio de configuración aprobado por el líder. Una prueba que falle si la configuración de producción lo trae encendido antes de que exista el traspaso. Pregunta al arquitecto y registro en "Contradicciones".
+
+#### R2-M-4 · El periodo de las notas de GOLD-ACM7-05 queda indefinido
+
+- **Ubicación:** CA-CM-7, último "Y", y GOLD-ACM7-05.
+- **Problema:** GC CA-33 anula el gasto el 2026-11-20 y deja las notas en el borrador `2026-11`. En CA-CM-7 la anulación ocurre después de emitir `2026-11` (2026-12-01), así que las notas caen en el borrador `2026-12`. Una prueba que reutilice la fecha de CA-33 metería las notas en `2026-11` y cambiaría lo que emite ese periodo frente a GOLD-ACM7-01 a 04 (regla 2).
+- **Corrección:** fijar la fecha (por ejemplo, 2026-12-02), decir que las notas van al borrador `2026-12` y que GOLD-ACM7-01 a 04 no las incluyen.
+
+### R2 · Menor
+
+1. **R2-m-1 · E-CM-1 se contradice sobre el 422 de residente.** S-CM-25 lo pone en el paso 4; "Orden de validación por acción" (Revocar) y CM-D4, en el paso 6. La diferencia se nota con una clave reutilizada (`IDEMPOTENCY_KEY_REUSED` frente a 422). **Corrección:** dejarlo en el paso 6 y corregir S-CM-25 y la introducción de E-CM-1, que solo trata los 403.
+2. **R2-m-2 · Orden dentro del paso 4 al otorgar.** Con `role = admin` y un `personRecordId` ajeno a la vez, no se dice si responde 404 o 403. **Corrección:** primero el 404 del `personRecordId` y después el 403 de `role = admin` (visibilidad antes que permiso); agregar el caso a CA-CM-23.
+3. **R2-m-3 · Motivo en cambios que solo tocan el código o el tipo.** CM-B7 dice que no exige motivo, pero CM-B7 ("toda … lote") y los órdenes de "Crear o editar una unidad" y "Lote" lo exigen "con algún periodo emitido". **Corrección:** "solo si es un alta, o si cambia la alícuota o el orden" en los dos órdenes y en CM-B6; agregar "sin motivo" a CA-CM-8, escenario 3.
+4. **R2-m-4 · Datos de prueba que chocan.** El RUT 11.111.111-1 es "inexistente en ComVive" en CA-CM-12 y es la persona X de CA-CM-24. **Corrección:** otro RUT válido para X, registrado en `comunidades-simuladas.md`.
+5. **R2-m-5 · Normalización Unicode.** CM-B2 no fija NFC ("Depto Ñ" en NFC y en NFD serían dos códigos que se ven iguales). En CM-B5, "código normalizado comparado por punto de código" no dice si conserva las tildes; si las quita, no es único. **Corrección:** normalizar a NFC al guardar y desempatar por el código guardado según CM-B2, con las tildes.
+6. **R2-m-6 · Referencias sin clave foránea.** CM-B8 y S-CM-12 verifican por claves foráneas; los `payload` de `JOB` (ADR 0008) y otras referencias lógicas no se detectan. **Corrección:** un trabajo pendiente con el id de la unidad también impide eliminarla, o los trabajos toleran una unidad inexistente, con su prueba.
+7. **R2-m-7 · Soporte ComVive en las rutas de plataforma.** La columna "Op" no distingue `platform_support` y ningún CA verifica que Soporte recibe 404 en las tres rutas (ADR 0009, paso 3a; ADR 0006, decisión 1). **Corrección:** agregar el caso a CA-CM-1 o CA-CM-27.
+8. **R2-m-8 · El 403 de la ficha de un administrador.** "Tu rol no permite esta acción" no explica nada: el rechazo depende del estado de otra persona, no del rol de quien actúa. **Corrección:** 422 con código propio, por ejemplo `ADMIN_RECORD_MANAGED_BY_COMVIVE` ("Los datos de un administrador los corrige ComVive"); así E-CM-1 queda solo para la revocación.
+9. **R2-m-9 · Efecto de S-CM-22 sobre las notificaciones del residente.** Si Operaciones reemplaza el contacto de una propietaria, cambia a dónde llegan sus notificaciones de residente y nadie de la comunidad puede corregirlo (CM-C6, P-CM-16). **Corrección:** decirlo en CM-A2 y priorizar P-CM-16 antes de la rebanada de ingreso.
+
+### R2 · Observaciones
+
+- **E-CM-1 y P-CM-17: recomendación (b)**, reducida a la revocación de una membresía `admin` si se acepta R2-m-8. A favor: no revela nada (el administrador ya pasó el paso 3b y ve esa membresía), toca una sola ruta y no obliga a crear un puerto ni un paso nuevos en un ADR recién aceptado. Costo: (b) también contradice ADR 0009, decisión 2 ("Todo lo que se sabe por la ruta … lo decide el guard"), así que hay que enmendarlo: agregar a "Lo que sigue en el servicio" una lista cerrada de verificaciones 403 por la instancia de la ruta, citada a esta spec, que van antes de la idempotencia, y alinear `docs/arquitectura.md` §3. Conviene (a) si aparecen más rutas con 403 según la instancia en otras rebanadas.
+- **Complejidad:** la ficha por (persona, comunidad) es más simple que el contacto por membresía y resuelve M-8 (c). El lote único y la salida de la conserjería y de las lecturas de plataforma reducen la superficie. No sobra nada.
+- **Lo que se verificó y cuadra:** encaje de la ficha con ADR 0002, decisión 3 (no amplía los datos globales; `PERSON` sigue "solo identidad"); D48 frente a ISO-7; D49 frente a ADR 0002 y 0006; D50 y D53 sin efectos colaterales; D51 con el flag apagado (CA-CM-26); orden de `PERSON_NAME_REQUIRED` respecto de GC S-63 (D52); pasos 1 a 6 coherentes con GC "Respuestas de error"; ids retirados sin reutilizar; fechas de CA-CM-14, CA-CM-15 y CA-CM-21 coherentes con O-1, O-4 y O-5; tope de 500 filas razonable.
+
+### R2 · Preguntas para el líder del proyecto
+
+1. **(R2-C-1)** ¿Acepta que el celular o correo del administrador sea siempre obligatorio en el alta y al otorgar `admin`, sin usar nunca un contacto verificado en otra comunidad? Esto cambia GC S-63 y CON-11.
+2. **(R2-M-1)** ¿Acepta como requisitos de la rebanada de ingreso que la habilitación por contacto se evalúe en cada petición, que corregir un contacto deshabilite las sesiones obtenidas con el anterior y que una sesión limitada no pueda cambiar datos de identidad?
+3. **(R2-M-3)** ¿Los feature flags se manejan por ambiente en la configuración de despliegue, encendidos solo con su aprobación? ¿O pide un ADR de feature flags antes de la rebanada 1?
+4. **(P-CM-17 y R2-m-8)** ¿Opción (b), limitada a la revocación de `admin`, con la corrección de la ficha de un administrador como 422 con código propio? ¿O prefiere (a)?
+5. **(R2-M-4)** ¿Confirma que en GOLD-ACM7-05 la anulación es posterior a la emisión de `2026-11` y que las notas van al borrador `2026-12`?
+
+### R2 · Resolución
+
+Pendiente.
