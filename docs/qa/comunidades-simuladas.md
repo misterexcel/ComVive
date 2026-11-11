@@ -151,11 +151,11 @@ Personas de la Comunidad B y de la plataforma usadas en los casos de aislamiento
 | — | — | Soporte ComVive (`platform_support`) | `soporte-1`, `soporte-2` | CA-41, CA-55, CA-65, CA-68, CA-70, CA-71 |
 | — | — | Operaciones ComVive (`platform_operations`) | `operaciones-1` (OP1), `operaciones-2` | CA-43, CA-69, ISO-GC-operaciones-1 a 3 |
 
-Personas de la spec de comunidades y membresías (`docs/specs/comunidades-y-membresias.md`, rev. 3). RUT inventados, con dígito verificador calculado por módulo 11:
+Personas de la spec de comunidades y membresías (`docs/specs/comunidades-y-membresias.md`, rev. 4). RUT inventados, con dígito verificador calculado por módulo 11:
 
 | Persona | RUT | Rol | Casos |
 | --- | --- | --- | --- |
-| Sofía Navarro (persona X) | 17.654.321-3 | Sin contacto verificado; arrendataria del Depto 102 de A (celular +56 9 1111 1111) y de la Casa 2 de B (correo `x@example.com`) | CA-CM-24 |
+| Sofía Navarro (persona X) | 17.654.321-3 | Sin contacto verificado; arrendataria del Depto 102 de A (celular +56 9 1111 1111) y de la Casa 2 de B (correo `x@example.com`) | CA-CM-24, CA-CM-29 |
 | — (RUT de control) | 11.111.111-1 | No existe en ComVive: nunca se registra en ningún escenario, para comparar la vista previa con la de un RUT que existe en otra comunidad | CA-CM-12 |
 
 Cálculo del dígito de 17.654.321: dígitos de derecha a izquierda 1, 2, 3, 4, 5, 6, 7, 1 por 2, 3, 4, 5, 6, 7, 2, 3: 2 + 6 + 12 + 20 + 30 + 42 + 14 + 3 = 129; 129 mod 11 = 8; 11 − 8 = 3. De 11.111.111: 2 + 3 + 4 + 5 + 6 + 7 + 2 + 3 = 32; 32 mod 11 = 10; 11 − 10 = 1.
