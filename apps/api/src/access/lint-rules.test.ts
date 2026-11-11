@@ -23,6 +23,53 @@ async function restrictedMessages(file: string, code: string): Promise<string[]>
 
 const ACCESS = '../access/access-policy.js';
 
+// Expected message of each "reports" row (cross m-6): the right rule, not just any error.
+const EXPECTED_MESSAGE: Record<string, string> = {
+  '@PublicTechnicalRoute outside src/health': '@PublicTechnicalRoute is only for src/health',
+  '@GatewayRoute in src/health': '@GatewayRoute is only for src/webpay-gateway',
+  '@PlatformRoute outside src/platform': '@PlatformRoute is only for src/platform',
+  '@InternalJobRoute outside src/jobs': '@InternalJobRoute is only for src/jobs',
+  '@AuthEntryRoute outside src/auth': '@AuthEntryRoute is only for src/auth',
+  '@IdentityRoute outside src/identity': '@IdentityRoute is only for src/identity',
+  'runInCommunity from src/units': 'runInCommunity is only for src/platform, src/jobs',
+  'recordPlatformAction from src/units': 'recordPlatformAction is only for src/platform',
+  'APP_GUARD outside src/access': 'APP_GUARD, APP_FILTER, APP_INTERCEPTOR and APP_PIPE only',
+  'APP_FILTER outside src/access': 'APP_GUARD, APP_FILTER, APP_INTERCEPTOR and APP_PIPE only',
+  'APP_INTERCEPTOR outside src/access': 'APP_GUARD, APP_FILTER, APP_INTERCEPTOR and APP_PIPE only',
+  'APP_PIPE outside src/access': 'APP_GUARD, APP_FILTER, APP_INTERCEPTOR and APP_PIPE only',
+  '@UseFilters outside src/access': '@UseFilters only in src/access',
+  'useGlobalPipes outside configure-app.ts':
+    'Global enhancers only in src/access and configure-app.ts',
+  'a NestModule with MiddlewareConsumer outside src/access':
+    'NestJS middleware runs before the guard',
+  'app.use( outside configure-app.ts': 'app.use( only in configure-app.ts',
+  'app.use( in src/access': 'app.use( only in configure-app.ts',
+  'a direct Express route outside configure-app.ts': 'Routes registered directly in Express',
+  'useStaticAssets outside configure-app.ts': 'useStaticAssets and enableVersioning only',
+  'enableVersioning outside configure-app.ts': 'useStaticAssets and enableVersioning only',
+  'getHttpAdapter() outside configure-app.ts and src/access':
+    'getHttpAdapter() and HttpAdapterHost only',
+  'HttpAdapterHost outside configure-app.ts and src/access':
+    'getHttpAdapter() and HttpAdapterHost only',
+  '@nestjs/serve-static': 'Static files, WebSockets and microservices bypass',
+  '@nestjs/websockets': 'Static files, WebSockets and microservices bypass',
+  '@nestjs/microservices': 'Static files, WebSockets and microservices bypass',
+  '@All()': '@All() is not allowed',
+  "@Param('unitId', ParseUUIDPipe)": '@Param takes only the parameter name',
+  "@Param('unitId', new ParseUUIDPipe())": '@Param takes only the parameter name',
+  '@Param(new ValidationPipe())': '@Param takes only the parameter name',
+  'als.enterWith()': 'Never enterWith',
+  'new AsyncLocalStorage outside src/access': 'The request context lives in src/access',
+  'createNestApplication outside configure-app.ts': 'Create applications only with createApp',
+  'NestFactory.create outside configure-app.ts': 'Create applications only with createApp',
+  'test-support from code that is not a test': 'Test doubles are only for',
+  '@Res() in src/platform': '@Res, @Response and @Next only in src/webpay-gateway',
+  '@Response() outside src/webpay-gateway': '@Res, @Response and @Next only in src/webpay-gateway',
+  '@Next() outside src/webpay-gateway': '@Res, @Response and @Next only in src/webpay-gateway',
+  '@PlatformRoute in src/platform/domain': '@PlatformRoute is only for src/platform',
+  'runInCommunity in src/platform/domain': 'runInCommunity is only for src/platform, src/jobs',
+};
+
 describe('lint rules of ADR 0009 (test 13)', () => {
   it.each([
     [
@@ -131,6 +178,11 @@ describe('lint rules of ADR 0009 (test 13)', () => {
       'declare const app: { getHttpAdapter(): void };\napp.getHttpAdapter();',
     ],
     [
+      'HttpAdapterHost outside configure-app.ts and src/access',
+      'apps/api/src/units/units.service.ts',
+      "import { HttpAdapterHost } from '@nestjs/core';\nexport class S { constructor(readonly host: HttpAdapterHost) {} }",
+    ],
+    [
       '@nestjs/serve-static',
       'apps/api/src/units/units.module.ts',
       "import { ServeStaticModule } from '@nestjs/serve-static';",
@@ -166,7 +218,7 @@ describe('lint rules of ADR 0009 (test 13)', () => {
       "import { Param, ValidationPipe } from '@nestjs/common';\nexport class C { x(@Param(new ValidationPipe()) p: unknown): unknown { return p; } }",
     ],
     [
-      'enterWith',
+      'als.enterWith()',
       'apps/api/src/access/request-context.ts',
       "import { AsyncLocalStorage } from 'node:async_hooks';\nconst s = new AsyncLocalStorage();\ns.enterWith({});",
     ],
@@ -215,8 +267,13 @@ describe('lint rules of ADR 0009 (test 13)', () => {
       'apps/api/src/platform/domain/rules.ts',
       "import { runInCommunity } from '../../access/request-context.js';\nvoid runInCommunity;",
     ],
-  ])('reports %s', async (_label, file, code) => {
-    expect(await restrictedMessages(file, code)).not.toEqual([]);
+  ])('reports %s', async (label, file, code) => {
+    const expectedMessage = EXPECTED_MESSAGE[label];
+    if (expectedMessage === undefined) {
+      throw new Error(`No expected message for "${label}"`);
+    }
+    const messages = await restrictedMessages(file, code);
+    expect(messages.some((message) => message.includes(expectedMessage))).toBe(true);
   });
 
   it('a domain file with new Date() and APP_GUARD fails by both rules', async () => {

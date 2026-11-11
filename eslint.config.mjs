@@ -132,8 +132,10 @@ const API_SYNTAX_GROUPS = {
   ],
   'http-adapter': [
     {
-      selector: "Identifier[name='getHttpAdapter']",
-      message: 'getHttpAdapter() only in configure-app.ts and src/access (R2-m-5).',
+      // HttpAdapterHost reaches the same Express instance (router params, settings).
+      selector: 'Identifier[name=/^(getHttpAdapter|HttpAdapterHost)$/]',
+      message:
+        'getHttpAdapter() and HttpAdapterHost only in configure-app.ts and src/access (R2-m-5; security m-4).',
     },
   ],
   'response-objects': [
