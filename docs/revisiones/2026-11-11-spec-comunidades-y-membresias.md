@@ -5,7 +5,7 @@
 - **Entregable:** `docs/specs/comunidades-y-membresias.md`, rev. 1, borrador del analista-producto, rama `docs/spec-comunidades-y-membresias`.
 - **Base revisada:** el archivo completo (667 líneas): alcance, matriz de recursos, acciones, errores, órdenes de validación, reglas A a G, CA-CM-1 a CA-CM-23, casos borde, supuestos S-CM-1 a S-CM-20, preguntas P-CM-1 a P-CM-15 y "Contradicciones y vacíos".
 - **Veredicto:** **Rechazado** (un crítico, C-1; nueve mayores). La estructura es sólida y la mayoría de las citas son exactas; las correcciones son acotadas y no obligan a rehacer la spec.
-- **Estado de la resolución:** rev. 3 incorporada; pendiente de tercera pasada.
+- **Estado de la resolución:** rev. 3 incorporada; tercera pasada: Aprobado con cambios (R3-M-1 a R3-M-3); pendiente de las respuestas del líder a sus preguntas 1 a 5.
 
 ## Documentos con que se contrastó
 
@@ -365,3 +365,119 @@ El líder del proyecto respondió las cinco preguntas de la segunda pasada el 20
 | Observación 1 E-CM-1 y P-CM-17 | Resuelto (D57) | Opción (b) limitada a la revocación de `admin`; P-CM-17 cerrada. La enmienda de ADR 0009, decisión 2 (lista cerrada de verificaciones 403 por la instancia de la ruta, citada a esta spec, antes de la idempotencia) y la alineación de `docs/arquitectura.md` §3 quedan en el punto 15 para el arquitecto. E-CM-1 anota que conviene (a) si aparecen más rutas así |
 | Observación 2 Complejidad | Anotada | Sin cambios: la rev. 3 no agrega rutas ni entidades; CM-H1 es una regla de configuración |
 | Observación 3 Lo que se verificó y cuadra | Anotada | Sin cambios |
+
+## Tercera pasada (rev. 3)
+
+### Base revisada
+
+- **Fecha:** 2026-11-11. **Revisor:** agente `revisor-critico`.
+- **Entregable:** `docs/specs/comunidades-y-membresias.md` rev. 3 (926 líneas, leída completa, commit 70021bb); `docs/qa/comunidades-simuladas.md` (personas de la spec y GOLD-ACM7); la sección "R2 · Resolución" de este informe.
+- **Contrastado con:** `CLAUDE.md` (reglas 1 a 10, metodología); GC rev. 9 ("Respuestas de error", pasos 1 a 6; tabla de errores; "Validaciones de la consola de Operaciones ComVive" con S-63; CA-33; creación del borrador siguiente al emitir); ADR 0003, decisiones 6 y 9; ADR 0008, inventario (fila 5), decisión 4 (reglas del manejador), decisión 5 (`ENTITY_NOT_FOUND`), decisión 14 (`NOTIFICATION_DELIVERY`, de dónde sale el contacto) y prueba 8; `docs/arquitectura.md` ("Cuando haga falta"); existencia de `docs/operaciones/`.
+
+### Veredicto
+
+**Aprobado con cambios.** No hay hallazgos críticos. La rev. 3 resuelve en el texto los 14 hallazgos de la segunda pasada y aplica bien D54 a D58; ningún camino de la rebanada 1 permite que un contacto registrado o verificado en una comunidad dé acceso a otra. Hay tres mayores, con corrección acotada al texto, que deben corregirse antes de la aprobación del líder (el coordinador puede verificarlos sin una cuarta pasada completa): R3-M-1 (la protección de dinero del flag se puede saltar), R3-M-2 (el contacto de las notificaciones sigue saliendo de `PERSON` según ADR 0008) y R3-M-3 (la tolerancia de `JOB` contradice ADR 0008). Los menores pueden ir como tareas de alineación, salvo R3-m-1 y R3-m-2, de una línea.
+
+### Verificación de la segunda pasada
+
+| Hallazgo | ¿Resuelto en el texto? | Dónde se verificó |
+| --- | --- | --- |
+| R2-C-1 | Sí | CM-A2, CM-C1, CM-C4, los dos órdenes (`INVALID_CONTACT` "siempre"), la tabla de errores, CA-CM-27 y el punto 17. Falta el caso del **alta** con un RUT existente (R3-m-5) |
+| R2-M-1 | Sí | CM-F3 con D55-1 a D55-4; CM-C6 y CM-A2 enlazan D55-2; P-CM-18; CA-CM-24 y CA-CM-19. Reparos en R3-m-2, R3-m-3 y R3-m-6 |
+| R2-M-2 | Sí | Puntos 17 a 24; punto 3 corregido. Faltantes nuevos en R3-M-2, R3-M-3 y R3-m-4 |
+| R2-M-3 | Parcial | CM-H1, S-CM-31, P-CM-20, punto 24 y CA-CM-26. La prueba del CI no cubre un cambio hecho directo en el despliegue (R3-M-1) |
+| R2-M-4 | Sí | CA-CM-7 (anulación 2026-12-02, notas en `2026-12`) y GOLD-ACM7 con la columna "Periodo de las notas" |
+| R2-m-1 | Sí | E-CM-1, S-CM-25, CM-D4 y el orden de "Revocar": 422 de residente en el paso 6 |
+| R2-m-2 | Sí | CM-D2 y el orden de "Otorgar": 404 antes que 403; CA-CM-23 |
+| R2-m-3 | Sí | CM-B6, CM-B7, los dos órdenes y CA-CM-8 |
+| R2-m-4 | Sí | Sofía Navarro 17.654.321-3 y RUT de control 11.111.111-1 |
+| R2-m-5 | Sí | CM-B2 (NFC), CM-B5, S-CM-5, S-CM-24 y el caso borde |
+| R2-m-6 | Sí, pero contradice ADR 0008 | CM-B8 y S-CM-12 (R3-M-3) |
+| R2-m-7 | Sí | Fila de Soporte, "Acciones de la rebanada" y CA-CM-1 |
+| R2-m-8 | Sí | Tabla de errores, matriz, CM-C6, orden de "Corregir una ficha", CA-CM-19 y CA-CM-27 |
+| R2-m-9 | Sí | CM-A2, S-CM-22, caso borde y P-CM-16 prioritaria. Falta el CA del corte de sesión por reemplazo (R3-m-6) |
+
+**Caminos de un contacto entre comunidades.**
+
+| Camino | Resultado |
+| --- | --- |
+| Alta | Cerrado: contacto obligatorio, solo en la ficha nueva |
+| Otorgamiento de `admin` | Cerrado: contacto obligatorio, solo en la ficha nueva |
+| Corrección de ficha | Cerrado: solo afecta a esa comunidad, con D55-2 |
+| Reemplazo por Operaciones (S-CM-22) | Cerrado: solo afecta a esa comunidad, con D55-2 |
+| Ingreso normal con varios contactos (D55-4) | Cerrado en su invariante; la redacción admite una lectura con un solo código (R3-m-2) |
+| Rutas `/me/` (D55-3) | Cerradas en cuanto a cambios; el rechazo revela que existen otras comunidades (R3-m-3) |
+| **Notificaciones** | **No cerrado:** ADR 0008, decisión 14 lee el contacto desde `PERSON` (R3-M-2). No ocurre en la rebanada 1 |
+
+**GOLD-ACM7, recalculado:** fondo 500.009.999 div 10.000 = $50.000; cargos de `2026-11` 199.500 + 262.500 + 262.500 + 325.500 = $1.050.000 (regla 3); notas del Depto 101 con la foto del 20 %: 950.000 × 0,20 = 190.000 (−10.000) y 47.500 × 0,20 = 9.500 (−500), total −$10.500; contraste con el 19 %: −$20.475. Periodo de las notas: borrador `2026-12`, coherente con GC.
+
+**RUT por módulo 11:**
+
+| RUT | Suma ponderada | Resto mod 11 | Dígito |
+| --- | --- | --- | --- |
+| 17.654.321 | 129 | 8 | 3 |
+| 11.111.111 | 32 | 10 | 1 |
+| 21.345.678 | 139 | 7 | 4 |
+| 22.456.789 | 168 | 3 | 8 |
+| 15.234.567 | 117 | 7 | 4 (y −9 es inválido, como espera CA-CM-13) |
+| 12.345.678 | 138 | 6 | 5 |
+| 12.345.670 | 122 | 1 | K |
+| 18.234.765 | 127 | 6 | 5 |
+| 13.579.246 | 163 | 9 | 2 |
+
+### R3 · Crítico
+
+Ninguno.
+
+### R3 · Mayor
+
+#### R3-M-1 · La prueba del flag `occupancy.end_and_transfer` no cubre un encendido hecho directo en el despliegue
+
+- **Ubicación:** CM-H1, tercera viñeta ("El cambio queda en el historial del repositorio **o del despliegue**") y quinta viñeta (prueba del CI); CM-E6, primera viñeta; CA-CM-26, segundo escenario.
+- **Problema:** la protección de dinero de D51 depende de que el flag siga apagado en producción, y la única barrera es una prueba del CI que lee la configuración de producción. Si el valor se cambia en el despliegue (variable de entorno de Cloud Run editada desde la consola o con `gcloud`), el cambio no pasa por el CI: un término o una venta reales dejarían la deuda en el ámbito equivocado, sin traspaso (GC F-9, F-13; reglas 2 y 5), y sería un cambio a producción sin aprobación trazable (regla 10). Además, `docs/operaciones/` no existe, así que hoy no hay configuración de despliegue versionada que la prueba pueda leer.
+- **Corrección:** (a) en CM-H1, la configuración de producción vive **solo** en el repositorio y el despliegue la toma de ahí; se borra "o del despliegue" y todo valor fuera del repositorio se considera apagado o hace fallar el arranque. (b) Una barrera en el código: mientras la constante que marca que el traspaso existe esté en falso, la API trata el flag como apagado en producción o se niega a arrancar si lo recibe encendido. Caso en CA-CM-26 ("con la constante del traspaso en falso, el flag encendido por configuración responde 422 `OCCUPANCY_ACTION_NOT_AVAILABLE`", o el arranque falla). Sumar a P-CM-20 que el arquitecto fije la variante.
+
+#### R3-M-2 · El contacto de las notificaciones sigue saliendo de `PERSON` según ADR 0008 (camino de C-1 no cerrado)
+
+- **Ubicación:** CM-C4, "Identificación" (solo como intención); CM-A2, "Efecto del reemplazo"; falta en "Contradicciones y vacíos". Choca con ADR 0008, decisión 14 ("el contacto y el texto se leen al enviar, desde `PERSON`, `MEMBERSHIP` o la variable de entorno del equipo").
+- **Problema:** la spec no fija a qué contacto va una notificación de una comunidad, y el ADR aceptado dice que se lee desde `PERSON`. Variante por notificación de C-1: el administrador malicioso de A registra a X con c_att; el atacante lo verifica con la invitación de A; la Comunidad B emite y `notification.send` toma el contacto de `PERSON`; el aviso de cobro de X en B (unidad, monto, deuda) llega a c_att. Fuga entre comunidades de datos de deuda (reglas 4 y 7). No es crítico porque la rebanada 1 no envía nada a residentes, pero las rebanadas de emisión y de ingreso implementarían ADR 0008 tal como está escrito.
+- **Corrección:** regla explícita en CM-C4: toda notificación originada en una comunidad (correo, SMS o WhatsApp) va **solo** al contacto de la ficha de la persona en **esa** comunidad, nunca a un contacto de `PERSON` ni de otra ficha; sin contacto en la ficha, la entrega queda `skipped` o `failed` según ADR 0008; el push sigue atado a la membresía (GC S-81). Los contactos verificados de `PERSON` sirven solo para los códigos de ingreso (CM-F3). Punto 25 en "Contradicciones y vacíos" (arquitecto): ADR 0008, decisión 14 debe leer el contacto desde la ficha de `NOTIFICATION_DELIVERY.community_id`, y `docs/arquitectura.md` §5 alinearse. Requisito heredado con CA de aislamiento: con el estado de CA-CM-24, el aviso de cobro de B va a c2 y nunca a c1.
+
+#### R3-M-3 · La tolerancia de `JOB` a unidades eliminadas contradice ADR 0008 y apaga una alarma de aislamiento
+
+- **Ubicación:** CM-B8, viñeta "Referencias sin clave foránea (R2-m-6)" ("termina sin efecto, sin reintentos y **sin error que alerte**"); S-CM-12; caso borde "Trabajo en segundo plano con el id de una unidad eliminada"; P-CM-20.
+- **Problema:** ADR 0008, decisión 5 (aceptado): si el manejador no encuentra la entidad del `payload` en esa comunidad, termina `skipped` con `ENTITY_NOT_FOUND`, no escribe nada y **envía un evento a Sentry** (prueba 8). Con RLS, una unidad eliminada y una de otra comunidad son indistinguibles: si "unidad no encontrada" deja de alertar, deja de alertar también el caso de aislamiento. La contradicción no está en "Contradicciones y vacíos", y hoy ningún tipo de trabajo lleva un id de unidad (`attemptId`, `refundId`, `membershipId`, `deliveryId`).
+- **Corrección (la más simple):** mantener ADR 0008 tal cual: un trabajo que no encuentra la unidad termina `skipped` con `ENTITY_NOT_FOUND` y su evento en Sentry. Reescribir la viñeta: "Hoy ningún `payload` lleva un id de unidad (prueba 17 de ADR 0008). Si un tipo de trabajo nuevo lo agrega, su manejador sigue ADR 0008, decisión 5 y tiene una prueba con una unidad eliminada". Alternativa, si se quiere evitar el ruido: distinguir el caso con la auditoría `unit.delete` de esa comunidad y enmendar ADR 0008. En ambos casos, borrar "sin error que alerte" y corregir S-CM-12 y el caso borde.
+
+### R3 · Menor
+
+1. **R3-m-1 · El 422 de la ficha de un administrador no cubre un `admin` con `valid_from` futuro.** CM-C6, tabla de errores y orden de "Corregir una ficha" dicen "membresía `admin` vigente"; ADR 0008 (fila 5) y GC P-61 admiten una todavía no vigente, cuyo nombre (que firma el aviso, D52) podría reescribir un administrador de la comunidad. **Corrección:** "membresía `admin` no revocada (vigente o con `valid_from` futuro)" en los tres lugares, en "Usuarios y permisos" y en la matriz.
+2. **R3-m-2 · D55-4 admite una lectura con un solo código.** Con el mismo código en todos los contactos, el sistema no sabe con qué contacto se ingresó y la sesión limitada no se puede construir; una implementación literal tendería a la unión de comunidades (C-1). **Corrección:** "un código distinto por contacto verificado (o la persona elige a qué contacto se envía), y la sesión queda limitada a las comunidades del contacto cuyo código se ingresó".
+3. **R3-m-3 · El rechazo de D55-3 revela que la persona tiene membresías en otras comunidades.** Una sesión limitada recibe un rechazo en las acciones de identidad y una completa no: el atacante que controla c_att aprende que X está en otra comunidad, el dato que D48 e ISO-7 ocultan. **Corrección:** requisito para la rebanada de ingreso: la respuesta a esas acciones no depende de si la sesión está limitada (por ejemplo, toda sesión las ejecuta solo con un código enviado a **cada** contacto verificado, o ninguna las ejecuta y las resuelve Soporte). Sumarlo a P-CM-18 (3).
+4. **R3-m-4 · "Contradicciones y vacíos" sigue incompleta y sin responsable en seis puntos.** Faltan, además de R3-M-2 y R3-M-3: (a) ADR 0003, decisión 9 (párrafo final) y GC "Respuestas de error", paso 4, que E-CM-1 extiende al recurso de la ruta (arquitecto y coordinador); (b) ADR 0003, decisión 6 y GC S-36, por la idempotencia en toda escritura (S-CM-23) (arquitecto y coordinador); (c) ADR 0008, fila 5 del inventario, que CM-A5 impide con el flag apagado (arquitecto). Los puntos 1, 2, 4, 6, 7 y 8 no nombran responsable; propuesta: 1, líder; 2, líder y arquitecto; 4, diseñador; 6, arquitecto; 7, coordinador; 8, diseñador.
+5. **R3-m-5 · D54 no tiene CA en el alta.** **Corrección:** en CA-CM-1, un alta con el RUT de Felipe Rojas (administrador de B, con contacto verificado) sin contacto responde 422 `INVALID_CONTACT`; con contacto, la ficha de C queda con ese contacto, la de B no cambia y la respuesta es igual a la de un RUT nuevo.
+6. **R3-m-6 · No hay CA del corte de sesión cuando Operaciones reemplaza el contacto.** **Corrección:** en CA-CM-27, como requisito de la rebanada de ingreso: si Ana tenía una sesión obtenida con su contacto anterior, desde la petición siguiente la Comunidad A le responde 404 y vuelve a entrar con la invitación al celular nuevo.
+7. **R3-m-7 · CM-A5 "desde el encendido" no es implementable con flags de configuración.** Con D56 el encendido es un despliegue; la base de datos no guarda ese instante y nadie encola los trabajos de las membresías `admin` otorgadas con el flag apagado. **Corrección:** requisito de la rebanada de ingreso: al encender, un procedimiento único (o el barrido de vigías de ADR 0008) encola un trabajo por membresía `admin` vigente sin primer ingreso, con `run_at` = `startOfDay(fecha de encendido + 8 días)`, tomando la fecha del valor configurado o de un registro auditado. Sumarlo a P-CM-20.
+8. **R3-m-8 · Contradicción sobre un contacto ya verificado que se escribe en otra ficha.** CM-F3 dice que un contacto escrito por un administrador "nunca … habilita nada sin que la persona ingrese el código"; con D55-1, escribir en la ficha de B un contacto ya verificado por A habilita B de inmediato (CA-CM-24 lo acepta). **Corrección:** "Un contacto que la persona no ha verificado nunca habilita nada. Uno ya verificado habilita, desde la petición siguiente, toda comunidad cuya ficha lo registre, también si se escribe después (D47, D55-1)".
+9. **R3-m-9 · Referencias de CM-H1 que no existen o no se pueden cumplir.** CM-H1 cita `docs/operaciones/`, que no existe, y los ambientes "desarrollo, pruebas, producción", no definidos; "ninguna ruta … lee … un flag" no dice cómo sabe la web si mostrar término y venta. **Corrección:** dejar ambos vacíos explícitos en el punto 24 y en P-CM-20.
+10. **R3-m-10 · Dos numeraciones de pasos en la misma sección.** "Revocar por la ruta de membresías" cita "ADR 0003, decisión 9, paso 4" (idempotencia), mientras la spec numera como GC (idempotencia en el paso 5; CM-B7). **Corrección:** citar "ADR 0003, decisión 9 (idempotencia)" sin número, o fijar una vez la equivalencia.
+
+### R3 · Observaciones
+
+- **Lo que bloquea la aprobación:** R3-M-1, R3-M-2 y R3-M-3; conviene incluir R3-m-1 y R3-m-2. Lo demás puede ir como tarea de alineación.
+- **Alineaciones previas a "Lista para desarrollo" de la rebanada 1:** puntos 3 y 17 (GC S-63), 5 y P-CM-18 (1) (`COMMUNITY_PERSON` en el modelo), 13 (GC S-53), 15 (enmienda de ADR 0009, decisión 2), 16 y 22 (permisos en ADR 0003 y ADR 0009), 21 y R3-m-4 (c), y 24 con R3-M-1 (mecanismo del flag). Los puntos 6, 8, 11, 12, 18, 19, 20 y 23 pueden esperar a su rebanada; se recomienda marcarlo en cada punto.
+- **422 `ADMIN_RECORD_MANAGED_BY_COMVIVE`:** por la definición de GC encajaría mejor en un 409, pero lo decidió el líder en D57 y no cambia la seguridad; no se levanta como hallazgo.
+- **Complejidad:** CM-H1 es el mecanismo más simple posible; R3-M-1 (b) agrega una sola constante; la corrección de R3-M-3 quita complejidad.
+- **Se verificó y cuadra:** los órdenes de alta y otorgamiento frente a GC S-63; E-CM-1 frente a ADR 0003, decisión 9; los ids (último S-CM-31, P-CM-20 y CA-CM-28; sin ids inexistentes ni reutilizados); las fechas de CA-CM-7 y GOLD-ACM7; los códigos de la tabla de errores frente a GC; la matriz de recursos frente a "Acciones de la rebanada".
+
+### R3 · Preguntas para el líder del proyecto
+
+1. **(R3-M-1)** Para el flag de término y venta, ¿acepta que la configuración de producción viva solo en el repositorio, más una barrera en el código que lo considera apagado en producción mientras no exista el traspaso? ¿O prefiere solo una de las dos?
+2. **(R3-M-2)** ¿Confirma que toda notificación de una comunidad va solo al contacto de la ficha de esa comunidad, y que los contactos verificados de `PERSON` sirven solo para los códigos de ingreso? Obliga a enmendar ADR 0008, decisión 14 antes de la rebanada de emisión.
+3. **(R3-M-3)** ¿Mantener ADR 0008 tal cual (un trabajo que no encuentra la unidad queda `skipped` con alerta en Sentry) en vez de la tolerancia sin alerta de la rev. 3?
+4. **(R3-m-3)** Para la rebanada de ingreso, ¿acepta que las acciones de identidad respondan igual a toda sesión (por ejemplo, exigiendo un código en cada contacto verificado), para no revelar que la persona tiene membresías en otras comunidades?
+5. **(Alineación)** ¿Acepta marcar en "Contradicciones y vacíos" cuáles alineaciones deben estar hechas antes de que la rebanada 1 pase a "Lista para desarrollo" (puntos 3, 5, 13, 15, 16, 17, 21, 22 y 24)?
+
+### R3 · Resolución
+
+Pendiente.
