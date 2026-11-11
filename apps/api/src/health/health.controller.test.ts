@@ -58,6 +58,26 @@ describe('GET /health', () => {
     }
   });
 
+  // D62: no caching of any answer and no MIME sniffing, neutral 404s included.
+  it.each(['/health', '/no-such-route', '/communities/x/units'])(
+    'answers %s with Cache-Control: no-store and X-Content-Type-Options: nosniff',
+    async (path) => {
+      const response = await request(app.getHttpServer()).get(path);
+      expect(response.headers['cache-control']).toBe('no-store');
+      expect(response.headers['x-content-type-options']).toBe('nosniff');
+    },
+  );
+
+  // ADR 0009, test 12 with the real ports: until the audit pool exists, every /platform/ request
+  // fails closed with 500, also for a missing route (D64).
+  it('answers 500 INTERNAL_ERROR to any /platform/ request while the audit writer is unavailable', async () => {
+    for (const path of ['/platform/anything', '/platform/webpay-attempts']) {
+      const response = await request(app.getHttpServer()).get(path);
+      expect(response.status).toBe(500);
+      expect(response.body).toEqual({ code: 'INTERNAL_ERROR' });
+    }
+  });
+
   // ADR 0009, test 12: the api does not load the worker routes.
   it('answers 404 NOT_FOUND to POST /internal/jobs/tick in the api', async () => {
     const response = await request(app.getHttpServer())

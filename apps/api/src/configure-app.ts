@@ -1,7 +1,7 @@
-import type { NestApplicationOptions, Type } from '@nestjs/common';
+import { Logger, type NestApplicationOptions, type Type } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { ExpressAdapter, type NestExpressApplication } from '@nestjs/platform-express';
-import express from 'express';
+import express, { type Response } from 'express';
 
 import { AccessExceptionFilter } from './access/access-exception.filter.js';
 import { BodyParseErrorInterceptor } from './access/body-parse-error.interceptor.js';
@@ -27,12 +27,30 @@ interface CompiledTestingModule {
   createNestApplication<T>(httpAdapter: ExpressAdapter, options?: NestApplicationOptions): T;
 }
 
-const createdByFactory = new WeakSet<object>();
+// Applications created by createApp and the TRUST_PROXY_HOPS each one was created with.
+const createdByFactory = new WeakMap<object, { trustProxyHops: number }>();
 
 /** Whether the application was created by {@link createApp} (inventory check 8, menor 2). */
 export function wasCreatedByCreateApp(app: object): boolean {
   return createdByFactory.has(app);
 }
+
+/** `TRUST_PROXY_HOPS` the application was created with (security m-4), if createApp made it. */
+export function trustProxyHopsOf(app: object): number | undefined {
+  return createdByFactory.get(app)?.trustProxyHops;
+}
+
+/**
+ * First layer: no answer is cached (personal data from the first slice on) and no browser sniffs
+ * a MIME type, neutral errors and the 413 of the body parser wrapper included (D62).
+ */
+function securityHeaders(_request: unknown, response: Response, next: () => void): void {
+  response.setHeader('Cache-Control', 'no-store');
+  response.setHeader('X-Content-Type-Options', 'nosniff');
+  next();
+}
+
+const accessLogger = new Logger('Access');
 
 /**
  * The single factory of the HTTP application (ADR 0009, decision 7, menor 2), used by `main.ts`,
@@ -69,6 +87,7 @@ export async function createApp(
   const events = app.get<symbol, AccessEventLog>(ACCESS_EVENT_LOG);
   const gateways = app.get<symbol, readonly GatewayVerifier[]>(GATEWAY_VERIFIERS);
 
+  app.use(securityHeaders);
   app.use(
     createBodyParsers({
       gatewayNeutralRedirect: () =>
@@ -81,7 +100,9 @@ export async function createApp(
         }),
       platformPayloadTooLarge: (request) =>
         audit.recordBeforeRouting(request, { status: 413, code: 'PAYLOAD_TOO_LARGE' }),
-      requestAborted: () => undefined,
+      // Stays in the API log (ADR 0009, decision 6): method and first path segment, no body.
+      requestAborted: (httpMethod, firstSegment) =>
+        accessLogger.log(JSON.stringify({ requestAborted: { httpMethod, firstSegment } })),
     }),
   );
   app.use(requestContextMiddleware);
@@ -92,6 +113,6 @@ export async function createApp(
     app.get(BodyParseErrorInterceptor),
   );
 
-  createdByFactory.add(app);
+  createdByFactory.set(app, { trustProxyHops: hops });
   return app;
 }

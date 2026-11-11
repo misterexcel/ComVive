@@ -140,6 +140,8 @@ describe('body is validated after the guards (decision 6; test 8)', () => {
     const response = await post(payments(UNIT_A1), headers, OVER_LIMIT);
     expect(response.status).toBe(413);
     expect(response.body).toEqual({ code: 'PAYLOAD_TOO_LARGE' });
+    expect(response.headers['cache-control']).toBe('no-store');
+    expect(response.headers['x-content-type-options']).toBe('nosniff');
     expect(executed).toEqual([]);
   });
 

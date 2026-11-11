@@ -2,10 +2,15 @@ import { RequestMethod, type INestApplication } from '@nestjs/common';
 import { METHOD_METADATA, PATH_METADATA, VERSION_METADATA } from '@nestjs/common/constants.js';
 import { DiscoveryService, MetadataScanner } from '@nestjs/core';
 
-import { wasCreatedByCreateApp } from '../configure-app.js';
+import { trustProxyHopsOf, wasCreatedByCreateApp } from '../configure-app.js';
 import { AccessGuard } from './access.guard.js';
 import { readAccessPolicies, type AccessPolicy } from './access-policy.js';
-import { PATH_RESOURCE_VISIBILITIES, type PathResourceVisibility } from './ports.js';
+import {
+  PATH_RESOURCE_VISIBILITIES,
+  PLATFORM_AUDIT_WRITER,
+  UnavailablePlatformAuditWriter,
+  type PathResourceVisibility,
+} from './ports.js';
 import { ROUTE_EXCEPTIONS, type AppKind, type RouteException } from './route-exceptions.js';
 import {
   hasRouteCommunity,
@@ -150,6 +155,7 @@ export function describeExpressStack(app: INestApplication): string[] {
 /** Closed list of layers outside NestJS that `createApp` registers, in order (decision 7). */
 const LAYERS_BEFORE_ROUTES = [
   'nestjs-adapter-hooks',
+  'securityHeaders',
   'wrappedBodyParsers',
   'requestContextMiddleware',
 ];
@@ -177,6 +183,41 @@ function expressStackDifference(
     return undefined;
   }
   return `expected ${JSON.stringify([...LAYERS_BEFORE_ROUTES, '<inventory routes>', ...LAYERS_AFTER_ROUTES])}, got ${JSON.stringify(stack)}`;
+}
+
+/**
+ * Express settings fixed by createApp and code that runs before the guard outside the router
+ * stack (security m-4): router param handlers, and settings changed afterwards (a later
+ * `set('trust proxy', true)` would let the client choose its IP).
+ */
+function expressSettingDifferences(
+  app: INestApplication,
+  trustProxyHops: number | undefined,
+): string[] {
+  const instance = app.getHttpAdapter().getInstance() as {
+    get(setting: string): unknown;
+    router?: { params?: Record<string, unknown> };
+  };
+  const differences: string[] = [];
+  const expected: [string, unknown][] = [
+    ['x-powered-by', false],
+    ['case sensitive routing', true],
+    ['strict routing', true],
+    ['trust proxy', trustProxyHops],
+  ];
+  for (const [setting, value] of expected) {
+    const actual = instance.get(setting);
+    if (actual !== value) {
+      differences.push(
+        `Express setting "${setting}" is ${JSON.stringify(actual)}, expected ${JSON.stringify(value)} (createApp)`,
+      );
+    }
+  }
+  const params = Object.keys(instance.router?.params ?? {});
+  if (params.length > 0) {
+    differences.push(`Express router param handlers run before the guard: ${params.join(', ')}`);
+  }
+  return differences;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -291,15 +332,27 @@ export function routeInventoryDifferences(
   const differences: string[] = [];
   const inventory = collectRouteInventory(app);
   const config = configOf(app);
-  const implemented = new Set(
-    app
-      .get<symbol, readonly PathResourceVisibility[]>(PATH_RESOURCE_VISIBILITIES)
-      .map((port) => port.resource),
-  );
+  const ports = app.get<symbol, readonly PathResourceVisibility[]>(PATH_RESOURCE_VISIBILITIES);
+  const implemented = new Set(ports.map((port) => port.resource));
+  // Check 7: one implementation per resource type; a second one would replace the first (m-10).
+  for (const resource of implemented) {
+    const count = ports.filter((port) => port.resource === resource).length;
+    if (count > 1) {
+      differences.push(
+        `resource type ${resource} has ${count} PathResourceVisibility implementations; it must have one`,
+      );
+    }
+  }
+  // D64: platform routes need a real audit writer; with the fail-closed default every platform
+  // request would answer 500.
+  const auditWriterUnavailable =
+    app.get(PLATFORM_AUDIT_WRITER) instanceof UnavailablePlatformAuditWriter;
 
   // Check 8: the global guard and the single factory (menor 2).
   if (!wasCreatedByCreateApp(app)) {
     differences.push('the application was not created with createApp (ADR 0009, decision 7)');
+  } else {
+    differences.push(...expressSettingDifferences(app, trustProxyHopsOf(app)));
   }
   if (!config.getGlobalGuards().some((guard) => guard instanceof AccessGuard)) {
     differences.push('AccessGuard is not registered as a global guard (APP_GUARD in AccessModule)');
@@ -334,6 +387,11 @@ export function routeInventoryDifferences(
     }
     if (route.versioned) {
       differences.push(`${label} declares a version, which ADR 0009 does not contemplate`);
+    }
+    if (policy.kind === 'platform' && auditWriterUnavailable) {
+      differences.push(
+        `${label} is a platform route but PLATFORM_AUDIT_WRITER is UnavailablePlatformAuditWriter (D64)`,
+      );
     }
     // Check 4 (ADR 0008, decision 2).
     if (appKind === 'api' && policy.kind === 'internal-job') {

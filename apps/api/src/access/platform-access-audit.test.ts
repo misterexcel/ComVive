@@ -1,11 +1,11 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { connect } from 'node:net';
 
-import { ConflictException, Controller, Post } from '@nestjs/common';
+import { ConflictException, Controller, Logger, Post } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AppModule } from '../app.module.js';
 import { createApp } from '../configure-app.js';
@@ -291,7 +291,11 @@ describe('platform access audit (ADR 0009, decision 3; test 11)', () => {
     expect(doubles.audit.writes).toBe(0);
   });
 
-  it('a request the client aborted leaves no row (accepted exception)', async () => {
+  it('a request the client aborted leaves no row and is logged without its body (accepted exception)', async () => {
+    const logged: string[] = [];
+    const spy = vi.spyOn(Logger.prototype, 'log').mockImplementation((message: unknown) => {
+      logged.push(String(message));
+    });
     const server = app.getHttpServer();
     if (!server.listening) {
       await new Promise<void>((resolve) => server.listen(0, resolve));
@@ -311,6 +315,10 @@ describe('platform access audit (ADR 0009, decision 3; test 11)', () => {
     });
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(doubles.audit.writes).toBe(0);
+    spy.mockRestore();
+    expect(logged.filter((line) => line.includes('requestAborted'))).toEqual([
+      JSON.stringify({ requestAborted: { httpMethod: 'POST', firstSegment: 'platform' } }),
+    ]);
   });
 
   describe('failures of the audit itself (D43; R3-m-7)', () => {

@@ -487,6 +487,22 @@ describe('assertRouteInventory (test 5)', () => {
     expect(inventoryErrors(app, 'api')).toMatch(/AccessGuard is not registered as a global guard/);
   });
 
+  it('fails for two PathResourceVisibility implementations of the same type (cross m-10)', async () => {
+    const app = await appWith([WellFormedCommunityController], {
+      pathResources: (doubles) => [doubles.units, doubles.units],
+    });
+    expect(inventoryErrors(app, 'api')).toMatch(
+      /resource type unit has 2 PathResourceVisibility implementations/,
+    );
+  });
+
+  it('fails for platform routes while the audit writer is UnavailablePlatformAuditWriter (D64)', async () => {
+    const app = await appWith([PlatformCommunityPositionController], { auditWriter: 'default' });
+    expect(inventoryErrors(app, 'api')).toMatch(
+      /GET \/platform\/communities\/\{communityId\} is a platform route but PLATFORM_AUDIT_WRITER is UnavailablePlatformAuditWriter/,
+    );
+  });
+
   it('fails for an application not created with createApp', async () => {
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
     // eslint-disable-next-line no-restricted-syntax -- test 5 proves an app built outside createApp fails.
@@ -592,6 +608,7 @@ describe('Express stack (test 6)', () => {
     const app = await appWith([WellFormedCommunityController, BillingConfigTestController]);
     expect(describeExpressStack(app)).toEqual([
       'nestjs-adapter-hooks',
+      'securityHeaders',
       'wrappedBodyParsers',
       'requestContextMiddleware',
       // Routes in registration order (controllers as listed in the module).
@@ -602,6 +619,49 @@ describe('Express stack (test 6)', () => {
     ]);
     expect(inventoryErrors(app, 'api')).toBe('');
   });
+
+  it('fails when the NestJS adapter request hook is active', async () => {
+    const app = await appWith([WellFormedCommunityController], {
+      beforeInit: (created) =>
+        (
+          created.getHttpAdapter() as unknown as {
+            setOnRequestHook(hook: (req: unknown, res: unknown, done: () => void) => void): void;
+          }
+        ).setOnRequestHook((_req, _res, done) => done()),
+    });
+    expect(inventoryErrors(app, 'api')).toMatch(/nestjs-adapter-hooks \(active\)/);
+  });
+
+  it('fails when a router param handler runs before the guard (security m-4)', async () => {
+    const app = await appWith([WellFormedCommunityController], {
+      beforeInit: (created) =>
+        (
+          created.getHttpAdapter().getInstance() as {
+            param(name: string, fn: (...args: unknown[]) => void): void;
+          }
+        ).param('communityId', (...args: unknown[]) => (args[2] as () => void)()),
+    });
+    expect(inventoryErrors(app, 'api')).toMatch(
+      /router param handlers run before the guard: communityId/,
+    );
+  });
+
+  it.each([
+    ['trust proxy', true, /Express setting "trust proxy" is true, expected 0/],
+    ['x-powered-by', true, /Express setting "x-powered-by" is true, expected false/],
+    ['strict routing', false, /Express setting "strict routing" is false, expected true/],
+  ])(
+    'fails when the Express setting %s is changed after createApp (security m-4)',
+    async (setting, value, message) => {
+      const app = await appWith([WellFormedCommunityController], {
+        beforeInit: (created) =>
+          (
+            created.getHttpAdapter().getInstance() as { set(name: string, value: unknown): void }
+          ).set(setting, value),
+      });
+      expect(inventoryErrors(app, 'api')).toMatch(message);
+    },
+  );
 
   it('fails when a module adds NestJS middleware with MiddlewareConsumer (ADR-0009-S7)', async () => {
     @Module({ controllers: [WellFormedCommunityController] })

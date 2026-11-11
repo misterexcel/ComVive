@@ -6,7 +6,7 @@ import express, {
 } from 'express';
 
 import { NEUTRAL_BODIES, PlatformAuditUnavailableException } from './access-errors.js';
-import { isGatewayPath, isPlatformPath } from './route-template.js';
+import { isGatewayPath, isPlatformPath, pathSegments } from './route-template.js';
 
 /** Body limit: the Express default (ADR-0009-S3). */
 export const BODY_LIMIT = '100kb';
@@ -28,7 +28,7 @@ export interface BodyParserHooks {
   /** Minimal anonymous audit row of a 413 under `/platform/` (D41, R2-m-1). */
   platformPayloadTooLarge(request: Request): Promise<void>;
   /** A request the client aborted: no useful answer, it stays in the API log. */
-  requestAborted(httpMethod: string): void;
+  requestAborted(httpMethod: string, firstSegment: string | null): void;
 }
 
 function bodyParserErrorType(error: unknown): string | undefined {
@@ -64,7 +64,7 @@ export function createBodyParsers(hooks: BodyParserHooks): RequestHandler {
     const gateway = isGatewayPath(request.path);
 
     if (type === 'request.aborted') {
-      hooks.requestAborted(request.method);
+      hooks.requestAborted(request.method, pathSegments(request.path)[0] ?? null);
       return;
     }
     if (type === 'entity.too.large') {

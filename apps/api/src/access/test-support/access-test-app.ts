@@ -56,6 +56,8 @@ export interface AccessTestAppOptions {
   providers?: Provider[];
   /** Real session verifier (`DenyAllSessionVerifier`) instead of the double. */
   sessionVerifier?: SessionVerifier | 'default';
+  /** Real `UnavailablePlatformAuditWriter` instead of the recording double (D64). */
+  auditWriter?: 'default';
   /** Path resource implementations; by default unit, admin-membership and webpay-attempt. */
   pathResources?: (doubles: AccessDoubles) => PathResourceVisibility[];
   gateways?: GatewayVerifier[];
@@ -104,8 +106,6 @@ export async function createAccessTestApp(
     .useValue(doubles.communities)
     .overrideProvider(PATH_RESOURCE_VISIBILITIES)
     .useValue(pathResources)
-    .overrideProvider(PLATFORM_AUDIT_WRITER)
-    .useValue(doubles.audit)
     .overrideProvider(ACCESS_EVENT_LOG)
     .useValue(doubles.events)
     .overrideProvider(CLOCK)
@@ -117,6 +117,9 @@ export async function createAccessTestApp(
     builder = builder
       .overrideProvider(SESSION_VERIFIER)
       .useValue(options.sessionVerifier ?? doubles.sessions);
+  }
+  if (options.auditWriter !== 'default') {
+    builder = builder.overrideProvider(PLATFORM_AUDIT_WRITER).useValue(doubles.audit);
   }
   if (options.internalCaller !== undefined) {
     builder = builder.overrideProvider(INTERNAL_CALLER_VERIFIER).useValue(options.internalCaller);
