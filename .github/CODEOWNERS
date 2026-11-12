@@ -1,0 +1,8 @@
+# Propietarios de código de ComVive (ADR 0009, decisiones D36, D40 y D68).
+# La exigencia "Require review from Code Owners" aún no está activada: se activa
+# cuando exista la cuenta separada de los agentes (D40).
+
+/apps/api/src/access/ @misterexcel
+/docs/adr/ @misterexcel
+/.github/ @misterexcel
+/eslint.config.mjs @misterexcel
