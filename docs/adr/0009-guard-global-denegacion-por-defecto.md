@@ -1,6 +1,6 @@
 # ADR 0009 · Guard global de denegación por defecto
 
-- **Estado:** Aceptado por el líder del proyecto el 2026-11-11 (rev. 4), después de tres pasadas de revisión crítica (`docs/revisiones/2026-11-08-adr-0009.md`), con las decisiones del líder D36 a D46. Enmendado el 2026-11-11 tras las revisiones cruzada y de seguridad de su implementación (D59 a D68; ver "Enmiendas tras la implementación"). Aplica desde el primer endpoint de negocio (rebanada 1: comunidades, unidades y membresías). De la primera palabra después de `Estado:` depende la verificación `assertExceptionsAuthorized` (decisión 4).
+- **Estado:** Aceptado por el líder del proyecto el 2026-11-11 (rev. 4), después de tres pasadas de revisión crítica (`docs/revisiones/2026-11-08-adr-0009.md`), con las decisiones del líder D36 a D46. Enmendado el 2026-11-11 tras las revisiones cruzada y de seguridad de su implementación (D59 a D68 y D74; ver "Enmiendas tras la implementación"). Aplica desde el primer endpoint de negocio (rebanada 1: comunidades, unidades y membresías). De la primera palabra después de `Estado:` depende la verificación `assertExceptionsAuthorized` (decisión 4).
 - **Fecha:** 2026-11-08
 - **Propone:** arquitecto de software
 - **Decide:** líder del proyecto
@@ -327,6 +327,7 @@ Decisiones del líder del proyecto del 2026-11-11 sobre la revisión cruzada (`d
 - **D66 (prueba 14):** la exigencia de implementación de `PathResourceVisibility` aplica solo a los tipos de recurso que aparecen en algún `pathResources` (prueba 14).
 - **D67 (rol en rechazos de plataforma):** la fila de un rechazo de una persona de plataforma identificada registra todos sus roles de plataforma vigentes.
 - **D68 (propietario de código):** `.github/CODEOWNERS` entra con la implementación de este ADR, con el líder como dueño de `apps/api/src/access/**`, `docs/adr/**`, `.github/**` y `eslint.config.mjs`; la exigencia "Require review from Code Owners" sigue sin activarse hasta que exista la cuenta separada de los agentes (D36, D40).
+- **D74 (resultado de D59):** el líder aceptó el 2026-11-11 el resultado de la verificación por mutación: cada escritura de auditoría (guard, interceptor, filtro y envoltura del 413) tiene pruebas que fallan sin ella, y las pruebas que el filtro respalda fallan con mutaciones combinadas. No se agrega un campo de origen solo para pruebas (`docs/revisiones/2026-11-11-access-guard.md`, "Resolución").
 
 **Precisiones que dejó la implementación corregida** (no cambian el enfoque; rigen sobre el texto de las decisiones donde difieran):
 

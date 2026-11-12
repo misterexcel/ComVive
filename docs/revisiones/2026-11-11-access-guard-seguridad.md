@@ -4,7 +4,7 @@
 - **Revisor:** agente `revisor-seguridad`. Solo leyó; no editó nada. El coordinador guarda el informe.
 - **Base revisada:** rama `feat/access-guard`, 7 commits sobre `main` @ 56b868c.
 - **Veredicto:** **Aprobado con cambios.** No hay ninguna vía para llegar a un *handler* sin pasar por el guard, ni fugas entre comunidades; tampoco secretos ni tokens en código o registros, y `test-support` no entra al build. Los puertos por defecto fallan cerrados. Hay un mayor de gobernanza (falta `CODEOWNERS`, comprometido en D36) y siete menores.
-- **Estado de la resolución:** resuelto el 2026-11-11 con las decisiones del líder D59 a D68 (ADR 0009, "Enmiendas tras la implementación") y los commits 9bb0768 a 0d31913. Ver "Resolución". Queda una observación abierta sobre D59.
+- **Estado de la resolución:** resuelto el 2026-11-11 con las decisiones del líder D59 a D68 (ADR 0009, "Enmiendas tras la implementación") y los commits 9bb0768 a 0d31913. Ver "Resolución". La observación sobre D59 quedó cerrada con D74 (ver la revisión cruzada).
 
 ## Qué se revisó
 

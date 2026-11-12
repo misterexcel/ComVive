@@ -5,7 +5,7 @@
 - **Base revisada:** rama `feat/access-guard`, 7 commits sobre `main` @ 56b868c. Referencia: `docs/adr/0009-guard-global-denegacion-por-defecto.md` (rev. 4, aceptado) y ADR 0003, decisión 9.
 - **Alcance:** fidelidad al ADR, corrección, calidad de las pruebas y complejidad. La revisión de seguridad está en `docs/revisiones/2026-11-11-access-guard-seguridad.md`.
 - **Veredicto:** **Aprobado con cambios.** Sin errores de monto (el módulo no mueve dinero) ni vías de fuga entre comunidades en lo que corre hoy; el guard falla cerrado en todos los caminos revisados. Hay que corregir antes de fusionar: una desviación del orden de la decisión 3 en `platform` que un doble oculta, la fuga de mensajes del *framework* antes del guard, el mapa de pruebas (2 y 7 incompletas, 12 matizada) y dos pruebas que pasan por construcción (barrido de la prueba 10 y prueba 14 de producción).
-- **Estado de la resolución:** resuelto el 2026-11-11 con las decisiones del líder D59 a D68 (ADR 0009, "Enmiendas tras la implementación") y los commits 9bb0768 a 0d31913. Ver "Resolución". Queda una observación abierta sobre D59.
+- **Estado de la resolución:** resuelto el 2026-11-11 con las decisiones del líder D59 a D68 (ADR 0009, "Enmiendas tras la implementación") y los commits 9bb0768 a 0d31913. Ver "Resolución". La observación sobre D59 quedó cerrada con D74.
 
 ## Mayor
 
@@ -126,6 +126,6 @@ El líder del proyecto respondió las preguntas el 2026-11-11 (D59 a D68, regist
 | Recomendación 6 (500 en `/platform/`) | Resuelto | D64: candado en `assertRouteInventory` |
 | Recomendación 8 (excepción a TDD) | **Parcial** | D59. Mutaciones sobre el código final (269 pruebas de `src/access`): sin la escritura del guard fallan 4 pruebas; sin la del interceptor, 6; sin la del filtro, 2; sin la envoltura del 413, 2. Como el filtro reescribe cualquier rechazo sin fila, algunas pruebas (400, 409, filas `anonymous` del guard, H-41, error de un puerto, intento fuera de la vista) no fallan con una sola mutación; sí fallan con las combinadas (interceptor y filtro: 4; guard y filtro: 16). La condición literal de D59 ("cada prueba falla al quitar su escritura") no se cumple para esas pruebas |
 
-**Observación abierta sobre D59 (decide el líder):** aceptar el resultado, dado que cada escritura tiene al menos dos pruebas que fallan sin ella y las demás fallan en combinación, o exigir que cada prueba distinga a su escritor (por ejemplo, un campo de origen visible solo en pruebas).
+**Observación sobre D59, cerrada (D74):** el líder del proyecto aceptó el 2026-11-11 el resultado de las mutaciones: cada escritura tiene al menos dos pruebas que fallan sin ella y las demás fallan en combinación. No se agrega un campo de origen solo para pruebas.
 
 **Mapa de pruebas 1 a 16 tras las correcciones:** completas 1, 2, 4, 5, 6, 7, 12, 13, 14 (según D66, con un `todo` para las implementaciones de plataforma) y 16 (falta el límite por IP, con el módulo de ingreso); con dobles 3, 9 y 10 (pendiente la capa de datos); parciales 8 (`ValidationPipe` real), 11 (RLS de `AUDIT_LOG`, escritura exitosa D45, espía de la vista de `webpay-attempt`, *preflight* de CORS) y 15 (`worker`).
