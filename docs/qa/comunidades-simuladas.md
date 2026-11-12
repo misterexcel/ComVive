@@ -151,6 +151,15 @@ Personas de la Comunidad B y de la plataforma usadas en los casos de aislamiento
 | — | — | Soporte ComVive (`platform_support`) | `soporte-1`, `soporte-2` | CA-41, CA-55, CA-65, CA-68, CA-70, CA-71 |
 | — | — | Operaciones ComVive (`platform_operations`) | `operaciones-1` (OP1), `operaciones-2` | CA-43, CA-69, ISO-GC-operaciones-1 a 3 |
 
+Personas de la spec de comunidades y membresías (`docs/specs/comunidades-y-membresias.md`, rev. 4). RUT inventados, con dígito verificador calculado por módulo 11:
+
+| Persona | RUT | Rol | Casos |
+| --- | --- | --- | --- |
+| Sofía Navarro (persona X) | 17.654.321-3 | Sin contacto verificado; arrendataria del Depto 102 de A (celular +56 9 1111 1111) y de la Casa 2 de B (correo `x@example.com`) | CA-CM-24, CA-CM-29 |
+| — (RUT de control) | 11.111.111-1 | No existe en ComVive: nunca se registra en ningún escenario, para comparar la vista previa con la de un RUT que existe en otra comunidad | CA-CM-12 |
+
+Cálculo del dígito de 17.654.321: dígitos de derecha a izquierda 1, 2, 3, 4, 5, 6, 7, 1 por 2, 3, 4, 5, 6, 7, 2, 3: 2 + 6 + 12 + 20 + 30 + 42 + 14 + 3 = 129; 129 mod 11 = 8; 11 − 8 = 3. De 11.111.111: 2 + 3 + 4 + 5 + 6 + 7 + 2 + 3 = 32; 32 mod 11 = 10; 11 − 10 = 1.
+
 ---
 
 ## Comunidad B · Condominio Las Brisas
@@ -433,6 +442,28 @@ La suma de cargos de cada periodo sigue igual al total emitido (regla 3 de `CLAU
 | CA-75, expiración con `AUTHORIZED` por $110.000 (D18) | Pago Webpay de $110.000 al capital vencido: ordinario 100.000 − 100.000 = 0; fondo 10.000 − 10.000 = 0 | Saldo 110.000 − 110.000 = $0 |
 | CA-75, expiración con `INITIALIZED`, sin respuesta u otro estado, y retornos inválidos | Ningún pago ni movimiento | Saldo $110.000 |
 | Caso borde del 284 (TC-GC-CB-34, S-84) | Reembolso pedido por el total autorizado de la última respuesta guardada (`AUTHORIZED` $11.000); Transbank lo rechaza; la comunidad devuelve $11.000 por transferencia fuera del libro de la unidad | Saldo del Depto 101 $110.000 antes y después |
+
+### GOLD-ACM7 · Cambio de alícuotas después de emitir (CA-CM-7 de `docs/specs/comunidades-y-membresias.md`)
+
+**Para revisión del líder del proyecto.** Comunidad A con `2026-10` emitido con la foto de alícuotas 20 %, 25 %, 25 %, 30 % (GOLD-A). El 2026-11-20 un lote cambia el Depto 101 de 200000 a 190000 y el Depto 202 de 300000 a 310000 (`aliquot_e6`); la suma sigue en 190.000 + 250.000 + 250.000 + 310.000 = 1.000.000. Se emite `2026-11` el 2026-12-01 con O = $1.000.000 y fondo 5 %: F = (1.000.000 × 500 + 9.999) div 10.000 = 500.009.999 div 10.000 = $50.000. Todos los productos son exactos (restos 0), así que el resto mayor no asigna pesos.
+
+| Prueba | Unidad | Alícuota nueva | Ordinario | Fondo | Cargo `2026-11` |
+| --- | --- | --- | --- | --- | --- |
+| GOLD-ACM7-01 | Depto 101 | 19 % | 1.000.000 × 190.000 / 1.000.000 = 190.000 | 50.000 × 190.000 / 1.000.000 = 9.500 | 190.000 + 9.500 = $199.500 |
+| GOLD-ACM7-02 | Depto 102 | 25 % | 1.000.000 × 250.000 / 1.000.000 = 250.000 | 50.000 × 250.000 / 1.000.000 = 12.500 | 250.000 + 12.500 = $262.500 |
+| GOLD-ACM7-03 | Depto 201 | 25 % | 250.000 | 12.500 | $262.500 |
+| GOLD-ACM7-04 | Depto 202 | 31 % | 1.000.000 × 310.000 / 1.000.000 = 310.000 | 50.000 × 310.000 / 1.000.000 = 15.500 | 310.000 + 15.500 = $325.500 |
+| | **Suma** | 100 % | **$1.000.000** | **$50.000** | **$1.050.000** ✔ |
+
+Comprobación: 199.500 + 262.500 = 462.000; 462.000 + 262.500 = 724.500; 724.500 + 325.500 = 1.050.000 (regla 3 de `CLAUDE.md`). Los cargos de `2026-10` no cambian (GOLD-A-01 a 04).
+
+**Corrección de un periodo emitido con la foto, no con la alícuota actual.** El 2026-12-02, después de emitir `2026-11` el 2026-12-01, se anula el gasto "Aseo y artículos" de `2026-10` (la acción de CA-33 de la spec de gasto común, con otra fecha; decisión del líder D58). Como `2026-11` ya está emitido, las notas de crédito van al borrador `2026-12`: GOLD-ACM7-01 a 04 no las incluyen y no cambian (la suma de `2026-11` sigue en $1.050.000). Una prueba que use la fecha de CA-33 (2026-11-20) metería las notas en `2026-11` y no corresponde a este escenario. La corrección usa la foto de `2026-10` (Depto 101 = 20 %), igual que GOLD-A33-01: O corregido = 1.000.000 − 50.000 = $950.000; F corregido = (950.000 × 500 + 9.999) div 10.000 = 475.009.999 div 10.000 = $47.500.
+
+| Prueba | Unidad | Periodo de las notas | Nota de crédito ordinario | Nota de crédito fondo | Total |
+| --- | --- | --- | --- | --- | --- |
+| GOLD-ACM7-05 | Depto 101 | Borrador `2026-12` (anulación del 2026-12-02) | 950.000 × 20 % − 200.000 = 190.000 − 200.000 = −10.000 | 47.500 × 20 % − 10.000 = 9.500 − 10.000 = −500 | −10.000 − 500 = −$10.500 |
+
+**Contraste (no es el resultado esperado):** una implementación que calcule el cargo corregido con la alícuota actual (19 %) obtendría 950.000 × 19 % = 180.500 y una nota de 180.500 − 200.000 = −19.500 en el ordinario, y 47.500 × 19 % = 9.025 y 9.025 − 10.000 = −975 en el fondo: −$20.475 en total. Debe fallar GOLD-ACM7-05.
 
 ---
 
