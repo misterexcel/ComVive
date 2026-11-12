@@ -328,6 +328,17 @@ Decisiones del líder del proyecto del 2026-11-11 sobre la revisión cruzada (`d
 - **D67 (rol en rechazos de plataforma):** la fila de un rechazo de una persona de plataforma identificada registra todos sus roles de plataforma vigentes.
 - **D68 (propietario de código):** `.github/CODEOWNERS` entra con la implementación de este ADR, con el líder como dueño de `apps/api/src/access/**`, `docs/adr/**`, `.github/**` y `eslint.config.mjs`; la exigencia "Require review from Code Owners" sigue sin activarse hasta que exista la cuenta separada de los agentes (D36, D40).
 
+**Precisiones que dejó la implementación corregida** (no cambian el enfoque; rigen sobre el texto de las decisiones donde difieran):
+
+- **Capas (decisión 7, prueba 6):** la lista cerrada de capas de Express empieza con `securityHeaders` (D62), para cubrir también el 413 de la envoltura. La lista admite además las tres capas internas de NestJS: la del adaptador (sin *hooks* activos), el manejador de ruta inexistente y el de errores.
+- **Rol en la auditoría (D67):** `platform_role` sigue siendo una columna de texto. En un rechazo del guard lleva todos los roles vigentes de la persona, ordenados y separados por coma; es nulo si no tiene ninguno; en una petición que pasó el guard lleva solo el rol que tenía el permiso. `docs/arquitectura.md` §4 y §5 se alinean con la capa de datos.
+- **Código neutro (D60):** un cuerpo "de contrato" es un objeto con `code` en mayúsculas con guiones bajos. El código neutro de un estado sin entrada propia es su frase HTTP en ese formato (409 `CONFLICT`, 422 `UNPROCESSABLE_ENTITY`).
+- **Inventario y lint (decisión 4):** `assertRouteInventory` verifica también los ajustes de Express (`x-powered-by`, `case sensitive routing`, `strict routing` y `trust proxy` igual a `TRUST_PROXY_HOPS`), que `router.params` esté vacío, que haya una sola implementación de `PathResourceVisibility` por tipo de recurso y que `pathResources` solo nombre parámetros de la ruta. `HttpAdapterHost` queda restringido por lint igual que `getHttpAdapter()`.
+- **Credenciales (decisión 3):** el esquema `Bearer` no distingue mayúsculas (RFC 7235).
+- **Auditoría de plataforma (decisión 3):** una vez identificada la persona, el guard audita todo error, no solo sus rechazos; el filtro queda como respaldo de cualquier rechazo sin fila.
+- **Prueba 10:** el barrido incluye un control positivo: el miembro con todos los parámetros visibles no puede recibir 401 ni 404.
+- **Petición abortada (decisión 6):** `request.aborted` se registra con el método y el primer segmento de la ruta, sin cuerpo.
+
 Las correcciones de código de los demás hallazgos de ambas revisiones no cambian este texto; su resolución queda en cada informe.
 
 ## Trazabilidad

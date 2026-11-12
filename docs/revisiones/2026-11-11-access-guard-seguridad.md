@@ -4,7 +4,7 @@
 - **Revisor:** agente `revisor-seguridad`. Solo leyó; no editó nada. El coordinador guarda el informe.
 - **Base revisada:** rama `feat/access-guard`, 7 commits sobre `main` @ 56b868c.
 - **Veredicto:** **Aprobado con cambios.** No hay ninguna vía para llegar a un *handler* sin pasar por el guard, ni fugas entre comunidades; tampoco secretos ni tokens en código o registros, y `test-support` no entra al build. Los puertos por defecto fallan cerrados. Hay un mayor de gobernanza (falta `CODEOWNERS`, comprometido en D36) y siete menores.
-- **Estado de la resolución:** pendiente de las respuestas del líder del proyecto.
+- **Estado de la resolución:** resuelto el 2026-11-11 con las decisiones del líder D59 a D68 (ADR 0009, "Enmiendas tras la implementación") y los commits 9bb0768 a 0d31913. Ver "Resolución". Queda una observación abierta sobre D59.
 
 ## Qué se revisó
 
@@ -119,3 +119,19 @@ Vías comprobadas en concreto:
 3. **Ingreso con dos saltos (m-5):** ¿se fija como condición de operaciones que el servicio `api` con `TRUST_PROXY_HOPS=2` tenga ingreso `internal-and-cloud-load-balancing`, sin URL `run.app` pública? Debe resolverse antes del módulo de ingreso.
 4. **Encabezados de respuesta:** ¿se agregan `Cache-Control: no-store` y `X-Content-Type-Options: nosniff` en `createApp` antes del primer endpoint con datos personales (rebanada 1)? El ADR no lo trata.
 5. **Desviación 7 (m-2):** ¿se acepta que un parámetro mal codificado responda 404 neutro, como una ruta inexistente, en vez de 400?
+
+## Resolución
+
+El líder del proyecto respondió las preguntas el 2026-11-11 (D59 a D68, registradas en el ADR 0009, "Enmiendas tras la implementación"). El desarrollador backend corrigió el código con TDD en los commits `9bb0768` a `0d31913`; el coordinador agregó `CODEOWNERS` y enmendó el ADR (`9a78e7b`). Verificación del coordinador: `pnpm run check` (315 pruebas de API, 2 `todo`; 76 de `shared`) y `format:check` en verde.
+
+| Hallazgo | Estado | Cómo se resolvió |
+| --- | --- | --- |
+| M-1 `CODEOWNERS` | Resuelto | D68: `.github/CODEOWNERS` con el líder como dueño de `apps/api/src/access/**`, `docs/adr/**`, `.github/**` y `eslint.config.mjs`; la exigencia sigue sin activarse (D40) |
+| m-1 Cuerpo del 500 y errores no neutros | Resuelto | D60: `NEUTRAL_BODIES[500] = {"code":"INTERNAL_ERROR"}`, una sola constante; un `HttpException` sin cuerpo de contrato sale con el código neutro de su estado. Prueba: `new BadRequestException('texto con datos')` responde `{"code":"BAD_REQUEST"}` |
+| m-2 Parámetro mal codificado | Resuelto | D61: estado 400 sin ruta calzada responde 404 `NOT_FOUND`; probado anónimo y con sesión, en `communityId` y `unitId`, y bajo `/platform/` con su fila `anonymous` |
+| m-3 Contenedor después de 3b | Resuelto | El contenedor se llena tras 3a y la comunidad, antes de `pathResources`; los dobles leen `requireTenantContext()`; el guard audita cualquier error con la persona ya identificada |
+| m-4 `router.params` y ajustes de Express | Resuelto | `assertRouteInventory` verifica los ajustes de Express y `router.params` vacío; `HttpAdapterHost` restringido por lint |
+| m-5 Dos saltos con `run.app` público | Pendiente de Operaciones | D63: condición de ingreso `internal-and-cloud-load-balancing` y prueba de humo por ambiente, antes del módulo de ingreso; nota en `apps/api/.env.example` |
+| m-6 `runInCommunity` desligado | Resuelto en lo que existe | El contenedor anidado comparte el estado de auditoría y la persona de plataforma; la prueba con `recordPlatformAction` llega con la capa de datos |
+| m-7 Pila completa en el registro | Resuelto en lo que existe | El filtro registra solo clase, código, método y ruta-plantilla; la limpieza de Sentry (`beforeSend`) queda para cuando se integre Sentry, antes del primer endpoint con datos personales |
+| Pregunta 4 Encabezados | Resuelto | D62: `Cache-Control: no-store` y `X-Content-Type-Options: nosniff` en una capa `securityHeaders`, la primera de `createApp` |

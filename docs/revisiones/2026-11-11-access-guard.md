@@ -5,7 +5,7 @@
 - **Base revisada:** rama `feat/access-guard`, 7 commits sobre `main` @ 56b868c. Referencia: `docs/adr/0009-guard-global-denegacion-por-defecto.md` (rev. 4, aceptado) y ADR 0003, decisión 9.
 - **Alcance:** fidelidad al ADR, corrección, calidad de las pruebas y complejidad. La revisión de seguridad está en `docs/revisiones/2026-11-11-access-guard-seguridad.md`.
 - **Veredicto:** **Aprobado con cambios.** Sin errores de monto (el módulo no mueve dinero) ni vías de fuga entre comunidades en lo que corre hoy; el guard falla cerrado en todos los caminos revisados. Hay que corregir antes de fusionar: una desviación del orden de la decisión 3 en `platform` que un doble oculta, la fuga de mensajes del *framework* antes del guard, el mapa de pruebas (2 y 7 incompletas, 12 matizada) y dos pruebas que pasan por construcción (barrido de la prueba 10 y prueba 14 de producción).
-- **Estado de la resolución:** pendiente de las respuestas del líder del proyecto.
+- **Estado de la resolución:** resuelto el 2026-11-11 con las decisiones del líder D59 a D68 (ADR 0009, "Enmiendas tras la implementación") y los commits 9bb0768 a 0d31913. Ver "Resolución". Queda una observación abierta sobre D59.
 
 ## Mayor
 
@@ -96,3 +96,36 @@ El tamaño (unas 6.000 líneas) es razonable para lo que pide el ADR y no hay ab
 4. **Prueba 14:** ¿se ajusta el ADR para exigir implementación de `PathResourceVisibility` solo a los tipos que aparecen en algún `pathResources`? Hoy obligaría a implementaciones de relleno para tipos como `billing-config` o `charge`.
 5. **Rol en la fila de un rechazo de plataforma con varios roles vigentes (m-1):** ¿se registra el primero o todos? La columna `platform_role` es una sola.
 6. **`CODEOWNERS` (M-6):** ¿lo agrega el coordinador en este mismo PR o en uno aparte antes de fusionar?
+
+## Resolución
+
+El líder del proyecto respondió las preguntas el 2026-11-11 (D59 a D68, registradas en el ADR 0009, "Enmiendas tras la implementación"). El desarrollador backend corrigió el código con TDD en los commits `9bb0768` a `0d31913`; el coordinador agregó `CODEOWNERS` y enmendó el ADR (`9a78e7b`). Verificación del coordinador: `pnpm run check` (315 pruebas de API, 2 `todo`; 76 de `shared`) y `format:check` en verde.
+
+| Hallazgo | Estado | Cómo se resolvió |
+| --- | --- | --- |
+| M-1 Orden en `platform` | Resuelto | El contenedor se llena antes de `pathResources`; los dobles de `unit` y `admin-membership` leen `requireTenantContext()` |
+| M-2 400 del *framework* | Resuelto | D60 y D61: cuerpos neutros y 404 para parámetros que no se pueden decodificar, con pruebas |
+| M-3 Mapa de pruebas | Resuelto | Prueba 2: decorador sobre clase lanza `TypeError`. Prueba 7: excepciones de servicio con el mismo cuerpo y encabezados que el 404 del guard. Prueba 12: con `AppModule` real, `/platform/...` responde 500 `INTERNAL_ERROR`. Prueba 13: cada fila verifica el mensaje de su regla |
+| M-4 Control positivo del barrido | Resuelto | El miembro con todos los parámetros visibles no puede recibir 401 ni 404; un caso con un rol que no ve el recurso lo reporta |
+| M-5 Prueba 14 por construcción | Resuelto | D66: toma las implementaciones y rutas reales de `AppModule` y fija `webpay-attempt` y `admin-membership` como faltantes esperados, con su `todo` |
+| M-6 `CODEOWNERS` | Resuelto | D68 |
+| M-7 D46 por intento | Resuelto | D65: `isVisible` devuelve `{ visible, auditCommunityId? }`; la comunidad va solo a la auditoría; un intento fuera de la vista se audita con `community_id` nulo |
+| m-1 Rol en rechazos | Resuelto | D67: todos los roles vigentes, ordenados y separados por coma; nulo sin roles; el rol del permiso si la petición pasó |
+| m-2 Error que no es de acceso | Resuelto | El guard audita todo error salvo las fallas de la propia auditoría |
+| m-3 Reglas distintas para `:communityId` | Resuelto | Una sola función `hasRouteCommunity` en `route-template.ts` |
+| m-4 `request.aborted` | Resuelto | Se registra con método y primer segmento de la ruta, sin cuerpo |
+| m-5 Constante del 500 | Resuelto | Una sola, en `NEUTRAL_BODIES` |
+| m-6 Lint sin verificar regla | Resuelto | Cada fila compara el mensaje esperado |
+| m-7 Tautología del *pipe* | Anotado | La prueba dice que usa un sustituto; `it.todo` para el `ValidationPipe` real, con el primer DTO |
+| m-8 *Keep-alive* | Resuelto | `http.Agent` con un solo socket; la prueba cuenta una conexión |
+| m-9 Nombre engañoso | Resuelto | Renombrado |
+| m-10 Registro de implementaciones | Resuelto | El inventario falla con duplicados; la prueba 14 rechaza un tipo que sea de comunidad y de plataforma a la vez |
+| m-11 `Bearer` | Resuelto | El esquema no distingue mayúsculas |
+| m-12 Código muerto | Resuelto | Rama de `gateway` eliminada; la variante de *hooks* activos tiene su caso; `httpMethod` y `platformRoles` se usan |
+| m-13 Lista de puertos del ADR | Resuelto | Enmienda del ADR (`CommunityDirectory`, `AccessEventLog`) |
+| Recomendación 6 (500 en `/platform/`) | Resuelto | D64: candado en `assertRouteInventory` |
+| Recomendación 8 (excepción a TDD) | **Parcial** | D59. Mutaciones sobre el código final (269 pruebas de `src/access`): sin la escritura del guard fallan 4 pruebas; sin la del interceptor, 6; sin la del filtro, 2; sin la envoltura del 413, 2. Como el filtro reescribe cualquier rechazo sin fila, algunas pruebas (400, 409, filas `anonymous` del guard, H-41, error de un puerto, intento fuera de la vista) no fallan con una sola mutación; sí fallan con las combinadas (interceptor y filtro: 4; guard y filtro: 16). La condición literal de D59 ("cada prueba falla al quitar su escritura") no se cumple para esas pruebas |
+
+**Observación abierta sobre D59 (decide el líder):** aceptar el resultado, dado que cada escritura tiene al menos dos pruebas que fallan sin ella y las demás fallan en combinación, o exigir que cada prueba distinga a su escritor (por ejemplo, un campo de origen visible solo en pruebas).
+
+**Mapa de pruebas 1 a 16 tras las correcciones:** completas 1, 2, 4, 5, 6, 7, 12, 13, 14 (según D66, con un `todo` para las implementaciones de plataforma) y 16 (falta el límite por IP, con el módulo de ingreso); con dobles 3, 9 y 10 (pendiente la capa de datos); parciales 8 (`ValidationPipe` real), 11 (RLS de `AUDIT_LOG`, escritura exitosa D45, espía de la vista de `webpay-attempt`, *preflight* de CORS) y 15 (`worker`).
