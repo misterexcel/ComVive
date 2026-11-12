@@ -5,7 +5,7 @@
 - **Entregable:** `docs/specs/comunidades-y-membresias.md`, rev. 1, borrador del analista-producto, rama `docs/spec-comunidades-y-membresias`.
 - **Base revisada:** el archivo completo (667 líneas): alcance, matriz de recursos, acciones, errores, órdenes de validación, reglas A a G, CA-CM-1 a CA-CM-23, casos borde, supuestos S-CM-1 a S-CM-20, preguntas P-CM-1 a P-CM-15 y "Contradicciones y vacíos".
 - **Veredicto:** **Rechazado** (un crítico, C-1; nueve mayores). La estructura es sólida y la mayoría de las citas son exactas; las correcciones son acotadas y no obligan a rehacer la spec.
-- **Estado de la resolución:** rev. 4 incorporada; el coordinador verificó el 2026-11-11 que R3-M-1, R3-M-2 y R3-M-3 están resueltos en el texto (CM-H1 y CA-CM-26; CM-C4, CA-CM-29 y punto 25; CM-B8, S-CM-12 y caso borde). Pendiente de la aprobación del líder del proyecto.
+- **Estado de la resolución:** rev. 4 incorporada; el coordinador verificó el 2026-11-11 que R3-M-1, R3-M-2 y R3-M-3 están resueltos en el texto (CM-H1 y CA-CM-26; CM-C4, CA-CM-29 y punto 25; CM-B8, S-CM-12 y caso borde). **Spec rev. 4 aprobada por el líder del proyecto el 2026-11-11.**
 
 ## Documentos con que se contrastó
 

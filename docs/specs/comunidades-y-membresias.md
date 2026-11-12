@@ -1,6 +1,6 @@
 # Especificación: Comunidades, unidades y membresías
 
-Estado: Para revisión del líder del proyecto (rev. 4, 2026-11-11; incorpora las tres pasadas de la revisión crítica `docs/revisiones/2026-11-11-spec-comunidades-y-membresias.md` y las decisiones del líder D47 a D58 y D69 a D73; pendiente de la verificación del coordinador)
+Estado: Aprobada por el líder del proyecto el 2026-11-11 (rev. 4), después de tres pasadas de revisión crítica (`docs/revisiones/2026-11-11-spec-comunidades-y-membresias.md`), con las decisiones del líder D47 a D58 y D69 a D73. Pasa a "Lista para desarrollo" cuando estén hechas las alineaciones marcadas "Antes de Lista para desarrollo de la rebanada 1" en "Contradicciones y vacíos" y los casos de prueba estén revisados.
 Responsable: analista-producto
 Aprobación: líder del proyecto
 
