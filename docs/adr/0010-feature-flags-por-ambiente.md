@@ -1,6 +1,6 @@
 # ADR 0010 · Feature flags por ambiente
 
-- **Estado:** Propuesto (2026-11-12). Pendiente de aprobación del líder del proyecto. Responde P-CM-20 de `docs/specs/comunidades-y-membresias.md` (rev. 5) y el punto 24 de sus "Contradicciones y vacíos". Las reglas de producto ya están decididas por el líder (D51, D56 y D69, 2026-11-11; D76, 2026-11-12); este ADR fija solo lo que esas decisiones dejaron al arquitecto. Revisión crítica `docs/revisiones/2026-11-12-adr-0010.md` (primera pasada, "Aprobado con cambios"): cambios aplicados el 2026-11-12 (M-1 a M-7 y m-1 a m-10), con las decisiones del líder D77 a D80, D92 y D96 a D101 del 2026-11-12 (ver "Decisiones del líder"). Segunda pasada de la misma revisión ("Aprobado con cambios"): cambios aplicados el 2026-11-12 (R2-M-1 y R2-m-1 a R2-m-9), con las decisiones del líder D103 y D104 del 2026-11-12.
+- **Estado:** Aceptado (2026-11-12) por el líder del proyecto, después de dos pasadas de revisión crítica. Propuesto el mismo día. Responde P-CM-20 de `docs/specs/comunidades-y-membresias.md` (rev. 5) y el punto 24 de sus "Contradicciones y vacíos". Las reglas de producto ya están decididas por el líder (D51, D56 y D69, 2026-11-11; D76, 2026-11-12); este ADR fija solo lo que esas decisiones dejaron al arquitecto. Revisión crítica `docs/revisiones/2026-11-12-adr-0010.md` (primera pasada, "Aprobado con cambios"): cambios aplicados el 2026-11-12 (M-1 a M-7 y m-1 a m-10), con las decisiones del líder D77 a D80, D92 y D96 a D101 del 2026-11-12 (ver "Decisiones del líder"). Segunda pasada de la misma revisión ("Aprobado con cambios"): cambios aplicados el 2026-11-12 (R2-M-1 y R2-m-1 a R2-m-9), con las decisiones del líder D103 y D104 del 2026-11-12.
 - **Fecha:** 2026-11-12
 - **Propone:** arquitecto de software
 - **Decide:** líder del proyecto
@@ -16,7 +16,7 @@
 
 El líder ya decidió (D56, D69): flags por ambiente, con su valor versionado **solo** en el repositorio; no editables por API ni por comunidad; encenderlos es un cambio de configuración aprobado por el líder; sin valor, apagado; y dos barreras para `occupancy.end_and_transfer`: una prueba del CI y una constante del código. Dejó al arquitecto cinco puntos (P-CM-20): (1) en qué archivo vive la configuración y cómo se llaman los ambientes; (2) qué pasa con un valor que llega fuera del repositorio; (3) la variante de la barrera en el código; (4) cómo sabe la web si mostrar término y venta; y (5) el procedimiento de encendido de la alerta.
 
-D56 dijo "sin ADR propio por ahora … y a un ADR si crece". Con D69 el mecanismo creció: tiene dos barreras, una verificación al arrancar, un procedimiento de encendido que encola trabajos y varias alternativas descartadas que conviene dejar registradas. Por eso se propone este ADR; `docs/arquitectura.md` §6 lleva solo el resumen.
+D56 dijo "sin ADR propio por ahora … y a un ADR si crece". Con D69 el mecanismo creció: tiene dos barreras, una verificación al arrancar, un procedimiento de encendido que encola trabajos y varias alternativas descartadas que conviene dejar registradas. Por eso se propuso este ADR; `docs/arquitectura.md` §6 lleva solo el resumen.
 
 **Estado actual de `apps/api`** (verificado contra el código el 2026-11-12; m-1 de la revisión):
 
@@ -206,13 +206,13 @@ Cierran las cuatro preguntas que traía este ADR, las siete de la primera pasada
    - **Sin evento a Sentry por membresía:** este vigía repone trabajos, no detecta un atraso; a diferencia de los vigías de ADR 0008, no envía eventos. Una alerta que no sale la cubren `watchdog.jobs_backlog` y `watchdog.jobs_dead`.
    - **Conteo (m-7):** el vigía corre con el rol `comvive_worker`, que sí lee `JOB` (ADR 0008, decisión 5), y usa la vía de reencolado del módulo `jobs`, que devuelve qué hizo con cada fila. `items_enqueued` de `JOB_RUN` cuenta solo las filas insertadas o devueltas a `pending`, no los intentos. Así, el primer barrido tras el encendido muestra el número de membresías pendientes y los siguientes, cero.
    - **Manejador con el flag apagado:** si el flag se apaga después de haber estado encendido, los trabajos ya encolados que lleguen a su `run_at` terminan sin alertar (resultado `skipped`, fila `done`), no crean `NOTIFICATION_DELIVERY` y no fijan `first_access_alerted_at`.
-   - **Apagar y volver a encender (D99):** el plazo de 7 días **se reinicia desde el nuevo encendido** para toda membresía que aún no recibió alerta. Lo hace la tabla de arriba con el `enabledOn` nuevo: las filas `done` vuelven a `pending` con el plazo nuevo y las `pending` se atrasan a él. Una membresía ya alertada no recibe otra. Esto enmienda ADR 0008, decisión 9, cuyo reencolado usa `run_at = now` y dispararía la alerta de inmediato (anotado en sus "Enmiendas de la rebanada 1", sin regir hasta que este ADR se apruebe).
+   - **Apagar y volver a encender (D99):** el plazo de 7 días **se reinicia desde el nuevo encendido** para toda membresía que aún no recibió alerta. Lo hace la tabla de arriba con el `enabledOn` nuevo: las filas `done` vuelven a `pending` con el plazo nuevo y las `pending` se atrasan a él. Una membresía ya alertada no recibe otra. Esto enmienda ADR 0008, decisión 9, cuyo reencolado usa `run_at = now` y dispararía la alerta de inmediato (enmienda aplicada en ADR 0008, decisión 9, el 2026-11-12 con la aceptación de este ADR; ver sus "Enmiendas de la rebanada 1", punto 2).
    - **Fecha que informa la alerta (D76; M-6):**
      - **Cuándo una membresía fue "otorgada con el flag apagado":** cuando la fecha de su otorgamiento, en hora de Chile, es **anterior** al `enabledOn` vigente. El mismo día cuenta como otorgada con el flag encendido: por fecha no se distingue, y el plazo coincide con el del otorgamiento (**Supuesto (a validar)** ADR-0010-S10). Tras un reencendido, el criterio usa el `enabledOn` nuevo, que es desde donde corre el plazo.
      - **Plantilla:** el manejador elige la plantilla al crear la fila de `NOTIFICATION_DELIVERY`, como fija ADR 0008, decisión 14. Para una membresía otorgada con el flag encendido usa la actual, con los tres datos de GC S-72 (nombre de la comunidad, id de la membresía y fecha del otorgamiento). Para una otorgada con el flag apagado usa una plantilla nueva de la enumeración `template` (nombre propuesto: `admin_first_access_alert_after_enablement`), que agrega la fecha de encendido desde la que corre el plazo. El texto lo fija la spec. La alerta sigue siendo una sola por membresía, por `first_access_alerted_at`.
      - **De dónde sale la fecha:** `notification.send` arma el texto al enviar desde la base de datos (ADR 0008, decisión 14), y la fecha de encendido no está en la base de datos: la lee de `enabledOn(flag)` del puerto. Es el único dato de un aviso que viene de la configuración.
      - **Flag apagado entre el manejador y el envío (R2-m-8):** el manejador fija `first_access_alerted_at` en la misma transacción en que crea la entrega (ADR 0008, fila 5). Si el flag se apaga después, `notification.send` **envía igual** la entrega ya creada; si su plantilla es la que lleva la fecha de encendido y `enabledOn(flag)` ya no existe, envía el texto sin esa fecha (variante que fija la spec junto con la plantilla de D76). El flag solo decide si se **crea** una alerta (manejador y vigía), no si se envía una ya registrada. Se elige esta opción, y no limpiar `first_access_alerted_at` al terminar `skipped`, porque mantiene la regla de ADR 0008 de que esa columna se escribe una sola vez junto con la entrega, y no obliga a crear una segunda entrega para la misma membresía contra el índice único de `NOTIFICATION_DELIVERY` (ADR 0008, decisión 14). El costo es una alerta a Operaciones, sin dinero ni accesos.
-     - **Enmienda de ADR 0008**, fila 5, columna "Qué hace": la alerta lleva, además, la fecha de encendido cuando la membresía fue otorgada con el flag apagado, y una entrega ya creada se envía aunque el flag se apague antes del envío (R2-m-8). Anotada en sus "Enmiendas de la rebanada 1", sin regir hasta que este ADR se apruebe.
+     - **Enmienda de ADR 0008**, fila 5, columna "Qué hace": la alerta lleva, además, la fecha de encendido cuando la membresía fue otorgada con el flag apagado, y una entrega ya creada se envía aunque el flag se apague antes del envío (R2-m-8). Aplicada en ADR 0008 el 2026-11-12 con la aceptación de este ADR (ver sus "Enmiendas de la rebanada 1", punto 2).
    - **Pasos del encendido en un ambiente:** (1) la rebanada de ingreso está **desplegada en ese ambiente** (no "en Hecho": "Hecho" incluye la validación en pruebas, que necesita la alerta encendida en `staging`; m-6); (2) PR de ese ambiente con `enabled: true` y `enabledOn` igual al día del despliegue; (3) despliegue aprobado ese mismo día (si se atrasa, el despliegue falla y se corrige la fecha; D98); (4) el primer barrido de vigías encola los trabajos; Operaciones verifica en `JOB_RUN` (`items_enqueued`) que corrió, sin leer datos de negocio.
 
 ### Qué se implementa en cada rebanada
@@ -258,9 +258,14 @@ Con TDD para lo que protege dinero (decisiones 3 y 4). Vitest; las del arranque,
 
 ## Alineaciones pendientes
 
-Lo que otros roles deben ajustar cuando este ADR se apruebe. Este ADR no edita esos archivos.
+Estado al 2026-11-12, con este ADR aceptado. Cada punto lleva su responsable; los marcados **Hecho** se aplicaron con la aceptación.
 
-**QA (`docs/qa/casos/comunidades-y-membresias.md`; m-2):**
+**Hecho el 2026-11-12 (arquitecto):**
+
+- **Hecho.** `docs/arquitectura.md` §6 (viñeta de feature flags), §3 ("Administrador sin primer ingreso"), §7 (lista de ADR) y encabezado: resumen actualizado con lo que rige.
+- **Hecho.** ADR 0008: inventario (fila 5) y decisión 9 editados según sus "Enmiendas de la rebanada 1", punto 2, que deja la constancia.
+
+**Hecho · QA (`docs/qa/casos/comunidades-y-membresias.md`; m-2).** QA aplicó estos ajustes en el archivo de casos el 2026-11-12 (casos TC-CM-CA26-04, 05 y 09 a 14, TC-CM-CA1-07 y PROP-CM-21). Sigue pendiente solo el último punto, que depende de la tarjeta de la web:
 
 - **PROP-CM-21:** quitar el estado "encendido en producción con la constante del traspaso en falso … responden 422". Con la variante elegida ese estado no existe: la API no arranca (decisión 4).
 - **TC-CM-CA26-04:** deja de estar bloqueado. El archivo es `apps/api/src/config/feature-flags.config.ts` y la prueba cubre **cada** ambiente (`local`, `staging`, `production`), no solo producción.
@@ -270,14 +275,18 @@ Lo que otros roles deben ajustar cuando este ADR se apruebe. Este ADR no edita e
 - **Casos nuevos:** proveedor único del puerto, instancia congelada y `worker` (prueba 9), `enabledOn` (prueba 10), requisito atado a pruebas de oro activas (prueba 5), tabla de requisitos exhaustiva y fila del traspaso fijada (pruebas 4 y 17) y reglas temporales (e) y (f) (prueba 6). QA fija los identificadores de las pruebas de oro del traspaso (ADR-0010-S9) y, por D104, incluye en la lista al menos una prueba de integración por la ruta HTTP de término y otra de venta que verifiquen los movimientos en el libro; los archivos terminan en `.gold.test.ts`.
 - **Segunda pasada (R2-m-8):** el caso del manejador con el flag apagado (prueba 15) no cambia; se agrega el de una entrega ya creada que se envía aunque el flag se apague antes del envío (prueba 16).
 
-**Coordinador, analista y Operaciones:**
+**Pendiente · coordinador, analista, desarrollador y Operaciones:**
 
-- `docs/arquitectura.md` §6 (viñeta de feature flags): actualizar el resumen al aprobarse este ADR.
-- ADR 0008: el inventario (fila 5) y la decisión 9 se editan al aprobarse este ADR, según sus "Enmiendas de la rebanada 1", punto 2.
-- Spec: texto de la plantilla de la alerta con fecha de encendido (D76), con su variante sin fecha para una entrega enviada con el flag ya apagado (R2-m-8), y registro de D92, D96 a D101, D103 y D104.
-- `.github/workflows/ci.yml`: paso del job `money-gold` que corre sin caché los `*.gold.test.ts` de `apps/api` (con la implementación; R2-m-1).
-- `apps/api/.env.example`, el CI y las pruebas con entorno propio: agregar `COMVIVE_ENV=local` (con la implementación).
-- `docs/operaciones/`, cuando exista: ids de proyecto por ambiente (D97), verificación de `enabledOn` en el pipeline (D98) y vía de emergencia (D101).
+- **Analista (spec de gasto común, S-72):** texto de la plantilla de la alerta con fecha de encendido (D76), con su variante sin fecha para una entrega enviada con el flag ya apagado (R2-m-8). **Coordinador:** registro en las specs de D92, D96 a D101, D103 y D104 donde falte.
+- **Desarrollador (rebanada 1):** implementación de las piezas de la tabla "Qué se implementa en cada rebanada" marcadas "Rebanada 1", con TDD.
+- **Desarrollador (con la implementación):** `.github/workflows/ci.yml`, paso del job `money-gold` que corre sin caché los `*.gold.test.ts` de `apps/api` (R2-m-1).
+- **Desarrollador (con la implementación):** `apps/api/.env.example`, el CI y las pruebas con entorno propio, agregar `COMVIVE_ENV=local`.
+- **Coordinador (con la implementación):** `.github/CODEOWNERS`, entradas de la decisión 6 (D79). La exigencia de revisión se activa con la cuenta separada de los agentes (ADR 0009, D36, D40 y D68).
+- **Desarrollador (antes del primer encendido de cualquier flag en `staging`):** comparación con el proyecto de Google Cloud y reemplazo de la regla (e) (D97).
+- **Desarrollador y Operaciones (antes del primer encendido en un ambiente desplegado):** verificación de `enabledOn` en el pipeline de despliegue y retiro de la regla (f) (D98).
+- **Operaciones (`docs/operaciones/`, cuando exista):** ids de proyecto por ambiente (D97), verificación de `enabledOn` en el pipeline (D98) y vía de emergencia (D101, D103).
+- **Analista y diseñador (rebanada web de este módulo):** campo de capacidades y su nombre (ADR-0010-S3; m-10).
+- **Antes del Piloto:** supuestos ADR-0010-S1 a S10.
 
 ## Alternativas consideradas
 
@@ -352,7 +361,7 @@ Lo que otros roles deben ajustar cuando este ADR se apruebe. Este ADR no edita e
 - **ADR-0010-S10 · Supuesto (a validar) (D76):** una membresía fue "otorgada con el flag apagado" si la fecha de su otorgamiento es anterior a `enabledOn`; el mismo día cuenta como otorgada con el flag encendido y su alerta no lleva fecha de encendido. La plantilla con fecha de encendido se usa también cuando el `valid_from` de esa membresía es posterior al encendido (D76 no distingue ese caso, y entonces el plazo corre desde `valid_from`, que la alerta no informa); el analista lo confirma con el texto de la plantilla.
 - **Supuestos heredados de la spec:** S-CM-27 (el plazo de la alerta cuenta desde el encendido), S-CM-30 (422 con el flag apagado) y S-CM-31 (mecanismo general).
 
-No quedan preguntas abiertas para el líder del proyecto: las cuatro de este ADR, las siete de la primera pasada de la revisión crítica y las dos de la segunda están respondidas en "Decisiones del líder". Queda pendiente su aprobación del ADR.
+No quedan preguntas abiertas para el líder del proyecto: las cuatro de este ADR, las siete de la primera pasada de la revisión crítica y las dos de la segunda están respondidas en "Decisiones del líder". El líder del proyecto aceptó este ADR el 2026-11-12.
 
 ## Trazabilidad
 
