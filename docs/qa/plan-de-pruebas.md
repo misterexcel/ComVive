@@ -110,7 +110,7 @@ Todo endpoint nuevo que exponga datos de negocio lleva este patrón estándar, c
 | --- | --- | --- |
 | ISO-1 | Actor de A lee un recurso de B por las dos vías | 404 en ambas; no revela que el recurso existe |
 | ISO-2 | Actor de A lista recursos | Solo aparecen recursos de A |
-| ISO-3 | Actor de A crea un recurso indicando la comunidad B (en la ruta o en el cuerpo) | 404; no se crea nada en B |
+| ISO-3 | Actor de A crea un recurso indicando la comunidad B (a) en la ruta; (b) en el cuerpo (`communityId` u otro campo que el esquema no declara) | (a) 404. (b) 400 `BAD_REQUEST` en el paso de forma, después de los 401 y de los 404/403 de membresía, visibilidad y permiso: la comunidad sale solo de la ruta (decisión del líder D91, 2026-11-12; `docs/specs/comunidades-y-membresias.md`, CM-C1 y "Contradicciones y vacíos", punto 30). En los dos, no se crea nada en A ni en B |
 | ISO-4 | Actor de A modifica o elimina un recurso de B por las dos vías | 404 en ambas; el recurso de B queda intacto |
 | ISO-5 | Actor de A usa un recurso de B como referencia dentro de A (p. ej. asignar un pago de A a una unidad de B) por las dos vías | 404; sin cambios en A ni en B |
 | ISO-6 | Administrador con acceso a A y B, operando en el contexto de A | Solo ve y modifica datos de A |
