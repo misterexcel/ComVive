@@ -18,7 +18,7 @@ Quien compra es el administrador (multi-comunidad). Quien más usa la app es el 
 
 ## Etapa actual
 
-**Etapa 2 · MVP.** Objetivo: construir el MVP en rebanadas verticales (base de datos → API → web/app → pruebas) desde el diseño aprobado de la Etapa 1, con TDD en todo lo que mueve dinero o datos de otra comunidad. Primera tarjeta: ADR 0008 "Tareas en segundo plano" (decisión del líder D14), **aceptado el 2026-11-08** tras tres pasadas de revisión crítica (decisiones D22 a D31); con eso se cumple su condición para que Webpay pase a "Lista para desarrollo". La spec de gasto común rev. 9 quedó aprobada el mismo día. El ADR 0009 "Guard global de denegación por defecto" quedó **aceptado el 2026-11-11** tras tres pasadas de revisión crítica (decisiones D36 a D46), condición previa al primer endpoint de negocio. Siguiente: rebanada 1 (comunidades, unidades y membresías). Hito de cierre: MVP aprobado por el líder del proyecto en el ambiente de pruebas.
+**Etapa 2 · MVP.** Objetivo: construir el MVP en rebanadas verticales (base de datos → API → web/app → pruebas) desde el diseño aprobado de la Etapa 1, con TDD en todo lo que mueve dinero o datos de otra comunidad. Primera tarjeta: ADR 0008 "Tareas en segundo plano" (decisión del líder D14), **aceptado el 2026-11-08** tras tres pasadas de revisión crítica (decisiones D22 a D31); con eso se cumple su condición para que Webpay pase a "Lista para desarrollo". La spec de gasto común rev. 9 quedó aprobada el mismo día. El ADR 0009 "Guard global de denegación por defecto" quedó **aceptado el 2026-11-11** tras tres pasadas de revisión crítica (decisiones D36 a D46), condición previa al primer endpoint de negocio, y su guard está implementado en `apps/api` (PR #10). Rebanada 1 (comunidades, unidades y membresías): spec `docs/specs/comunidades-y-membresias.md` aprobada el 2026-11-12 (rev. 5, más D105 a D110 en la rev. 6), con sus casos de QA; la spec de gasto común quedó en rev. 10 y el ADR 0010 "Feature flags por ambiente" fue **aceptado el 2026-11-12** tras dos pasadas de revisión crítica (decisiones D77 a D80 y D96 a D104). Las tarjetas F1 a F3 pasan a "Lista para desarrollo". Siguiente: implementar la rebanada 1 con TDD. Hito de cierre: MVP aprobado por el líder del proyecto en el ambiente de pruebas.
 
 **Etapa 1 · Diseño: cerrada el 2026-11-08** con la aprobación en bloque del líder del proyecto (ADR 0001 a 0007, arquitectura, spec de gasto común rev. 8, design system, wireframes y QA). Quedan para antes del Piloto los supuestos marcados **(a validar)** y las preguntas P-55 y P-56.
 
@@ -102,7 +102,7 @@ docs/qa/                plan de pruebas, comunidades simuladas, pruebas de oro
 docs/revisiones/        informes del revisor crítico y su resolución
 docs/operaciones/       ambientes y procedimientos (desde la Etapa 2)
 docs/contexto/          investigación de mercado y plan de puesta en marcha
-apps/api                API NestJS (esqueleto con /health)
+apps/api                API NestJS (/health y guard global de denegación por defecto, ADR 0009)
 apps/web | mobile       se crean en la Etapa 2
 packages/shared         montos CLP y reparto con redondeo (@comvive/shared/money-engine, solo API)
 ```

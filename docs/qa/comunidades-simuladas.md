@@ -445,7 +445,7 @@ La suma de cargos de cada periodo sigue igual al total emitido (regla 3 de `CLAU
 
 ### GOLD-ACM7 · Cambio de alícuotas después de emitir (CA-CM-7 de `docs/specs/comunidades-y-membresias.md`)
 
-**Para revisión del líder del proyecto.** Comunidad A con `2026-10` emitido con la foto de alícuotas 20 %, 25 %, 25 %, 30 % (GOLD-A). El 2026-11-20 un lote cambia el Depto 101 de 200000 a 190000 y el Depto 202 de 300000 a 310000 (`aliquot_e6`); la suma sigue en 190.000 + 250.000 + 250.000 + 310.000 = 1.000.000. Se emite `2026-11` el 2026-12-01 con O = $1.000.000 y fondo 5 %: F = (1.000.000 × 500 + 9.999) div 10.000 = 500.009.999 div 10.000 = $50.000. Todos los productos son exactos (restos 0), así que el resto mayor no asigna pesos.
+**Aprobada por el líder del proyecto el 2026-11-11 (D75).** Comunidad A con `2026-10` emitido con la foto de alícuotas 20 %, 25 %, 25 %, 30 % (GOLD-A). El 2026-11-20 un lote cambia el Depto 101 de 200000 a 190000 y el Depto 202 de 300000 a 310000 (`aliquot_e6`); la suma sigue en 190.000 + 250.000 + 250.000 + 310.000 = 1.000.000. Se emite `2026-11` el 2026-12-01 con O = $1.000.000 y fondo 5 %: F = (1.000.000 × 500 + 9.999) div 10.000 = 500.009.999 div 10.000 = $50.000. Todos los productos son exactos (restos 0), así que el resto mayor no asigna pesos.
 
 | Prueba | Unidad | Alícuota nueva | Ordinario | Fondo | Cargo `2026-11` |
 | --- | --- | --- | --- | --- | --- |
